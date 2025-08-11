@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Node } from 'reactflow';
-import { X, Settings, Database, Globe, Smartphone, Cpu, Box, Zap } from 'lucide-react';
+import { X, Settings, Database, Globe, Smartphone, Cpu, Box, Zap, Code, Workflow } from 'lucide-react';
+import WeUIModal from '@/components/modals/WeUIModal';
+import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
 
 interface NodePropertiesPanelProps {
   selectedNode: Node | null;
@@ -13,6 +15,9 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
   onClose,
   onUpdateNode,
 }) => {
+  const [showWeUIModal, setShowWeUIModal] = useState(false);
+  const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
+  
   if (!selectedNode) return null;
 
   const handleInputChange = (field: string, value: string) => {
@@ -348,12 +353,48 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-slate-900 dark:text-white">Actions</h4>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowWeUIModal(true)}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  <Code className="h-4 w-4" />
+                  <span>Open WeUI</span>
+                </button>
+                
+                <button
+                  onClick={() => setShowServiceFlowModal(true)}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <Workflow className="h-4 w-4" />
+                  <span>Open Service Flow</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         
         {/* Bottom fade indicator */}
         <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white dark:from-slate-800 to-transparent pointer-events-none z-10"></div>
       </div>
+      
+      {/* Modals */}
+      <WeUIModal
+        isOpen={showWeUIModal}
+        onClose={() => setShowWeUIModal(false)}
+        nodeData={selectedNode?.data}
+      />
+      
+      <ServiceFlowModal
+        isOpen={showServiceFlowModal}
+        onClose={() => setShowServiceFlowModal(false)}
+        nodeData={selectedNode?.data}
+      />
     </div>
   );
 };
