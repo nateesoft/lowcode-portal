@@ -18,6 +18,8 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap, Circle, Square, Diamond, ArrowRight, Hexagon, Triangle, Octagon } from 'lucide-react';
+import ServiceFlowPropertiesPanel from '@/components/panels/ServiceFlowPropertiesPanel';
+import CodeEditorModal from '@/components/modals/CodeEditorModal';
 
 interface ServiceFlowModalProps {
   isOpen: boolean;
@@ -199,6 +201,9 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialServiceEdges);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [selectedService, setSelectedService] = useState<Node | null>(null);
+  const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
+  const [showCodeEditor, setShowCodeEditor] = useState(false);
+  const [selectedNodeForEditor, setSelectedNodeForEditor] = useState<any>(null);
 
   const onConnect: OnConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -211,8 +216,10 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     ({ nodes: selectedNodes }: { nodes: Node[]; edges: Edge[] }) => {
       if (selectedNodes.length === 1) {
         setSelectedService(selectedNodes[0]);
+        setShowPropertiesPanel(true);
       } else {
         setSelectedService(null);
+        setShowPropertiesPanel(false);
       }
     },
     [],
@@ -227,6 +234,41 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     console.log('Saving Service Flow:', flowData);
     onClose();
   };
+
+  const onUpdateNode = useCallback(
+    (nodeId: string, updates: Partial<Node['data']>) => {
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, ...updates } }
+            : node
+        )
+      );
+      
+      if (selectedService && selectedService.id === nodeId) {
+        setSelectedService(prev => prev ? { ...prev, data: { ...prev.data, ...updates } } : null);
+      }
+    },
+    [setNodes, selectedService],
+  );
+
+  const onClosePropertiesPanel = useCallback(() => {
+    setShowPropertiesPanel(false);
+    setSelectedService(null);
+    if (reactFlowInstance) {
+      reactFlowInstance.setNodes((nds) => nds.map(node => ({ ...node, selected: false })));
+    }
+  }, [reactFlowInstance]);
+
+  const onOpenCodeEditor = useCallback((nodeData: any) => {
+    setSelectedNodeForEditor(nodeData);
+    setShowCodeEditor(true);
+  }, []);
+
+  const onCloseCodeEditor = useCallback(() => {
+    setShowCodeEditor(false);
+    setSelectedNodeForEditor(null);
+  }, []);
 
   const serviceTypes = [
     { type: 'REST API', icon: Database, color: 'bg-blue-100 text-blue-800' },
@@ -450,7 +492,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
           </div>
 
           {/* ReactFlow Canvas */}
-          <div className="flex-1 relative" ref={reactFlowWrapper}>
+          <div className={`flex-1 relative ${showPropertiesPanel ? 'mr-80' : ''}`} ref={reactFlowWrapper}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -492,6 +534,25 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Properties Panel - Fixed Sidebar */}
+      {showPropertiesPanel && (
+        <div className="fixed right-0 top-0 h-full z-50">
+          <ServiceFlowPropertiesPanel
+            selectedNode={selectedService}
+            onClose={onClosePropertiesPanel}
+            onUpdateNode={onUpdateNode}
+            onOpenCodeEditor={onOpenCodeEditor}
+          />
+        </div>
+      )}
+
+      {/* Code Editor Modal */}
+      <CodeEditorModal
+        isOpen={showCodeEditor}
+        onClose={onCloseCodeEditor}
+        nodeData={selectedNodeForEditor}
+      />
     </div>
   );
 };
