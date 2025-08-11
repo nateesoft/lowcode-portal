@@ -151,15 +151,13 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     }
 
     return (
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1">
-          <textarea
-            value={content}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="w-full h-full resize-none font-mono text-sm border border-slate-300 dark:border-slate-600 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-          />
-        </div>
+      <div className="flex-1 flex flex-col min-h-0">
+        <textarea
+          value={content}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="flex-1 w-full resize-none font-mono text-sm border border-slate-300 dark:border-slate-600 rounded-lg p-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white min-h-0"
+        />
       </div>
     );
   };
@@ -221,7 +219,7 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 p-6 overflow-hidden">
+        <div className="flex-1 p-6 overflow-hidden flex flex-col">
           {activeTab === 'preview' ? renderPreview() : renderEditor()}
         </div>
 
