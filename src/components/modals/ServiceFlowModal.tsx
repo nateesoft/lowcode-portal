@@ -17,13 +17,71 @@ import ReactFlow, {
   Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap } from 'lucide-react';
+import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap, Circle, Square, Diamond, ArrowRight, Hexagon, Triangle, Octagon } from 'lucide-react';
 
 interface ServiceFlowModalProps {
   isOpen: boolean;
   onClose: () => void;
   nodeData?: any;
 }
+
+// Flowchart Shape Components
+const FlowchartNode = ({ data, selected }: { data: any; selected?: boolean }) => {
+  const baseStyle = {
+    backgroundColor: data.backgroundColor || '#ffffff',
+    borderColor: selected ? '#3b82f6' : (data.borderColor || '#6b7280'),
+  };
+
+  const shapeClasses = {
+    rectangle: 'rounded-md',
+    circle: 'rounded-full aspect-square',
+    diamond: 'transform rotate-45 rounded-sm',
+    triangle: 'clip-triangle',
+    hexagon: 'clip-hexagon',
+    octagon: 'clip-octagon'
+  };
+
+  const shapeClass = shapeClasses[data.shape as keyof typeof shapeClasses] || 'rounded-md';
+  
+  return (
+    <div className="relative">
+      {/* Input Handle */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="flowchart-input"
+        className="w-2 h-2 !bg-blue-500 !border !border-white shadow-sm"
+        style={{ left: -4 }}
+      />
+      
+      <div 
+        className={`w-20 h-12 border-2 transition-colors flex items-center justify-center text-xs font-medium text-slate-700 ${shapeClass} ${
+          selected ? 'border-blue-500 shadow-blue-200 shadow-md' : ''
+        }`}
+        style={baseStyle}
+      >
+        {data.shape === 'diamond' ? (
+          <span className="transform -rotate-45 text-center leading-tight">
+            {data.label}
+          </span>
+        ) : (
+          <span className="text-center leading-tight px-1">
+            {data.label}
+          </span>
+        )}
+      </div>
+      
+      {/* Output Handle */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="flowchart-output"
+        className="w-2 h-2 !bg-green-500 !border !border-white shadow-sm"
+        style={{ right: -4 }}
+      />
+    </div>
+  );
+};
 
 // Custom Service Node Component
 const ServiceNode = ({ data, selected }: { data: any; selected?: boolean }) => {
@@ -71,6 +129,7 @@ const ServiceNode = ({ data, selected }: { data: any; selected?: boolean }) => {
 
 const serviceNodeTypes: NodeTypes = {
   service: ServiceNode,
+  flowchart: FlowchartNode,
 };
 
 // Initial service nodes
@@ -176,10 +235,28 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     { type: 'Function', icon: Cpu, color: 'bg-yellow-100 text-yellow-800' },
   ];
 
-  const onDragStart = (event: React.DragEvent, serviceType: string, icon: any) => {
+  const flowchartShapes = [
+    { shape: 'rectangle', name: 'Process', icon: Square, color: 'bg-slate-100 text-slate-800' },
+    { shape: 'diamond', name: 'Decision', icon: Diamond, color: 'bg-orange-100 text-orange-800' },
+    { shape: 'circle', name: 'Start/End', icon: Circle, color: 'bg-green-100 text-green-800' },
+    { shape: 'hexagon', name: 'Preparation', icon: Hexagon, color: 'bg-blue-100 text-blue-800' },
+    { shape: 'triangle', name: 'Input/Output', icon: Triangle, color: 'bg-purple-100 text-purple-800' },
+    { shape: 'octagon', name: 'Stop', icon: Octagon, color: 'bg-red-100 text-red-800' },
+  ];
+
+  const onServiceDragStart = (event: React.DragEvent, serviceType: string, icon: any) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify({
+      nodeType: 'service',
       type: serviceType,
       icon: icon.name
+    }));
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
+  const onShapeDragStart = (event: React.DragEvent, shape: string) => {
+    event.dataTransfer.setData('application/reactflow', JSON.stringify({
+      nodeType: 'flowchart',
+      shape: shape
     }));
     event.dataTransfer.effectAllowed = 'move';
   };
@@ -199,27 +276,46 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
 
         if (!dragData) return;
 
-        const { type, icon } = JSON.parse(dragData);
+        const parsedData = JSON.parse(dragData);
         const position = reactFlowInstance.project({
           x: event.clientX - reactFlowBounds.left,
           y: event.clientY - reactFlowBounds.top,
         });
 
-        const newNode: Node = {
-          id: `service-${nodes.length + 1}`,
-          type: 'service',
-          position,
-          data: {
-            label: `New ${type}`,
-            type: type,
-            icon: serviceTypes.find(s => s.type === type)?.icon || Box
-          },
-        };
+        let newNode: Node;
+
+        if (parsedData.nodeType === 'service') {
+          newNode = {
+            id: `service-${nodes.length + 1}`,
+            type: 'service',
+            position,
+            data: {
+              label: `New ${parsedData.type}`,
+              type: parsedData.type,
+              icon: serviceTypes.find(s => s.type === parsedData.type)?.icon || Box
+            },
+          };
+        } else if (parsedData.nodeType === 'flowchart') {
+          const shapeName = flowchartShapes.find(s => s.shape === parsedData.shape)?.name || 'Shape';
+          newNode = {
+            id: `flowchart-${nodes.length + 1}`,
+            type: 'flowchart',
+            position,
+            data: {
+              label: shapeName,
+              shape: parsedData.shape,
+              backgroundColor: '#ffffff',
+              borderColor: '#6b7280'
+            },
+          };
+        } else {
+          return;
+        }
 
         setNodes((nds) => nds.concat(newNode));
       }
     },
-    [reactFlowInstance, nodes, setNodes, serviceTypes],
+    [reactFlowInstance, nodes, setNodes, serviceTypes, flowchartShapes],
   );
 
   if (!isOpen) return null;
@@ -265,31 +361,61 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
 
         {/* Main Content */}
         <div className="flex-1 flex">
-          {/* Service Palette Sidebar */}
-          <div className="w-64 bg-slate-50 dark:bg-slate-700 border-r border-slate-200 dark:border-slate-600">
-            <div className="p-4">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">
-                Service Types
-              </h3>
-              <div className="space-y-2">
-                {serviceTypes.map((service) => {
-                  const IconComponent = service.icon;
-                  return (
-                    <div
-                      key={service.type}
-                      className="p-3 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 cursor-move transition-colors"
-                      draggable
-                      onDragStart={(event) => onDragStart(event, service.type, service.icon)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <IconComponent className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          {service.type}
-                        </span>
+          {/* Tool Palette Sidebar */}
+          <div className="w-64 bg-slate-50 dark:bg-slate-700 border-r border-slate-200 dark:border-slate-600 overflow-y-auto">
+            <div className="p-4 space-y-6">
+              {/* Service Types Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+                  Service Types
+                </h3>
+                <div className="space-y-2">
+                  {serviceTypes.map((service) => {
+                    const IconComponent = service.icon;
+                    return (
+                      <div
+                        key={service.type}
+                        className="p-3 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 cursor-move transition-colors"
+                        draggable
+                        onDragStart={(event) => onServiceDragStart(event, service.type, service.icon)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <IconComponent className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                          <span className="text-sm text-slate-700 dark:text-slate-300">
+                            {service.type}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Flowchart Shapes Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+                  Flowchart Shapes
+                </h3>
+                <div className="space-y-2">
+                  {flowchartShapes.map((shape) => {
+                    const IconComponent = shape.icon;
+                    return (
+                      <div
+                        key={shape.shape}
+                        className="p-3 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-move transition-colors"
+                        draggable
+                        onDragStart={(event) => onShapeDragStart(event, shape.shape)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <IconComponent className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                          <span className="text-sm text-slate-700 dark:text-slate-300">
+                            {shape.name}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Selected Service Info */}
