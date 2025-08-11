@@ -48,7 +48,7 @@ export interface AppState {
   darkMode: boolean;
   selectedProject: Project | null;
   showCreateModal: boolean;
-  showCreateProject2Modal: boolean;
+  showCreateSmartFlowModal: boolean;
   activeTab: string;
   mobileMenuOpen: boolean;
   mobileSidebarOpen: boolean;

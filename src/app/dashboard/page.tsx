@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Dashboard from '@/components/pages/Dashboard';
-import CreateProject2Modal from '@/components/modals/CreateProject2Modal';
+import CreateSmartFlowModal from '@/components/modals/CreateSmartFlowModal';
 import { SAMPLE_PROJECTS } from '@/lib/constants';
 import { Project, UserRole, UserTier } from '@/lib/types';
 
@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>(SAMPLE_PROJECTS);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showCreateProject2Modal, setShowCreateProject2Modal] = useState(false);
+  const [showCreateSmartFlowModal, setShowCreateSmartFlowModal] = useState(false);
   
   // User state - in a real app, this would come from auth context
   const [isAuthenticated, setIsAuthenticated] = useState(true);
@@ -45,16 +45,16 @@ export default function DashboardPage() {
         setShowCreateModal={setShowCreateModal}
         setSelectedProject={setSelectedProject}
         setIsAuthenticated={handleLogout}
-        onShowCreateProject2Modal={() => setShowCreateProject2Modal(true)}
+        onShowCreateSmartFlowModal={() => setShowCreateSmartFlowModal(true)}
       />
       
-      <CreateProject2Modal 
-        isOpen={showCreateProject2Modal}
-        onClose={() => setShowCreateProject2Modal(false)}
+      <CreateSmartFlowModal 
+        isOpen={showCreateSmartFlowModal}
+        onClose={() => setShowCreateSmartFlowModal(false)}
         onCreateProject={(projectData) => {
           setProjects([...projects, projectData]);
           setSelectedProject(projectData);
-          setShowCreateProject2Modal(false);
+          setShowCreateSmartFlowModal(false);
           router.push('/reactflow');
         }}
       />

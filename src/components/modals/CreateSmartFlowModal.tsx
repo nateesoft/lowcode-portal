@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
-import { X, Folder, FileText, Database, Globe } from 'lucide-react';
+import { X, Building2, Globe, Computer, TabletSmartphone, ServerIcon,
+  Diamond, User2, Component
+ } from 'lucide-react';
 
-interface CreateProject2ModalProps {
+interface CreateSmartFlowModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreateProject: (projectData: object) => void;
 }
 
-const CreateProject2Modal: React.FC<CreateProject2ModalProps> = ({
+const CreateSmartFlowModal: React.FC<CreateSmartFlowModalProps> = ({
   isOpen,
   onClose,
   onCreateProject,
 }) => {
   const [projectName, setProjectName] = useState('');
   const [projectType, setProjectType] = useState('web-app');
+  const [butsinessType, setBusinessType] = useState('startup');
   const [description, setDescription] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,6 +38,7 @@ const CreateProject2Modal: React.FC<CreateProject2ModalProps> = ({
     onCreateProject(newProject);
     setProjectName('');
     setProjectType('web-app');
+    setBusinessType('startup');
     setDescription('');
     onClose();
   };
@@ -52,19 +56,46 @@ const CreateProject2Modal: React.FC<CreateProject2ModalProps> = ({
       id: 'mobile-app',
       name: 'Mobile Application',
       description: 'Build a mobile app interface',
-      icon: FileText
+      icon: TabletSmartphone
     },
     {
-      id: 'dashboard',
-      name: 'Dashboard',
-      description: 'Create an analytics dashboard',
-      icon: Database
+      id: 'desktop-app',
+      name: 'Desktop Application',
+      description: 'Build a desktop app interface',
+      icon: Computer
     },
     {
-      id: 'workflow',
-      name: 'Workflow',
-      description: 'Design a business workflow',
-      icon: Folder
+      id: 'micro-service',
+      name: 'Microservice',
+      description: 'Create full APIs services',
+      icon: ServerIcon
+    }
+  ];
+
+  const businessTypes = [
+    {
+      id: 'startup',
+      name: 'Startup',
+      description: 'ธุรกิจที่เน้นการสร้างนวัตกรรมและเติบโตอย่างรวดเร็ว',
+      icon: Diamond
+    },
+    {
+      id: 'sme',
+      name: 'SME',
+      description: 'ธุรกิจขนาดกลางและขนาดย่อม ซึ่งมีหลากหลายรูปแบบ',
+      icon: User2
+    },
+    {
+      id: 'franchise',
+      name: 'Franchise',
+      description: 'การให้สิทธิในการทำธุรกิจภายใต้แบรนด์และรูปแบบธุรกิจที่กำหนด',
+      icon: Component
+    },
+    {
+      id: 'enterprise',
+      name: 'State Enterprise',
+      description: 'ธุรกิจที่ดำเนินการโดยรัฐบาลหรือหน่วยงานของรัฐ',
+      icon: Building2
     }
   ];
 
@@ -73,7 +104,7 @@ const CreateProject2Modal: React.FC<CreateProject2ModalProps> = ({
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-            Create New Project2
+            Create New Smart Flow
           </h2>
           <button
             onClick={onClose}
@@ -143,6 +174,46 @@ const CreateProject2Modal: React.FC<CreateProject2ModalProps> = ({
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                Business Type
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {businessTypes.map((type) => {
+                  const IconComponent = type.icon;
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => setBusinessType(type.id)}
+                      className={`p-4 border rounded-lg text-left transition-colors ${
+                        butsinessType === type.id
+                          ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                          : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <IconComponent className={`h-5 w-5 ${
+                          butsinessType === type.id
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-slate-500 dark:text-slate-400'
+                        }`} />
+                        <div>
+                          <h3 className={`font-medium ${
+                            butsinessType === type.id
+                              ? 'text-green-900 dark:text-green-100'
+                              : 'text-slate-900 dark:text-white'
+                          }`}>
+                            {type.name}
+                          </h3>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Description (Optional)
               </label>
@@ -169,7 +240,7 @@ const CreateProject2Modal: React.FC<CreateProject2ModalProps> = ({
               disabled={!projectName.trim()}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Create Project2
+              Create Project
             </button>
           </div>
         </form>
@@ -178,4 +249,4 @@ const CreateProject2Modal: React.FC<CreateProject2ModalProps> = ({
   );
 };
 
-export default CreateProject2Modal;
+export default CreateSmartFlowModal;

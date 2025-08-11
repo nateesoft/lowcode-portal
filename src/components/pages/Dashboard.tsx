@@ -21,7 +21,7 @@ interface DashboardProps {
   setShowCreateModal: (show: boolean) => void;
   setSelectedProject: (project: Project | null) => void;
   setIsAuthenticated: (auth: boolean) => void;
-  onShowCreateProject2Modal?: () => void;
+  onShowCreateSmartFlowModal?: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -37,7 +37,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   setShowCreateModal,
   setSelectedProject,
   setIsAuthenticated,
-  onShowCreateProject2Modal,
+  onShowCreateSmartFlowModal,
 }) => {
   const router = useRouter();
   const [showSiteMap, setShowSiteMap] = useState(false);
@@ -87,13 +87,6 @@ const Dashboard: React.FC<DashboardProps> = ({
           <button className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300">
             <Package className="h-5 w-5" />
             <span>Templates</span>
-          </button>
-          <button 
-            onClick={() => setShowSiteMap(!showSiteMap)}
-            className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300"
-          >
-            <Terminal className="h-5 w-5" />
-            <span>Site Map</span>
           </button>
           {userRole === 'admin' && (
             <>
@@ -270,11 +263,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                   New Project
                 </button>
                 <button 
-                  onClick={() => onShowCreateProject2Modal?.()}
+                  onClick={() => onShowCreateSmartFlowModal?.()}
                   className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Project2
+                  Create Project
                 </button>
               </div>
             </div>
