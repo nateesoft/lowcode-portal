@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Code, Save, Eye, Settings, Plus, Trash2, Copy } from 'lucide-react';
+import { X, Code, Save, Eye, Settings, Plus, Trash2, Copy, FileText } from 'lucide-react';
 
 interface WeUIModalProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
   nodeData,
 }) => {
   const [activeTab, setActiveTab] = useState('schema');
+  const [showTemplates, setShowTemplates] = useState(false);
   const [jsonSchema, setJsonSchema] = useState(`{
   "type": "object",
   "title": "User Registration Form",
@@ -64,6 +65,112 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
   "email": "john.doe@example.com",
   "age": 25
 }`);
+
+  const uiTemplates = [
+    {
+      id: 'basic',
+      name: 'Basic Form',
+      description: 'Simple form with basic styling',
+      template: `{
+  "firstName": {
+    "ui:placeholder": "Enter your first name"
+  },
+  "lastName": {
+    "ui:placeholder": "Enter your last name"
+  },
+  "email": {
+    "ui:placeholder": "user@example.com",
+    "ui:help": "We'll never share your email with anyone else."
+  }
+}`
+    },
+    {
+      id: 'advanced',
+      name: 'Advanced Form',
+      description: 'Form with advanced widgets and validation',
+      template: `{
+  "firstName": {
+    "ui:placeholder": "Enter your first name",
+    "ui:autocomplete": "given-name",
+    "ui:help": "Required field"
+  },
+  "lastName": {
+    "ui:placeholder": "Enter your last name",
+    "ui:autocomplete": "family-name"
+  },
+  "email": {
+    "ui:placeholder": "user@example.com",
+    "ui:widget": "email",
+    "ui:help": "We'll never share your email with anyone else.",
+    "ui:options": {
+      "inputType": "email"
+    }
+  },
+  "age": {
+    "ui:widget": "range",
+    "ui:help": "Select your age using the slider"
+  }
+}`
+    },
+    {
+      id: 'card-layout',
+      name: 'Card Layout',
+      description: 'Form with card-style layout',
+      template: `{
+  "ui:layout": "card",
+  "firstName": {
+    "ui:placeholder": "First Name",
+    "ui:widget": "text",
+    "ui:options": {
+      "label": false,
+      "placeholder": "Enter first name"
+    }
+  },
+  "lastName": {
+    "ui:placeholder": "Last Name",
+    "ui:widget": "text",
+    "ui:options": {
+      "label": false,
+      "placeholder": "Enter last name"
+    }
+  },
+  "email": {
+    "ui:placeholder": "Email Address",
+    "ui:widget": "email",
+    "ui:options": {
+      "label": false,
+      "placeholder": "Enter email address"
+    }
+  },
+  "age": {
+    "ui:widget": "updown",
+    "ui:title": "Age"
+  }
+}`
+    },
+    {
+      id: 'minimal',
+      name: 'Minimal Form',
+      description: 'Clean minimal design',
+      template: `{
+  "ui:options": {
+    "submitText": "Submit"
+  },
+  "firstName": {
+    "ui:placeholder": "First Name"
+  },
+  "lastName": {
+    "ui:placeholder": "Last Name"
+  },
+  "email": {
+    "ui:placeholder": "Email"
+  },
+  "age": {
+    "ui:widget": "hidden"
+  }
+}`
+    }
+  ];
 
   if (!isOpen) return null;
 
@@ -135,23 +242,80 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     );
   };
 
+  const applyTemplate = (template: string) => {
+    setUISchema(template);
+    setShowTemplates(false);
+  };
+
+  const renderTemplates = () => {
+    return (
+      <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">UI Schema Templates</h3>
+          <button
+            onClick={() => setShowTemplates(false)}
+            className="p-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {uiTemplates.map((template) => (
+            <div key={template.id} className="bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 cursor-pointer transition-colors" onClick={() => applyTemplate(template.template)}>
+              <div className="flex items-start space-x-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded">
+                  <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-slate-900 dark:text-white">{template.name}</h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{template.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderEditor = () => {
     let content = jsonSchema;
     let onChange = setJsonSchema;
     let placeholder = "Enter JSON Schema...";
+    let isUITab = false;
 
     if (activeTab === 'ui') {
       content = uiSchema;
       onChange = setUISchema;
       placeholder = "Enter UI Schema...";
+      isUITab = true;
     } else if (activeTab === 'data') {
       content = formData;
       onChange = setFormData;
       placeholder = "Enter Form Data...";
     }
 
+    if (showTemplates && isUITab) {
+      return renderTemplates();
+    }
+
     return (
       <div className="flex-1 flex flex-col min-h-0">
+        {isUITab && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <Settings className="h-4 w-4 text-slate-500" />
+              <span className="text-sm text-slate-600 dark:text-slate-400">UI Schema Editor</span>
+            </div>
+            <button
+              onClick={() => setShowTemplates(true)}
+              className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              <FileText className="h-4 w-4" />
+              <span>Templates</span>
+            </button>
+          </div>
+        )}
         <textarea
           value={content}
           onChange={(e) => onChange(e.target.value)}
