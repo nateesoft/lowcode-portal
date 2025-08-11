@@ -59,11 +59,11 @@ const Dashboard: React.FC<DashboardProps> = ({
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">My Projects</h2>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button 
-                  onClick={() => setShowCreateModal(true)}
-                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+                  onClick={() => onShowCreateSmartFlowModal?.()}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  New Project
+                  Create Project
                 </button>
               </div>
             </div>
@@ -789,14 +789,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      New Project
-                    </button>
-                    <button 
-                      onClick={() => onShowCreateSmartFlowModal?.()}
-                      className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Project
+                      New Project (Demo)
                     </button>
                   </div>
                 </div>
