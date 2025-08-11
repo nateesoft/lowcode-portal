@@ -402,10 +402,10 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex min-h-0">
           {/* Tool Palette Sidebar */}
-          <div className="w-64 bg-slate-50 dark:bg-slate-700 border-r border-slate-200 dark:border-slate-600 overflow-y-auto">
-            <div className="p-4 space-y-6">
+          <div className="w-64 bg-slate-50 dark:bg-slate-700 border-r border-slate-200 dark:border-slate-600 flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
               {/* Service Types Section */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">

@@ -282,10 +282,10 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       )}
 
       {/* Component Palette Sidebar */}
-      <div className={`fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 z-50 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed left-0 top-0 h-screen w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 z-50 transform transition-transform duration-300 ease-in-out flex flex-col ${
         mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0`}>
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Box className="h-6 w-6 text-blue-600" />
@@ -300,7 +300,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 min-h-0">
           <div className="space-y-6">
             {nodeCategories.map((category) => (
               <div key={category.title}>
@@ -324,7 +324,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           </div>
         </div>
 
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div className="flex space-x-2">
             <button className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               <Save className="h-4 w-4 mx-auto" />
