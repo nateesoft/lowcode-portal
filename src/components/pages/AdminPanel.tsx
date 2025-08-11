@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Layers, Package, Activity, Terminal, Shield, BarChart3,
@@ -7,6 +7,7 @@ import {
 import { ADMIN_MOCK_STATS } from '@/lib/constants';
 import { AdminViewType } from '@/lib/types';
 import ThemeToggle from '@/components/ui/ThemeToggle';
+import SiteMap from '@/components/ui/SiteMap';
 
 interface AdminPanelProps {
   adminView: AdminViewType;
@@ -22,6 +23,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   setMobileSidebarOpen,
 }) => {
   const router = useRouter();
+  const [showSiteMap, setShowSiteMap] = useState(false);
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Mobile Sidebar Backdrop */}
@@ -76,6 +78,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           <button className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300">
             <Terminal className="h-5 w-5" />
             <span>Logs</span>
+          </button>
+          <button 
+            onClick={() => setShowSiteMap(!showSiteMap)}
+            className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300"
+          >
+            <Package className="h-5 w-5" />
+            <span>Site Map</span>
           </button>
         </nav>
 
@@ -287,6 +296,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* Site Map Modal */}
+      {showSiteMap && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <SiteMap 
+              userRole="admin"
+              isAuthenticated={true}
+              onClose={() => setShowSiteMap(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

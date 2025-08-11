@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Code2, Layers, Package, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
-  Menu, Check, Zap, Globe, Smartphone, Cpu
+  Menu, Check, Zap, Globe, Smartphone, Cpu, Terminal
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
+import SiteMap from '@/components/ui/SiteMap';
 
 interface DashboardProps {
   projects: Project[];
@@ -39,6 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onShowCreateProject2Modal,
 }) => {
   const router = useRouter();
+  const [showSiteMap, setShowSiteMap] = useState(false);
   const stats = {
     totalProjects: projects.length,
     published: projects.filter(p => p.status === 'Published').length,
@@ -85,6 +87,13 @@ const Dashboard: React.FC<DashboardProps> = ({
           <button className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300">
             <Package className="h-5 w-5" />
             <span>Templates</span>
+          </button>
+          <button 
+            onClick={() => setShowSiteMap(!showSiteMap)}
+            className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300"
+          >
+            <Terminal className="h-5 w-5" />
+            <span>Site Map</span>
           </button>
           {userRole === 'admin' && (
             <>
@@ -466,6 +475,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                 Create Project
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Site Map Modal */}
+      {showSiteMap && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <SiteMap 
+              userRole={userRole}
+              isAuthenticated={true}
+              onClose={() => setShowSiteMap(false)}
+            />
           </div>
         </div>
       )}
