@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Code2, Layers, Package, Users, Settings, BarChart3, Plus, Play, Download, Eye, Save, 
-    GitBranch, Database, Globe, Smartphone, Cpu, LogOut, Bell, Moon, Sun, Home, FileText, Zap, 
-    ArrowRight, Check, Edit, Trash2, RefreshCw, TrendingUp, Activity, Terminal, 
-    Box, Lock, Shield, Star, Award } from 'lucide-react';
+import { Code2, Layers, Package, Users, Plus, Eye, 
+    Globe, Smartphone, Cpu, LogOut, Bell, Moon, Sun, Home, Zap, 
+    Check, Edit, Trash2, TrendingUp, Activity, Terminal, Lock,
+    Shield, Star, Award, Menu, X, BarChart3 } from 'lucide-react';
 
 const HomePortal = () => {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -15,6 +15,9 @@ const HomePortal = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [adminView, setAdminView] = useState('overview');
 
   // Sample data
   const [projects, setProjects] = useState([
@@ -49,7 +52,9 @@ const HomePortal = () => {
               <Code2 className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">FlowCode</span>
             </div>
-            <div className="flex items-center space-x-6">
+            
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-6">
               <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Features</button>
               <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Templates</button>
               <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Pricing</button>
@@ -60,20 +65,47 @@ const HomePortal = () => {
                 Get Started
               </button>
             </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <button 
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </div>
+          
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-4">
+              <div className="flex flex-col space-y-4 px-4">
+                <button className="text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2">Features</button>
+                <button className="text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2">Templates</button>
+                <button className="text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2">Pricing</button>
+                <button 
+                  onClick={() => { setCurrentPage('login'); setMobileMenuOpen(false); }}
+                  className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition text-center mt-4"
+                >
+                  Get Started
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
       {/* Hero Section */}
       <section className="pt-20 pb-32 px-4">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-6">
             Build Apps <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">10x Faster</span>
           </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-3xl mx-auto px-4">
             The AI-powered low-code platform that transforms your ideas into production-ready applications with visual workflows and intelligent automation.
           </p>
-          <div className="flex justify-center space-x-4">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 px-4">
             <button 
               onClick={() => setCurrentPage('login')}
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-lg font-semibold hover:shadow-xl transition transform hover:scale-105"
@@ -91,7 +123,7 @@ const HomePortal = () => {
       <section className="py-20 bg-white dark:bg-slate-800">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">Start with Production-Ready Templates</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {templates.map(template => (
               <div key={template.id} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-6 hover:shadow-xl transition transform hover:scale-105 cursor-pointer">
                 <div className="text-4xl mb-4">{template.icon}</div>
@@ -117,7 +149,7 @@ const HomePortal = () => {
       <section className="py-20 bg-slate-50 dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">Simple, Transparent Pricing</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {['Junior', 'Senior', 'Specialist'].map((tier, index) => (
               <div key={tier} className={`bg-white dark:bg-slate-800 rounded-xl p-8 ${index === 1 ? 'ring-2 ring-blue-600 transform scale-105' : ''}`}>
                 <h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">{tier}</h3>
@@ -157,7 +189,7 @@ const HomePortal = () => {
     </div>
   );
 
-  // Login Page Component
+  // Login Page Component  
   const LoginPage = () => {
     const [isLogin, setIsLogin] = useState(true);
     
@@ -248,8 +280,18 @@ const HomePortal = () => {
 
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        {/* Mobile Sidebar Backdrop */}
+        {mobileSidebarOpen && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <div className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+        <div className={`fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 z-50 transform transition-transform duration-300 ease-in-out ${
+          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0`}>
           <div className="p-6 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center space-x-2">
               <Code2 className="h-8 w-8 text-blue-600" />
@@ -328,14 +370,20 @@ const HomePortal = () => {
         </div>
 
         {/* Main Content */}
-        <div className="ml-64 p-8">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Welcome back!</h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">Here's what's happening with your projects</p>
+        <div className="lg:ml-64">
+          {/* Mobile Header */}
+          <div className="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <button 
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <div className="flex items-center space-x-2">
+              <Code2 className="h-6 w-6 text-blue-600" />
+              <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">FlowCode</span>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                 <Bell className="h-5 w-5" />
               </button>
@@ -347,101 +395,115 @@ const HomePortal = () => {
               </button>
             </div>
           </div>
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <Layers className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="text-sm text-green-600 dark:text-green-400 flex items-center">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  12%
-                </span>
+          
+          <div className="p-4 sm:p-8">
+            {/* Header - Desktop only */}
+            <div className="hidden lg:flex justify-between items-center mb-8">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Welcome back!</h1>
+                <p className="text-slate-600 dark:text-slate-400 mt-1">Here's what's happening with your projects</p>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalProjects}</div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Total Projects</div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-sm text-green-600 dark:text-green-400 flex items-center">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  8%
-                </span>
+              <div className="flex items-center space-x-4">
+                <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+                  <Bell className="h-5 w-5" />
+                </button>
+                <button 
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                >
+                  {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                </button>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.published}</div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Published</div>
+            </div>
+            
+            {/* Mobile Header */}
+            <div className="lg:hidden mb-6">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome back!</h1>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">Here's what's happening</p>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                  <Zap className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <Layers className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <span className="text-sm text-green-600 dark:text-green-400 flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    12%
+                  </span>
                 </div>
-                <span className="text-sm text-green-600 dark:text-green-400 flex items-center">
-                  <TrendingUp className="h-4 w-4 mr-1" />
-                  24%
-                </span>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalProjects}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-400">Total Projects</div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalTasks}</div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Total Tasks</div>
-            </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                  <Activity className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  </div>
+                  <span className="text-sm text-green-600 dark:text-green-400 flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    8%
+                  </span>
                 </div>
-                <span className="text-sm text-green-600 dark:text-green-400">
-                  {Math.round((stats.completedTasks / stats.totalTasks) * 100)}%
-                </span>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.published}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-400">Published</div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.completedTasks}</div>
-              <div className="text-sm text-slate-600 dark:text-slate-400">Completed Tasks</div>
-            </div>
-          </div>
 
-          {/* Recent Projects */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent Projects</h2>
-              <button 
-                onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Project
-              </button>
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <Zap className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <span className="text-sm text-green-600 dark:text-green-400 flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    24%
+                  </span>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalTasks}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-400">Total Tasks</div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                    <Activity className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <span className="text-sm text-green-600 dark:text-green-400">
+                    {Math.round((stats.completedTasks / stats.totalTasks) * 100)}%
+                  </span>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.completedTasks}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-400">Completed Tasks</div>
+              </div>
             </div>
-            <div className="p-6">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-sm text-slate-600 dark:text-slate-400">
-                    <th className="pb-4">Project Name</th>
-                    <th className="pb-4">Type</th>
-                    <th className="pb-4">Status</th>
-                    <th className="pb-4">Progress</th>
-                    <th className="pb-4">Last Modified</th>
-                    <th className="pb-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="space-y-2">
+
+            {/* Recent Projects */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent Projects</h2>
+                <button 
+                  onClick={() => setShowCreateModal(true)}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Project
+                </button>
+              </div>
+              <div className="p-4 sm:p-6">
+                {/* Mobile Cards View */}
+                <div className="lg:hidden space-y-4">
                   {projects.map(project => (
-                    <tr key={project.id} className="border-t border-slate-100 dark:border-slate-700">
-                      <td className="py-4">
-                        <div className="font-medium text-slate-900 dark:text-white">{project.name}</div>
-                      </td>
-                      <td className="py-4">
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-sm">
-                          {project.type}
-                        </span>
-                      </td>
-                      <td className="py-4">
+                    <div key={project.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="font-medium text-slate-900 dark:text-white">{project.name}</div>
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-sm mt-1 inline-block">
+                            {project.type}
+                          </span>
+                        </div>
                         <span className={`px-2 py-1 rounded text-sm ${
                           project.status === 'Published' 
                             ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
@@ -449,51 +511,121 @@ const HomePortal = () => {
                         }`}>
                           {project.status}
                         </span>
-                      </td>
-                      <td className="py-4">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-32 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                            <div 
-                              className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full"
-                              style={{ width: `${(project.completed / project.tasks) * 100}%` }}
-                            />
-                          </div>
+                      </div>
+                      <div className="mb-3">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-sm text-slate-600 dark:text-slate-400">Progress:</span>
                           <span className="text-sm text-slate-600 dark:text-slate-400">
                             {project.completed}/{project.tasks}
                           </span>
                         </div>
-                      </td>
-                      <td className="py-4 text-sm text-slate-600 dark:text-slate-400">
-                        {project.lastModified}
-                      </td>
-                      <td className="py-4">
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                          <div 
+                            className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full"
+                            style={{ width: `${(project.completed / project.tasks) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-slate-500 dark:text-slate-400">{project.lastModified}</span>
                         <div className="flex items-center space-x-2">
                           <button 
                             onClick={() => { setSelectedProject(project); setCurrentPage('builder'); }}
-                            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                           >
                             <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                           </button>
-                          <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                             <Eye className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                           </button>
-                          <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                             <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+                
+                {/* Desktop Table View */}
+                <div className="hidden lg:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-sm text-slate-600 dark:text-slate-400">
+                        <th className="pb-4">Project Name</th>
+                        <th className="pb-4">Type</th>
+                        <th className="pb-4">Status</th>
+                        <th className="pb-4">Progress</th>
+                        <th className="pb-4">Last Modified</th>
+                        <th className="pb-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="space-y-2">
+                      {projects.map(project => (
+                        <tr key={project.id} className="border-t border-slate-100 dark:border-slate-700">
+                          <td className="py-4">
+                            <div className="font-medium text-slate-900 dark:text-white">{project.name}</div>
+                          </td>
+                          <td className="py-4">
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-sm">
+                              {project.type}
+                            </span>
+                          </td>
+                          <td className="py-4">
+                            <span className={`px-2 py-1 rounded text-sm ${
+                              project.status === 'Published' 
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
+                                : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+                            }`}>
+                              {project.status}
+                            </span>
+                          </td>
+                          <td className="py-4">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-32 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                                <div 
+                                  className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full"
+                                  style={{ width: `${(project.completed / project.tasks) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-sm text-slate-600 dark:text-slate-400">
+                                {project.completed}/{project.tasks}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 text-sm text-slate-600 dark:text-slate-400">
+                            {project.lastModified}
+                          </td>
+                          <td className="py-4">
+                            <div className="flex items-center space-x-2">
+                              <button 
+                                onClick={() => { setSelectedProject(project); setCurrentPage('builder'); }}
+                                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                              >
+                                <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                              </button>
+                              <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                                <Eye className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                              </button>
+                              <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                                <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Create Project Modal */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-slate-800 rounded-xl p-8 w-full max-w-2xl">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Create New Project</h2>
               
               <div className="space-y-4">
@@ -509,7 +641,7 @@ const HomePortal = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Project Type</label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {['Full-Stack', 'Single Web', 'Microservice', 'Script Logic'].map(type => (
                       <button key={type} className="p-4 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition text-left">
                         <div className="font-medium text-slate-900 dark:text-white">{type}</div>
@@ -526,16 +658,16 @@ const HomePortal = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Target Platform</label>
-                  <div className="flex space-x-4">
-                    <button className="flex-1 p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition flex items-center justify-center">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <button className="p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition flex items-center justify-center">
                       <Globe className="h-5 w-5 mr-2" />
                       Web
                     </button>
-                    <button className="flex-1 p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition flex items-center justify-center">
+                    <button className="p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition flex items-center justify-center">
                       <Smartphone className="h-5 w-5 mr-2" />
                       Mobile
                     </button>
-                    <button className="flex-1 p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition flex items-center justify-center">
+                    <button className="p-3 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition flex items-center justify-center">
                       <Cpu className="h-5 w-5 mr-2" />
                       IoT
                     </button>
@@ -543,7 +675,7 @@ const HomePortal = () => {
                 </div>
               </div>
               
-              <div className="flex justify-end space-x-4 mt-8">
+              <div className="flex flex-col sm:flex-row justify-end gap-4 mt-8">
                 <button 
                   onClick={() => setShowCreateModal(false)}
                   className="px-6 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
@@ -564,254 +696,8 @@ const HomePortal = () => {
     );
   };
 
-  // Project Builder Component (Simplified Visual Flow Editor)
-  const ProjectBuilder = () => {
-    const [selectedNode, setSelectedNode] = useState(null);
-    const [nodes, setNodes] = useState([
-      { id: 1, type: 'user', name: 'User Management', x: 100, y: 100 },
-      { id: 2, type: 'page', name: 'Dashboard Page', x: 300, y: 100 },
-      { id: 3, type: 'service', name: 'API Service', x: 500, y: 100 },
-    ]);
-
-    const nodeTypes = [
-      { type: 'user', icon: Users, color: 'blue', label: 'User Node' },
-      { type: 'page', icon: FileText, color: 'green', label: 'Page Node' },
-      { type: 'service', icon: Box, color: 'purple', label: 'Service Node' },
-      { type: 'database', icon: Database, color: 'orange', label: 'Database' },
-    ];
-
-    return (
-      <div className="h-screen flex bg-slate-50 dark:bg-slate-900">
-        {/* Left Toolbar */}
-        <div className="w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 p-4">
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Project: {selectedProject?.name || 'New Project'}</h3>
-            <div className="flex space-x-2">
-              <button className="flex-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium">
-                Edit
-              </button>
-              <button className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium">
-                Preview
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase mb-3">Toolbox</h4>
-            <div className="space-y-2">
-              {nodeTypes.map(node => (
-                <div 
-                  key={node.type}
-                  draggable
-                  className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg cursor-move hover:bg-slate-100 dark:hover:bg-slate-600 transition flex items-center space-x-3"
-                >
-                  <div className={`p-2 bg-${node.color}-100 dark:bg-${node.color}-900/30 rounded`}>
-                    <node.icon className={`h-4 w-4 text-${node.color}-600 dark:text-${node.color}-400`} />
-                  </div>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{node.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <button className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transition flex items-center justify-center">
-              <Save className="h-4 w-4 mr-2" />
-              Save
-            </button>
-            <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition flex items-center justify-center">
-              <Play className="h-4 w-4 mr-2" />
-              Test Flow
-            </button>
-            <button className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition flex items-center justify-center">
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </button>
-          </div>
-        </div>
-
-        {/* Main Canvas Area */}
-        <div className="flex-1 relative overflow-hidden">
-          {/* Top Toolbar */}
-          <div className="absolute top-0 left-0 right-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 p-4 z-10">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                <button 
-                  onClick={() => setCurrentPage('dashboard')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
-                >
-                  <ArrowRight className="h-5 w-5 rotate-180 text-slate-600 dark:text-slate-400" />
-                </button>
-                <div className="flex items-center space-x-2">
-                  <GitBranch className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">main</span>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
-                  <RefreshCw className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                </button>
-                <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
-                  <Settings className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Canvas */}
-          <div className="h-full pt-20 p-8">
-            <div className="bg-white dark:bg-slate-800 rounded-xl h-full border-2 border-dashed border-slate-300 dark:border-slate-600 relative">
-              {/* Grid Background */}
-              <div className="absolute inset-0 opacity-5">
-                <svg width="100%" height="100%">
-                  <defs>
-                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="1"/>
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-                </svg>
-              </div>
-
-              {/* Nodes */}
-              {nodes.map(node => {
-                const NodeIcon = nodeTypes.find(t => t.type === node.type)?.icon || Box;
-                const nodeColor = nodeTypes.find(t => t.type === node.type)?.color || 'slate';
-                
-                return (
-                  <div
-                    key={node.id}
-                    className="absolute bg-white dark:bg-slate-700 rounded-lg border-2 border-slate-300 dark:border-slate-600 p-4 cursor-move hover:shadow-lg transition"
-                    style={{ left: node.x, top: node.y }}
-                    onClick={() => setSelectedNode(node)}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 bg-${nodeColor}-100 dark:bg-${nodeColor}-900/30 rounded`}>
-                        <NodeIcon className={`h-5 w-5 text-${nodeColor}-600 dark:text-${nodeColor}-400`} />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-white">{node.name}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{node.type}</div>
-                      </div>
-                    </div>
-                    <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-slate-300 dark:bg-slate-600 rounded-full border-2 border-white dark:border-slate-700"></div>
-                    <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-slate-300 dark:bg-slate-600 rounded-full border-2 border-white dark:border-slate-700"></div>
-                  </div>
-                );
-              })}
-
-              {/* Connection Lines */}
-              <svg className="absolute inset-0 pointer-events-none">
-                <path 
-                  d="M 120 120 Q 200 120 280 120" 
-                  stroke="#3b82f6" 
-                  strokeWidth="2" 
-                  fill="none"
-                  strokeDasharray="5,5"
-                />
-                <path 
-                  d="M 320 120 Q 400 120 480 120" 
-                  stroke="#3b82f6" 
-                  strokeWidth="2" 
-                  fill="none"
-                  strokeDasharray="5,5"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Properties Panel */}
-        {selectedNode && (
-          <div className="w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 p-6">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Node Properties</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Node Name</label>
-                <input 
-                  type="text" 
-                  value={selectedNode.name}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Node Type</label>
-                <select className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white">
-                  <option value="user">User Node</option>
-                  <option value="page">Page Node</option>
-                  <option value="service">Service Node</option>
-                  <option value="database">Database</option>
-                </select>
-              </div>
-
-              {selectedNode.type === 'page' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Page Type</label>
-                    <div className="flex space-x-2">
-                      <button className="flex-1 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm">
-                        Single
-                      </button>
-                      <button className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm">
-                        Multiple
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Components</label>
-                    <div className="space-y-2">
-                      <button className="w-full px-3 py-2 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700">
-                        + Add Component
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {selectedNode.type === 'service' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Service Type</label>
-                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white">
-                      <option>REST API</option>
-                      <option>GraphQL</option>
-                      <option>WebSocket</option>
-                      <option>Async Queue</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">HTTP Method</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['GET', 'POST', 'PUT', 'DELETE'].map(method => (
-                        <button key={method} className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-600">
-                          {method}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                <button className="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition">
-                  Delete Node
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // Admin Panel Component
   const AdminPanel = () => {
-    const [adminView, setAdminView] = useState('overview');
-    
     const stats = {
       totalUsers: 1234,
       totalProjects: 5678,
@@ -824,8 +710,18 @@ const HomePortal = () => {
 
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        {/* Mobile Sidebar Backdrop */}
+        {mobileSidebarOpen && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
         {/* Admin Sidebar */}
-        <div className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+        <div className={`fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 z-50 transform transition-transform duration-300 ease-in-out ${
+          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0`}>
           <div className="p-6 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center space-x-2">
               <Shield className="h-8 w-8 text-red-600" />
@@ -864,10 +760,6 @@ const HomePortal = () => {
               <Terminal className="h-5 w-5" />
               <span>Logs</span>
             </button>
-            <button className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300">
-              <Settings className="h-5 w-5" />
-              <span>Settings</span>
-            </button>
           </nav>
 
           <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -881,181 +773,202 @@ const HomePortal = () => {
         </div>
 
         {/* Main Admin Content */}
-        <div className="ml-64 p-8">
-          {adminView === 'overview' && (
-            <>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">Admin Overview</h1>
-              
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <Users className="h-8 w-8 text-blue-600" />
-                    <span className="text-sm text-green-600 dark:text-green-400">+12%</span>
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalUsers}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Total Users</div>
-                </div>
+        <div className="lg:ml-64">
+          {/* Mobile Header */}
+          <div className="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <button 
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <div className="flex items-center space-x-2">
+              <Shield className="h-6 w-6 text-red-600" />
+              <span className="text-lg font-bold text-slate-900 dark:text-white">Admin</span>
+            </div>
+            <div className="w-8"></div>
+          </div>
+          
+          <div className="p-4 sm:p-8">
+            {adminView === 'overview' && (
+              <>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-8">Admin Overview</h1>
                 
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <Users className="h-8 w-8 text-blue-600" />
+                      <span className="text-sm text-green-600 dark:text-green-400">+12%</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalUsers}</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">Total Users</div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <Layers className="h-8 w-8 text-purple-600" />
+                      <span className="text-sm text-green-600 dark:text-green-400">+8%</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalProjects}</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">Total Projects</div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <Eye className="h-8 w-8 text-green-600" />
+                      <span className="text-sm text-green-600 dark:text-green-400">+24%</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalExports}</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">Total Exports</div>
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <Activity className="h-8 w-8 text-orange-600" />
+                      <span className="text-sm text-green-600 dark:text-green-400">+5%</span>
+                    </div>
+                    <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.activeUsers}</div>
+                    <div className="text-sm text-slate-600 dark:text-slate-400">Active Users</div>
+                  </div>
+                </div>
+
+                {/* User Distribution */}
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <Layers className="h-8 w-8 text-purple-600" />
-                    <span className="text-sm text-green-600 dark:text-green-400">+8%</span>
+                  <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-6">User Distribution by Tier</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Junior (Free)</span>
+                        <span className="text-sm text-slate-600 dark:text-slate-400">{stats.juniorUsers} users</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                        <div className="bg-blue-600 h-3 rounded-full" style={{ width: '65%' }}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Senior ($10/mo)</span>
+                        <span className="text-sm text-slate-600 dark:text-slate-400">{stats.seniorUsers} users</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                        <div className="bg-purple-600 h-3 rounded-full" style={{ width: '28%' }}></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Specialist ($100/mo)</span>
+                        <span className="text-sm text-slate-600 dark:text-slate-400">{stats.specialistUsers} users</span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 h-3 rounded-full" style={{ width: '7%' }}></div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalProjects}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Total Projects</div>
                 </div>
-                
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <Download className="h-8 w-8 text-green-600" />
-                    <span className="text-sm text-green-600 dark:text-green-400">+24%</span>
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalExports}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Total Exports</div>
-                </div>
-                
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                  <div className="flex items-center justify-between mb-4">
-                    <Activity className="h-8 w-8 text-orange-600" />
-                    <span className="text-sm text-green-600 dark:text-green-400">+5%</span>
-                  </div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.activeUsers}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Active Users</div>
-                </div>
-              </div>
+              </>
+            )}
 
-              {/* User Distribution */}
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-6">User Distribution by Tier</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Junior (Free)</span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">{stats.juniorUsers} users</span>
-                    </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                      <div className="bg-blue-600 h-3 rounded-full" style={{ width: '65%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Senior ($10/mo)</span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">{stats.seniorUsers} users</span>
-                    </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                      <div className="bg-purple-600 h-3 rounded-full" style={{ width: '28%' }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Specialist ($100/mo)</span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">{stats.specialistUsers} users</span>
-                    </div>
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                      <div className="bg-gradient-to-r from-blue-600 to-purple-600 h-3 rounded-full" style={{ width: '7%' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {adminView === 'users' && (
-            <>
-              <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white">User Management</h1>
-                <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition">
-                  + Add User
-                </button>
-              </div>
-
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-                  <div className="flex space-x-4">
-                    <div className="flex-1">
-                      <input 
-                        type="text" 
-                        placeholder="Search users..." 
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
-                      />
-                    </div>
-                    <select className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white">
-                      <option>All Tiers</option>
-                      <option>Junior</option>
-                      <option>Senior</option>
-                      <option>Specialist</option>
-                    </select>
-                    <select className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white">
-                      <option>All Status</option>
-                      <option>Active</option>
-                      <option>Suspended</option>
-                    </select>
-                  </div>
+            {adminView === 'users' && (
+              <>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">User Management</h1>
+                  <button className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition">
+                    + Add User
+                  </button>
                 </div>
 
-                <div className="p-6">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-slate-600 dark:text-slate-400">
-                        <th className="pb-4">User</th>
-                        <th className="pb-4">Email</th>
-                        <th className="pb-4">Tier</th>
-                        <th className="pb-4">Projects</th>
-                        <th className="pb-4">Status</th>
-                        <th className="pb-4">Joined</th>
-                        <th className="pb-4">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[1, 2, 3, 4, 5].map(i => (
-                        <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
-                          <td className="py-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                                U{i}
-                              </div>
-                              <span className="font-medium text-slate-900 dark:text-white">User {i}</span>
-                            </div>
-                          </td>
-                          <td className="py-4 text-sm text-slate-600 dark:text-slate-400">user{i}@example.com</td>
-                          <td className="py-4">
-                            <span className={`px-2 py-1 rounded text-sm ${
-                              i === 1 ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
-                              i === 2 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
-                              'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                            }`}>
-                              {i === 1 ? 'Specialist' : i === 2 ? 'Senior' : 'Junior'}
-                            </span>
-                          </td>
-                          <td className="py-4 text-sm text-slate-600 dark:text-slate-400">{Math.floor(Math.random() * 10)}</td>
-                          <td className="py-4">
-                            <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded text-sm">
-                              Active
-                            </span>
-                          </td>
-                          <td className="py-4 text-sm text-slate-600 dark:text-slate-400">2025-01-0{i}</td>
-                          <td className="py-4">
-                            <div className="flex items-center space-x-2">
-                              <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                                <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                              </button>
-                              <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                                <Lock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                              </button>
-                              <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                                <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+                    <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                      <div className="flex-1">
+                        <input 
+                          type="text" 
+                          placeholder="Search users..." 
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                        />
+                      </div>
+                      <div className="flex space-x-4">
+                        <select className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white">
+                          <option>All Tiers</option>
+                          <option>Junior</option>
+                          <option>Senior</option>
+                          <option>Specialist</option>
+                        </select>
+                        <select className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white">
+                          <option>All Status</option>
+                          <option>Active</option>
+                          <option>Suspended</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 sm:p-6">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-left text-sm text-slate-600 dark:text-slate-400">
+                            <th className="pb-4">User</th>
+                            <th className="pb-4">Email</th>
+                            <th className="pb-4">Tier</th>
+                            <th className="pb-4">Projects</th>
+                            <th className="pb-4">Status</th>
+                            <th className="pb-4">Joined</th>
+                            <th className="pb-4">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[1, 2, 3, 4, 5].map(i => (
+                            <tr key={i} className="border-t border-slate-100 dark:border-slate-700">
+                              <td className="py-4">
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                    U{i}
+                                  </div>
+                                  <span className="font-medium text-slate-900 dark:text-white">User {i}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 text-sm text-slate-600 dark:text-slate-400">user{i}@example.com</td>
+                              <td className="py-4">
+                                <span className={`px-2 py-1 rounded text-sm ${
+                                  i === 1 ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
+                                  i === 2 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                                  'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                }`}>
+                                  {i === 1 ? 'Specialist' : i === 2 ? 'Senior' : 'Junior'}
+                                </span>
+                              </td>
+                              <td className="py-4 text-sm text-slate-600 dark:text-slate-400">{Math.floor(Math.random() * 10)}</td>
+                              <td className="py-4">
+                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded text-sm">
+                                  Active
+                                </span>
+                              </td>
+                              <td className="py-4 text-sm text-slate-600 dark:text-slate-400">2025-01-0{i}</td>
+                              <td className="py-4">
+                                <div className="flex items-center space-x-2">
+                                  <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                                    <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                                  </button>
+                                  <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                                    <Lock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                  </button>
+                                  <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                                    <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -1075,8 +988,6 @@ const HomePortal = () => {
       case 'dashboard':
       case 'projects':
         return <Dashboard />;
-      case 'builder':
-        return <ProjectBuilder />;
       case 'admin':
         return userRole === 'admin' ? <AdminPanel /> : <Dashboard />;
       default:
