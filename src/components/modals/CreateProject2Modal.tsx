@@ -4,7 +4,7 @@ import { X, Folder, FileText, Database, Globe } from 'lucide-react';
 interface CreateProject2ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateProject: (projectData: any) => void;
+  onCreateProject: (projectData: object) => void;
 }
 
 const CreateProject2Modal: React.FC<CreateProject2ModalProps> = ({

@@ -3,15 +3,12 @@ import ReactFlow, {
   MiniMap,
   Controls,
   Background,
+  BackgroundVariant,
   useNodesState,
   useEdgesState,
   addEdge,
   Node,
   Edge,
-  Connection,
-  NodeDragHandler,
-  OnNodesChange,
-  OnEdgesChange,
   OnConnect,
   ReactFlowProvider,
   ReactFlowInstance,
@@ -19,20 +16,40 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
-  ArrowLeft, Save, Play, Download, Upload, Plus, 
-  Database, Globe, Smartphone, Cpu, Box, Zap,
-  Menu, Settings, Trash2
+  ArrowLeft, Save, Play, Download, Upload, 
+  Database, Cpu, Box, Zap,
+  Menu
 } from 'lucide-react';
 import { PageType } from '@/lib/types';
+import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
 
 // Custom Node Components
-const CustomNode = ({ data, isConnectable }: any) => {
+interface NodeData {
+  label: string;
+  description: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  backgroundColor?: string;
+  borderColor?: string;
+  [key: string]: unknown;
+}
+
+const CustomNode = ({ data, selected }: { data: NodeData; selected?: boolean }) => {
+  const nodeStyle = {
+    backgroundColor: data.backgroundColor || '#ffffff',
+    borderColor: selected ? '#3b82f6' : (data.borderColor || '#a1a1aa'),
+  };
+  
   return (
-    <div className="px-4 py-2 shadow-lg rounded-lg bg-white border-2 border-stone-400">
+    <div 
+      className={`px-4 py-2 shadow-lg rounded-lg border-2 transition-colors ${
+        selected ? 'border-blue-500 shadow-blue-200' : ''
+      }`}
+      style={nodeStyle}
+    >
       <div className="flex items-center">
         {data.icon && <data.icon className="h-4 w-4 mr-2 text-blue-600" />}
         <div className="ml-2">
-          <div className="text-lg font-bold">{data.label}</div>
+          <div className="text-lg font-bold text-slate-900">{data.label}</div>
           <div className="text-gray-500 text-sm">{data.description}</div>
         </div>
       </div>
@@ -94,6 +111,8 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
 
   const onConnect: OnConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -101,6 +120,44 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   );
 
   const onInit = (rfi: ReactFlowInstance) => setReactFlowInstance(rfi);
+
+  const onSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: { nodes: Node[]; edges: Edge[] }) => {
+      if (selectedNodes.length === 1) {
+        setSelectedNode(selectedNodes[0]);
+        setShowPropertiesPanel(true);
+      } else {
+        setSelectedNode(null);
+        setShowPropertiesPanel(false);
+      }
+    },
+    [],
+  );
+
+  const onUpdateNode = useCallback(
+    (nodeId: string, updates: Partial<Node['data']>) => {
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, ...updates } }
+            : node
+        )
+      );
+      
+      if (selectedNode && selectedNode.id === nodeId) {
+        setSelectedNode(prev => prev ? { ...prev, data: { ...prev.data, ...updates } } : null);
+      }
+    },
+    [setNodes, selectedNode],
+  );
+
+  const onClosePropertiesPanel = useCallback(() => {
+    setShowPropertiesPanel(false);
+    setSelectedNode(null);
+    if (reactFlowInstance) {
+      reactFlowInstance.setNodes((nds) => nds.map(node => ({ ...node, selected: false })));
+    }
+  }, [reactFlowInstance]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -155,7 +212,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   };
 
   const getNodeIcon = (type: string) => {
-    const icons: { [key: string]: any } = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       'API Call': Database,
       'Database': Database,
       'UI Component': Box,
@@ -317,21 +374,40 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
             onInit={onInit}
             onDrop={onDrop}
             onDragOver={onDragOver}
+            onSelectionChange={onSelectionChange}
             nodeTypes={nodeTypes}
             fitView
             className="bg-teal-50 dark:bg-slate-900"
           >
             <Controls />
             <MiniMap 
-              nodeColor={(node) => {
-                return '#6366f1';
-              }}
+              nodeColor={() => '#6366f1'}
               className="!bg-slate-100 !border-slate-300"
             />
-            <Background variant="dots" gap={12} size={1} />
+            <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
           </ReactFlow>
         </div>
       </div>
+
+      {/* Properties Panel - Fixed Sidebar Overlay */}
+      {showPropertiesPanel && (
+        <>
+          {/* Mobile backdrop */}
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={onClosePropertiesPanel}
+          />
+          
+          {/* Properties Panel */}
+          <div className="fixed right-0 top-0 h-full z-50 transform transition-transform duration-300 ease-in-out">
+            <NodePropertiesPanel
+              selectedNode={selectedNode}
+              onClose={onClosePropertiesPanel}
+              onUpdateNode={onUpdateNode}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };
