@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Code2, Layers, Package, Users, LogOut, Bell, Moon, Sun, Home, 
+  Code2, Layers, Package, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
-  Menu, Check, Zap, Globe, Smartphone, Cpu, Terminal
+  Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon,
+  Globe2
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
@@ -77,6 +78,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <Home className="h-5 w-5" />
             <span className="font-medium">Dashboard</span>
           </button>
+          <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
           <button 
             onClick={() => router.push('/dashboard')}
             className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300"
@@ -84,9 +86,25 @@ const Dashboard: React.FC<DashboardProps> = ({
             <Layers className="h-5 w-5" />
             <span>My Projects</span>
           </button>
+          
+          <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
+          
           <button className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300">
-            <Package className="h-5 w-5" />
-            <span>Templates</span>
+            <Globe2 className="h-5 w-5" />
+            <span>Pages</span>
+          </button>
+          <button className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300">
+            <ServerIcon className="h-5 w-5" />
+            <span>Services</span>
+          </button>
+          <button className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300">
+            <Component className="h-5 w-5" />
+            <span>Components</span>
+          </button>
+          <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
+          <button className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300">
+            <Settings className="h-5 w-5" />
+            <span>Settings</span>
           </button>
           {userRole === 'admin' && (
             <>

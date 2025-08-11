@@ -38,7 +38,7 @@ export interface AdminStats {
 export type UserRole = 'user' | 'admin';
 export type UserTier = 'Junior' | 'Senior' | 'Specialist';
 export type PageType = 'landing' | 'login' | 'dashboard' | 'projects' | 'admin' | 'builder' | 'reactflow';
-export type AdminViewType = 'overview' | 'users';
+export type AdminViewType = 'overview' | 'users' | 'templates' | 'analytics' | 'logs';
 
 export interface AppState {
   currentPage: PageType;
