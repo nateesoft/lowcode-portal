@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { ADMIN_MOCK_STATS } from '@/lib/constants';
 import { AdminViewType } from '@/lib/types';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 interface AdminPanelProps {
   adminView: AdminViewType;
@@ -36,9 +37,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0`}>
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex items-center space-x-2">
-            <Shield className="h-8 w-8 text-red-600" />
-            <span className="text-xl font-bold text-slate-900 dark:text-white">Admin Panel</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Shield className="h-8 w-8 text-red-600" />
+              <span className="text-xl font-bold text-slate-900 dark:text-white">Admin Panel</span>
+            </div>
+            <ThemeToggle />
           </div>
         </div>
 
@@ -99,7 +103,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             <Shield className="h-6 w-6 text-red-600" />
             <span className="text-lg font-bold text-slate-900 dark:text-white">Admin</span>
           </div>
-          <div className="w-8"></div>
+          <ThemeToggle />
         </div>
         
         <div className="p-4 sm:p-8">
