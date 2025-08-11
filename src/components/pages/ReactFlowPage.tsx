@@ -12,7 +12,9 @@ import ReactFlow, {
   OnConnect,
   ReactFlowProvider,
   ReactFlowInstance,
-  NodeTypes
+  NodeTypes,
+  Handle,
+  Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
@@ -41,11 +43,21 @@ const CustomNode = ({ data, selected }: { data: NodeData; selected?: boolean }) 
   
   return (
     <div 
-      className={`px-4 py-2 shadow-lg rounded-lg border-2 transition-colors ${
+      className={`px-4 py-2 shadow-lg rounded-lg border-2 transition-colors relative ${
         selected ? 'border-blue-500 shadow-blue-200' : ''
       }`}
       style={nodeStyle}
     >
+      {/* Input Handle - Left side */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="input"
+        className="w-3 h-3 !bg-blue-500 !border-2 !border-white shadow-md"
+        style={{ left: -6 }}
+      />
+      
+      {/* Node Content */}
       <div className="flex items-center">
         {data.icon && <data.icon className="h-4 w-4 mr-2 text-blue-600" />}
         <div className="ml-2">
@@ -54,12 +66,14 @@ const CustomNode = ({ data, selected }: { data: NodeData; selected?: boolean }) 
         </div>
       </div>
       
-      <div className="flex justify-between mt-2">
-        <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow" 
-             style={{ marginLeft: '-8px', marginTop: '4px' }} />
-        <div className="w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow" 
-             style={{ marginRight: '-8px', marginTop: '4px' }} />
-      </div>
+      {/* Output Handle - Right side */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="output"
+        className="w-3 h-3 !bg-green-500 !border-2 !border-white shadow-md"
+        style={{ right: -6 }}
+      />
     </div>
   );
 };
@@ -93,7 +107,16 @@ const initialNodes: Node[] = [
 ];
 
 const initialEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2' },
+  { 
+    id: 'e1-2', 
+    source: '1', 
+    target: '2',
+    sourceHandle: 'output',
+    targetHandle: 'input',
+    type: 'smoothstep',
+    animated: true,
+    style: { stroke: '#3b82f6', strokeWidth: 2 }
+  },
 ];
 
 interface ReactFlowPageProps {

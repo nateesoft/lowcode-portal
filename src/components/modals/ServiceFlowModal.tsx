@@ -12,7 +12,9 @@ import ReactFlow, {
   OnConnect,
   ReactFlowProvider,
   ReactFlowInstance,
-  NodeTypes
+  NodeTypes,
+  Handle,
+  Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap } from 'lucide-react';
@@ -32,11 +34,21 @@ const ServiceNode = ({ data, selected }: { data: any; selected?: boolean }) => {
   
   return (
     <div 
-      className={`px-3 py-2 shadow-md rounded-md border-2 transition-colors ${
+      className={`px-3 py-2 shadow-md rounded-md border-2 transition-colors relative ${
         selected ? 'border-blue-500 shadow-blue-200' : ''
       }`}
       style={nodeStyle}
     >
+      {/* Input Handle - Left side */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="service-input"
+        className="w-3 h-3 !bg-purple-500 !border-2 !border-white shadow-md"
+        style={{ left: -6 }}
+      />
+      
+      {/* Service Node Content */}
       <div className="flex items-center">
         {data.icon && <data.icon className="h-3 w-3 mr-2 text-purple-600" />}
         <div>
@@ -45,12 +57,14 @@ const ServiceNode = ({ data, selected }: { data: any; selected?: boolean }) => {
         </div>
       </div>
       
-      <div className="flex justify-between mt-1">
-        <div className="w-3 h-3 bg-purple-500 rounded-full border border-white shadow-sm" 
-             style={{ marginLeft: '-6px', marginTop: '2px' }} />
-        <div className="w-3 h-3 bg-green-500 rounded-full border border-white shadow-sm" 
-             style={{ marginRight: '-6px', marginTop: '2px' }} />
-      </div>
+      {/* Output Handle - Right side */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="service-output"
+        className="w-3 h-3 !bg-green-500 !border-2 !border-white shadow-md"
+        style={{ right: -6 }}
+      />
     </div>
   );
 };
@@ -94,8 +108,26 @@ const initialServiceNodes: Node[] = [
 ];
 
 const initialServiceEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2', type: 'smoothstep' },
-  { id: 'e2-3', source: '2', target: '3', type: 'smoothstep' },
+  { 
+    id: 'e1-2', 
+    source: '1', 
+    target: '2', 
+    sourceHandle: 'service-output',
+    targetHandle: 'service-input',
+    type: 'smoothstep',
+    animated: true,
+    style: { stroke: '#10b981', strokeWidth: 2 }
+  },
+  { 
+    id: 'e2-3', 
+    source: '2', 
+    target: '3', 
+    sourceHandle: 'service-output',
+    targetHandle: 'service-input',
+    type: 'smoothstep',
+    animated: true,
+    style: { stroke: '#10b981', strokeWidth: 2 }
+  },
 ];
 
 const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
