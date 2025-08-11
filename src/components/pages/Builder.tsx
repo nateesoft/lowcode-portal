@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Code2, Save, Play, Layers, Menu, ArrowLeft, Plus,
   Smartphone, Globe, Database, Zap, Box
 } from 'lucide-react';
-import { Project, PageType } from '@/lib/types';
+import { Project } from '@/lib/types';
 
 interface BuilderProps {
   selectedProject: Project | null;
   mobileSidebarOpen: boolean;
   setMobileSidebarOpen: (open: boolean) => void;
-  setCurrentPage: (page: PageType) => void;
 }
 
 const Builder: React.FC<BuilderProps> = ({
   selectedProject,
   mobileSidebarOpen,
   setMobileSidebarOpen,
-  setCurrentPage,
 }) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('design');
 
   const componentCategories = [
@@ -64,7 +64,7 @@ const Builder: React.FC<BuilderProps> = ({
               <span className="font-bold text-slate-900 dark:text-white">Builder</span>
             </div>
             <button 
-              onClick={() => setCurrentPage('dashboard')}
+              onClick={() => router.push('/dashboard')}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
             >
               <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />

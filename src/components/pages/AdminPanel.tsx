@@ -1,17 +1,17 @@
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Users, Layers, Package, Activity, Terminal, Shield, BarChart3,
   Menu, Edit, Lock, Trash2, Eye
 } from 'lucide-react';
 import { ADMIN_MOCK_STATS } from '@/lib/constants';
-import { AdminViewType, PageType } from '@/lib/types';
+import { AdminViewType } from '@/lib/types';
 
 interface AdminPanelProps {
   adminView: AdminViewType;
   mobileSidebarOpen: boolean;
   setAdminView: (view: AdminViewType) => void;
   setMobileSidebarOpen: (open: boolean) => void;
-  setCurrentPage: (page: PageType) => void;
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -19,8 +19,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   mobileSidebarOpen,
   setAdminView,
   setMobileSidebarOpen,
-  setCurrentPage,
 }) => {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Mobile Sidebar Backdrop */}
@@ -77,7 +77,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
 
         <div className="absolute bottom-0 left-0 right-0 p-4">
           <button 
-            onClick={() => setCurrentPage('dashboard')}
+            onClick={() => router.push('/dashboard')}
             className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition"
           >
             Back to Dashboard

@@ -1,10 +1,11 @@
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Code2, Layers, Package, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
   Menu, Check, Zap, Globe, Smartphone, Cpu
 } from 'lucide-react';
-import { Project, UserRole, UserTier, PageType } from '@/lib/types';
+import { Project, UserRole, UserTier } from '@/lib/types';
 
 interface DashboardProps {
   projects: Project[];
@@ -15,7 +16,6 @@ interface DashboardProps {
   showCreateModal: boolean;
   selectedProject: Project | null;
   setMobileSidebarOpen: (open: boolean) => void;
-  setCurrentPage: (page: PageType) => void;
   setDarkMode: (dark: boolean) => void;
   setShowCreateModal: (show: boolean) => void;
   setSelectedProject: (project: Project | null) => void;
@@ -32,13 +32,13 @@ const Dashboard: React.FC<DashboardProps> = ({
   showCreateModal,
   selectedProject,
   setMobileSidebarOpen,
-  setCurrentPage,
   setDarkMode,
   setShowCreateModal,
   setSelectedProject,
   setIsAuthenticated,
   onShowCreateProject2Modal,
 }) => {
+  const router = useRouter();
   const stats = {
     totalProjects: projects.length,
     published: projects.filter(p => p.status === 'Published').length,
@@ -69,14 +69,14 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         <nav className="p-4 space-y-2">
           <button 
-            onClick={() => setCurrentPage('dashboard')}
+            onClick={() => router.push('/dashboard')}
             className="w-full flex items-center space-x-3 px-4 py-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg"
           >
             <Home className="h-5 w-5" />
             <span className="font-medium">Dashboard</span>
           </button>
           <button 
-            onClick={() => setCurrentPage('projects')}
+            onClick={() => router.push('/dashboard')}
             className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300"
           >
             <Layers className="h-5 w-5" />
@@ -92,7 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <span className="px-4 text-xs font-semibold text-slate-400 uppercase">Admin</span>
               </div>
               <button 
-                onClick={() => setCurrentPage('admin')}
+                onClick={() => router.push('/admin')}
                 className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300"
               >
                 <Shield className="h-5 w-5" />
@@ -125,7 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
             <button 
-              onClick={() => { setIsAuthenticated(false); setCurrentPage('landing'); }}
+              onClick={() => { setIsAuthenticated(false); router.push('/landing'); }}
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             >
               <LogOut className="h-5 w-5" />
@@ -307,7 +307,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       <span className="text-sm text-slate-500 dark:text-slate-400">{project.lastModified}</span>
                       <div className="flex items-center space-x-2">
                         <button 
-                          onClick={() => { setSelectedProject(project); setCurrentPage('builder'); }}
+                          onClick={() => { setSelectedProject(project); router.push('/builder'); }}
                           className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                         >
                           <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
@@ -376,7 +376,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <td className="py-4">
                           <div className="flex items-center space-x-2">
                             <button 
-                              onClick={() => { setSelectedProject(project); setCurrentPage('builder'); }}
+                              onClick={() => { setSelectedProject(project); router.push('/builder'); }}
                               className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                             >
                               <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
@@ -460,7 +460,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 Cancel
               </button>
               <button 
-                onClick={() => { setShowCreateModal(false); setCurrentPage('builder'); }}
+                onClick={() => { setShowCreateModal(false); router.push('/builder'); }}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition"
               >
                 Create Project

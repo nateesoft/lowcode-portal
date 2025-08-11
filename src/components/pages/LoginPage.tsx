@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { Code2 } from 'lucide-react';
-import { PageType, UserRole } from '@/lib/types';
+import { UserRole } from '@/lib/types';
 
 interface LoginPageProps {
   setIsAuthenticated: (authenticated: boolean) => void;
-  setCurrentPage: (page: PageType) => void;
   setUserRole: (role: UserRole) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({
   setIsAuthenticated,
-  setCurrentPage,
   setUserRole,
 }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -57,7 +55,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
           </div>
 
           <button 
-            onClick={() => { setIsAuthenticated(true); setCurrentPage('dashboard'); }}
+            onClick={() => setIsAuthenticated(true)}
             className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition transform hover:scale-105"
           >
             {isLogin ? 'Login' : 'Create Account'}
@@ -80,7 +78,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
 
         <div className="mt-4 text-center">
           <button 
-            onClick={() => { setIsAuthenticated(true); setUserRole('admin'); setCurrentPage('dashboard'); }}
+            onClick={() => { setIsAuthenticated(true); setUserRole('admin'); }}
             className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 underline"
           >
             Login as Admin (Demo)

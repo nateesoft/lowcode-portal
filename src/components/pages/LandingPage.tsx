@@ -1,19 +1,18 @@
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { Code2, Star, Check, Menu, X } from 'lucide-react';
 import { TEMPLATES, TIER_LIMITS } from '@/lib/constants';
-import { PageType } from '@/lib/types';
 
 interface LandingPageProps {
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
-  setCurrentPage: (page: PageType) => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({
   mobileMenuOpen,
   setMobileMenuOpen,
-  setCurrentPage,
 }) => {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
       {/* Navigation */}
@@ -31,7 +30,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Templates</button>
               <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Pricing</button>
               <button 
-                onClick={() => setCurrentPage('login')}
+                onClick={() => router.push('/login')}
                 className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition transform hover:scale-105"
               >
                 Get Started
@@ -57,7 +56,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
                 <button className="text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2">Templates</button>
                 <button className="text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2">Pricing</button>
                 <button 
-                  onClick={() => { setCurrentPage('login'); setMobileMenuOpen(false); }}
+                  onClick={() => { router.push('/login'); setMobileMenuOpen(false); }}
                   className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition text-center mt-4"
                 >
                   Get Started
@@ -79,7 +78,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 px-4">
             <button 
-              onClick={() => setCurrentPage('login')}
+              onClick={() => router.push('/login')}
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-lg font-semibold hover:shadow-xl transition transform hover:scale-105"
             >
               Start Building Free

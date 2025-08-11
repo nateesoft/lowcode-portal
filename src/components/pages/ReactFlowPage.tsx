@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -22,7 +23,6 @@ import {
   Database, Cpu, Box, Zap,
   Menu
 } from 'lucide-react';
-import { PageType } from '@/lib/types';
 import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
 
 // Custom Node Components
@@ -122,14 +122,13 @@ const initialEdges: Edge[] = [
 interface ReactFlowPageProps {
   mobileSidebarOpen: boolean;
   setMobileSidebarOpen: (open: boolean) => void;
-  setCurrentPage: (page: PageType) => void;
 }
 
 const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   mobileSidebarOpen,
   setMobileSidebarOpen,
-  setCurrentPage,
 }) => {
+  const router = useRouter();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -292,7 +291,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
               <span className="font-bold text-slate-900 dark:text-white">Flow Builder</span>
             </div>
             <button 
-              onClick={() => setCurrentPage('dashboard')}
+              onClick={() => router.push('/dashboard')}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
             >
               <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
@@ -358,7 +357,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button 
-                onClick={() => setCurrentPage('dashboard')}
+                onClick={() => router.push('/dashboard')}
                 className="hidden lg:flex items-center space-x-2 px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
               >
                 <ArrowLeft className="h-4 w-4" />
