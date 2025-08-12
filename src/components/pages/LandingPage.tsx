@@ -5,7 +5,9 @@ import { TEMPLATES, TIER_LIMITS } from '@/lib/constants';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import CurrencySwitcher from '@/components/ui/CurrencySwitcher';
+import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
 import { useTranslation } from 'react-i18next';
+import { useScrollToSection } from '@/hooks/useScrollToSection';
 
 interface LandingPageProps {
   mobileMenuOpen: boolean;
@@ -19,6 +21,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
   const router = useRouter();
   const { getPricing } = useCurrency();
   const { t } = useTranslation();
+  const { activeSection, scrollToSection } = useScrollToSection();
   const pricing = getPricing();
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
@@ -28,14 +31,35 @@ const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <Code2 className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">FlowCode</span>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">TON Lowcode</span>
             </div>
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-6">
-              <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Features</button>
-              <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Templates</button>
-              <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Pricing</button>
+              <button 
+                onClick={() => scrollToSection('features')}
+                className={`text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition ${
+                  activeSection === 'features' ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''
+                }`}
+              >
+                {t('features')}
+              </button>
+              <button 
+                onClick={() => scrollToSection('templates')}
+                className={`text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition ${
+                  activeSection === 'templates' ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''
+                }`}
+              >
+                {t('templates')}
+              </button>
+              <button 
+                onClick={() => scrollToSection('pricing')}
+                className={`text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition ${
+                  activeSection === 'pricing' ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''
+                }`}
+              >
+                {t('pricing')}
+              </button>
               <CurrencySwitcher />
               <LanguageSwitcher />
               <button 
@@ -61,9 +85,39 @@ const LandingPage: React.FC<LandingPageProps> = ({
           {mobileMenuOpen && (
             <div className="md:hidden border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-4">
               <div className="flex flex-col space-y-4 px-4">
-                <button className="text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2">Features</button>
-                <button className="text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2">Templates</button>
-                <button className="text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2">Pricing</button>
+                <button 
+                  onClick={() => {
+                    scrollToSection('features');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2 ${
+                    activeSection === 'features' ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''
+                  }`}
+                >
+                  {t('features')}
+                </button>
+                <button 
+                  onClick={() => {
+                    scrollToSection('templates');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2 ${
+                    activeSection === 'templates' ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''
+                  }`}
+                >
+                  {t('templates')}
+                </button>
+                <button 
+                  onClick={() => {
+                    scrollToSection('pricing');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`text-left text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition py-2 ${
+                    activeSection === 'pricing' ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''
+                  }`}
+                >
+                  {t('pricing')}
+                </button>
                 <button 
                   onClick={() => { router.push('/login'); setMobileMenuOpen(false); }}
                   className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition text-center mt-4"
@@ -77,7 +131,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-32 px-4">
+      <section id="home" className="pt-20 pb-32 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-slate-900 dark:text-white mb-6">
             Build Apps <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">10x Faster</span>
@@ -99,8 +153,38 @@ const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
+      {/* Features Section */}
+      <section id="features" className="py-20 bg-white dark:bg-slate-800">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">{t('powerfulFeatures')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Code2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">{t('visualDevelopment')}</h3>
+              <p className="text-slate-600 dark:text-slate-400">{t('visualDevelopmentDesc')}</p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Star className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">{t('aiPowered')}</h3>
+              <p className="text-slate-600 dark:text-slate-400">{t('aiPoweredDesc')}</p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Check className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">{t('productionReady')}</h3>
+              <p className="text-slate-600 dark:text-slate-400">{t('productionReadyDesc')}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Templates Section */}
-      <section className="py-20 bg-white dark:bg-slate-800">
+      <section id="templates" className="py-20 bg-slate-50 dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">Start with Production-Ready Templates</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -126,7 +210,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 bg-slate-50 dark:bg-slate-900">
+      <section id="pricing" className="py-20 bg-white dark:bg-slate-800">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">Simple, Transparent Pricing</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -166,6 +250,9 @@ const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Scroll to Top Button */}
+      <ScrollToTopButton />
     </div>
   );
 };

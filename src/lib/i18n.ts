@@ -109,7 +109,17 @@ const resources = {
       "open": "Open",
       "language": "Language",
       "currency": "Currency",
-      "selectCurrency": "Select Currency"
+      "selectCurrency": "Select Currency",
+      "features": "Features",
+      "templates": "Templates",
+      "pricing": "Pricing",
+      "powerfulFeatures": "Powerful Features",
+      "visualDevelopment": "Visual Development",
+      "visualDevelopmentDesc": "Build applications with drag-and-drop components and visual workflows",
+      "aiPowered": "AI-Powered",
+      "aiPoweredDesc": "Leverage artificial intelligence to generate code and automate workflows",
+      "productionReady": "Production Ready",
+      "productionReadyDesc": "Deploy scalable applications with enterprise-grade security and performance"
     }
   },
   th: {
@@ -218,7 +228,17 @@ const resources = {
       "open": "เปิด",
       "language": "ภาษา",
       "currency": "สกุลเงิน",
-      "selectCurrency": "เลือกสกุลเงิน"
+      "selectCurrency": "เลือกสกุลเงิน",
+      "features": "คุณสมบัติ",
+      "templates": "เทมเพลต",
+      "pricing": "แผนราคา",
+      "powerfulFeatures": "คุณสมบัติที่ทรงพลัง",
+      "visualDevelopment": "การพัฒนาแบบ Visual",
+      "visualDevelopmentDesc": "สร้างแอปพลิเคชันด้วยการลากวางคอมโพเนนต์และเวิร์กโฟลว์แบบ visual",
+      "aiPowered": "ขับเคลื่อนด้วย AI",
+      "aiPoweredDesc": "ใช้ประโยชน์จากปัญญาประดิษฐ์ในการสร้างโค้ดและระบบอัตโนมัติ",
+      "productionReady": "พร้อมใช้งานจริง",
+      "productionReadyDesc": "ปรับใช้แอปพลิเคชันที่สามารถขยายขนาดได้พร้อมความปลอดภัยและประสิทธิภาพระดับองค์กร"
     }
   }
 };
