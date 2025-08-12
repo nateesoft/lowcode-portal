@@ -1,30 +1,45 @@
 import React, { useState } from 'react';
-import { Node } from 'reactflow';
-import { X, Settings, Database, Globe, Smartphone, Cpu, Box, Zap, Code, Workflow } from 'lucide-react';
+import { Node, Edge, MarkerType } from 'reactflow';
+import { X, Settings, Database, Globe, Smartphone, Cpu, Box, Zap, Code, Workflow, ArrowRight } from 'lucide-react';
 import WeUIModal from '@/components/modals/WeUIModal';
 import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
 
 interface NodePropertiesPanelProps {
   selectedNode: Node | null;
+  selectedEdge?: Edge | null;
   onClose: () => void;
   onUpdateNode: (nodeId: string, updates: Partial<Node['data']>) => void;
+  onUpdateEdge?: (edgeId: string, updates: Partial<Edge>) => void;
 }
 
 const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
   selectedNode,
+  selectedEdge,
   onClose,
   onUpdateNode,
+  onUpdateEdge,
 }) => {
   const [showWeUIModal, setShowWeUIModal] = useState(false);
   const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
   
-  if (!selectedNode) return null;
+  if (!selectedNode && !selectedEdge) return null;
 
   const handleInputChange = (field: string, value: string) => {
-    onUpdateNode(selectedNode.id, {
-      ...selectedNode.data,
-      [field]: value
-    });
+    if (selectedNode) {
+      onUpdateNode(selectedNode.id, {
+        ...selectedNode.data,
+        [field]: value
+      });
+    }
+  };
+
+  const handleEdgeInputChange = (field: string, value: any) => {
+    if (selectedEdge && onUpdateEdge) {
+      onUpdateEdge(selectedEdge.id, {
+        ...selectedEdge,
+        [field]: value
+      });
+    }
   };
 
   const getNodeIcon = (nodeData: Record<string, unknown>) => {
@@ -41,7 +56,15 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
     return icons[iconName] || Box;
   };
 
-  const IconComponent = getNodeIcon(selectedNode.data);
+  const IconComponent = selectedNode ? getNodeIcon(selectedNode.data) : ArrowRight;
+
+  const edgeTypes = [
+    { value: 'default', label: 'Default' },
+    { value: 'straight', label: 'Straight' },
+    { value: 'step', label: 'Step' },
+    { value: 'smoothstep', label: 'Smooth Step' },
+    { value: 'bezier', label: 'Bezier' }
+  ];
 
   return (
     <div className="w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col h-full shadow-2xl">
@@ -49,7 +72,9 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750">
         <div className="flex items-center space-x-2">
           <Settings className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-          <h3 className="font-semibold text-slate-900 dark:text-white">Node Properties</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white">
+            {selectedNode ? 'Node Properties' : 'Edge Properties'}
+          </h3>
         </div>
         <button 
           onClick={onClose}
@@ -66,22 +91,122 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
         
         <div className="h-full overflow-y-auto scrollbar-thin p-4">
           <div className="space-y-6 pb-8 pt-2">
-            {/* Node Header */}
+            {/* Header */}
             <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
               <IconComponent className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               <div>
                 <div className="font-medium text-slate-900 dark:text-white">
-                  {selectedNode.data.label}
+                  {selectedNode ? selectedNode.data.label : 'Connection'}
                 </div>
                 <div className="text-sm text-slate-500 dark:text-slate-400">
-                  ID: {selectedNode.id}
+                  ID: {selectedNode ? selectedNode.id : selectedEdge?.id}
                 </div>
               </div>
             </div>
 
-            {/* Basic Properties */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Basic Properties</h4>
+            {/* Edge Properties */}
+            {selectedEdge && (
+              <>
+                <div className="space-y-4">
+                  <h4 className="font-medium text-slate-900 dark:text-white">Connection Type</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Line Type
+                    </label>
+                    <select
+                      value={selectedEdge.type || 'default'}
+                      onChange={(e) => handleEdgeInputChange('type', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    >
+                      {edgeTypes.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Animation
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedEdge.animated || false}
+                        onChange={(e) => handleEdgeInputChange('animated', e.target.checked)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Animated</span>
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Arrow Type
+                    </label>
+                    <select
+                      value={
+                        typeof selectedEdge.markerEnd === 'object' && selectedEdge.markerEnd?.type 
+                          ? selectedEdge.markerEnd.type 
+                          : MarkerType.ArrowClosed
+                      }
+                      onChange={(e) => handleEdgeInputChange('markerEnd', {
+                        type: e.target.value as MarkerType,
+                        color: '#3b82f6'
+                      })}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    >
+                      <option value={MarkerType.Arrow}>Arrow</option>
+                      <option value={MarkerType.ArrowClosed}>Arrow Closed</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Line Color
+                    </label>
+                    <input
+                      type="color"
+                      value={(selectedEdge.style as any)?.stroke || '#3b82f6'}
+                      onChange={(e) => handleEdgeInputChange('style', {
+                        ...(selectedEdge.style || {}),
+                        stroke: e.target.value
+                      })}
+                      className="w-full h-10 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                      Line Width
+                    </label>
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      value={(selectedEdge.style as any)?.strokeWidth || 2}
+                      onChange={(e) => handleEdgeInputChange('style', {
+                        ...(selectedEdge.style || {}),
+                        strokeWidth: parseInt(e.target.value)
+                      })}
+                      className="w-full"
+                    />
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {(selectedEdge.style as any)?.strokeWidth || 2}px
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Node Properties */}
+            {selectedNode && (
+              <>
+                {/* Basic Properties */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-slate-900 dark:text-white">Basic Properties</h4>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -354,28 +479,30 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Actions</h4>
-              
-              <div className="space-y-3">
-                <button
-                  onClick={() => setShowWeUIModal(true)}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                  <Code className="h-4 w-4" />
-                  <span>Open WeUI</span>
-                </button>
-                
-                <button
-                  onClick={() => setShowServiceFlowModal(true)}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                >
-                  <Workflow className="h-4 w-4" />
-                  <span>Open Service Flow</span>
-                </button>
-              </div>
-            </div>
+                {/* Action Buttons */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-slate-900 dark:text-white">Actions</h4>
+                  
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setShowWeUIModal(true)}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    >
+                      <Code className="h-4 w-4" />
+                      <span>Open WeUI</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setShowServiceFlowModal(true)}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                    >
+                      <Workflow className="h-4 w-4" />
+                      <span>Open Service Flow</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
         

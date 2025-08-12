@@ -15,7 +15,8 @@ import ReactFlow, {
   ReactFlowInstance,
   NodeTypes,
   Handle,
-  Position
+  Position,
+  MarkerType
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
@@ -113,9 +114,13 @@ const initialEdges: Edge[] = [
     target: '2',
     sourceHandle: 'output',
     targetHandle: 'input',
-    type: 'smoothstep',
+    type: 'default',
     animated: true,
-    style: { stroke: '#3b82f6', strokeWidth: 2 }
+    style: { stroke: '#3b82f6', strokeWidth: 2 },
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      color: '#3b82f6',
+    }
   },
 ];
 
@@ -134,23 +139,42 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
   const onConnect: OnConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
+    (params) => {
+      const newEdge = {
+        ...params,
+        type: 'default',
+        animated: true,
+        style: { stroke: '#3b82f6', strokeWidth: 2 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#3b82f6',
+        }
+      };
+      setEdges((eds) => addEdge(newEdge, eds));
+    },
     [setEdges],
   );
 
   const onInit = (rfi: ReactFlowInstance) => setReactFlowInstance(rfi);
 
   const onSelectionChange = useCallback(
-    ({ nodes: selectedNodes }: { nodes: Node[]; edges: Edge[] }) => {
+    ({ nodes: selectedNodes, edges: selectedEdges }: { nodes: Node[]; edges: Edge[] }) => {
       if (selectedNodes.length === 1) {
         setSelectedNode(selectedNodes[0]);
+        setSelectedEdge(null);
+        setShowPropertiesPanel(true);
+      } else if (selectedEdges.length === 1) {
+        setSelectedEdge(selectedEdges[0]);
+        setSelectedNode(null);
         setShowPropertiesPanel(true);
       } else {
         setSelectedNode(null);
+        setSelectedEdge(null);
         setShowPropertiesPanel(false);
       }
     },
@@ -174,11 +198,30 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     [setNodes, selectedNode],
   );
 
+  const onUpdateEdge = useCallback(
+    (edgeId: string, updates: Partial<Edge>) => {
+      setEdges((eds) =>
+        eds.map((edge) =>
+          edge.id === edgeId
+            ? { ...edge, ...updates }
+            : edge
+        )
+      );
+      
+      if (selectedEdge && selectedEdge.id === edgeId) {
+        setSelectedEdge(prev => prev ? { ...prev, ...updates } : null);
+      }
+    },
+    [setEdges, selectedEdge],
+  );
+
   const onClosePropertiesPanel = useCallback(() => {
     setShowPropertiesPanel(false);
     setSelectedNode(null);
+    setSelectedEdge(null);
     if (reactFlowInstance) {
       reactFlowInstance.setNodes((nds) => nds.map(node => ({ ...node, selected: false })));
+      reactFlowInstance.setEdges((eds) => eds.map(edge => ({ ...edge, selected: false })));
     }
   }, [reactFlowInstance]);
 
@@ -449,8 +492,10 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           <div className="fixed right-0 top-0 h-full z-50 transform transition-transform duration-300 ease-in-out">
             <NodePropertiesPanel
               selectedNode={selectedNode}
+              selectedEdge={selectedEdge}
               onClose={onClosePropertiesPanel}
               onUpdateNode={onUpdateNode}
+              onUpdateEdge={onUpdateEdge}
             />
           </div>
         </>
