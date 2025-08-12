@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Code, Save, Eye, Settings, Plus, Trash2, Copy, FileText } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Code, Save, Eye, Settings, Plus, Trash2, Copy, FileText, Layout, Type, Hash, Calendar, CheckSquare, ToggleLeft, List, Image, FileUp, Rows, Columns, Square, Layers } from 'lucide-react';
 
 interface WeUIModalProps {
   isOpen: boolean;
@@ -14,6 +14,8 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('schema');
   const [showTemplates, setShowTemplates] = useState(false);
+  const [dragDropElements, setDragDropElements] = useState<any[]>([]);
+  const [dragDropSchema, setDragDropSchema] = useState('{}');
   const [jsonSchema, setJsonSchema] = useState(`{
   "type": "object",
   "title": "User Registration Form",
@@ -172,20 +174,131 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     }
   ];
 
-  if (!isOpen) return null;
-
   const tabs = [
     { id: 'schema', name: 'JSON Schema', icon: Code },
     { id: 'ui', name: 'UI Schema', icon: Settings },
     { id: 'data', name: 'Form Data', icon: Copy },
+    { id: 'designer', name: 'Visual Designer', icon: Layout },
     { id: 'preview', name: 'Preview', icon: Eye }
   ];
 
+  const layoutElements = [
+    { id: 'vertical', name: 'Vertical Layout', icon: Rows, type: 'layout', isContainer: true, direction: 'column', columns: 1 },
+    { id: 'horizontal', name: 'Horizontal Layout', icon: Columns, type: 'layout', isContainer: true, direction: 'row', columns: 2 },
+    { id: 'container', name: 'Container', icon: Square, type: 'layout', isContainer: true, direction: 'column', columns: 1 }
+  ];
+
+  const uiElements = [
+    { id: 'text', name: 'Text Input', icon: Type, type: 'string', widget: 'text' },
+    { id: 'email', name: 'Email', icon: Type, type: 'string', widget: 'email' },
+    { id: 'password', name: 'Password', icon: Type, type: 'string', widget: 'password' },
+    { id: 'number', name: 'Number', icon: Hash, type: 'number', widget: 'number' },
+    { id: 'textarea', name: 'Textarea', icon: Type, type: 'string', widget: 'textarea' },
+    { id: 'date', name: 'Date', icon: Calendar, type: 'string', widget: 'date' },
+    { id: 'checkbox', name: 'Checkbox', icon: CheckSquare, type: 'boolean', widget: 'checkbox' },
+    { id: 'radio', name: 'Radio', icon: ToggleLeft, type: 'string', widget: 'radio' },
+    { id: 'select', name: 'Select', icon: List, type: 'string', widget: 'select' },
+    { id: 'file', name: 'File Upload', icon: FileUp, type: 'string', widget: 'file' },
+    { id: 'image', name: 'Image', icon: Image, type: 'string', widget: 'image' }
+  ];
+
   const handleSaveSchema = () => {
-    // Here you would save the schema to your backend or state management
-    console.log('Saving WeUI Schema:', { jsonSchema, uiSchema, formData });
+    // Generate schema from drag-drop elements if in designer mode
+    if (activeTab === 'designer' && dragDropElements.length > 0) {
+      const generatedSchema = generateSchemaFromElements();
+      console.log('Saving WeUI Schema (Generated):', generatedSchema);
+    } else {
+      console.log('Saving WeUI Schema:', { jsonSchema, uiSchema, formData });
+    }
     onClose();
   };
+
+  const generateSchemaFromElements = () => {
+    const properties: any = {};
+    const uiSchemaObj: any = {};
+    const required: string[] = [];
+
+    dragDropElements.forEach((element, index) => {
+      const fieldName = element.fieldName || `field_${index + 1}`;
+      
+      properties[fieldName] = {
+        type: element.type,
+        title: element.title || element.name,
+        ...(element.enum && { enum: element.enum }),
+        ...(element.default !== undefined && { default: element.default })
+      };
+
+      if (element.required) {
+        required.push(fieldName);
+      }
+
+      uiSchemaObj[fieldName] = {
+        'ui:widget': element.widget,
+        ...(element.placeholder && { 'ui:placeholder': element.placeholder }),
+        ...(element.help && { 'ui:help': element.help })
+      };
+    });
+
+    const schema = {
+      type: 'object',
+      title: 'Generated Form',
+      properties,
+      ...(required.length > 0 && { required })
+    };
+
+    // Update the schemas
+    setJsonSchema(JSON.stringify(schema, null, 2));
+    setUISchema(JSON.stringify(uiSchemaObj, null, 2));
+
+    return { schema, uiSchema: uiSchemaObj };
+  };
+
+  // Parse JSON Schema to extract dynamic elements
+  const dynamicElements = useMemo(() => {
+    try {
+      const schema = JSON.parse(jsonSchema);
+      const elements: any[] = [];
+      
+      if (schema.properties) {
+        Object.entries(schema.properties).forEach(([key, property]: [string, any]) => {
+          const getWidgetFromType = (type: string, format?: string) => {
+            if (format === 'email') return 'email';
+            if (format === 'date') return 'date';
+            if (type === 'string') return 'text';
+            if (type === 'number' || type === 'integer') return 'number';
+            if (type === 'boolean') return 'checkbox';
+            if (type === 'array') return 'select';
+            return 'text';
+          };
+
+          const getIconFromType = (type: string, format?: string) => {
+            if (format === 'email') return 'email';
+            if (format === 'date') return 'date';
+            if (type === 'string') return 'text';
+            if (type === 'number' || type === 'integer') return 'number';
+            if (type === 'boolean') return 'checkbox';
+            if (type === 'array') return 'select';
+            return 'text';
+          };
+
+          elements.push({
+            id: `schema_${key}`,
+            name: property.title || key,
+            icon: getIconFromType(property.type, property.format),
+            type: property.type,
+            widget: getWidgetFromType(property.type, property.format),
+            isFromSchema: true,
+            fieldName: key,
+            schemaProperty: property
+          });
+        });
+      }
+      
+      return elements;
+    } catch (error) {
+      return [];
+    }
+  }, [jsonSchema]);
 
   const renderPreview = () => {
     return (
@@ -278,6 +391,484 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     );
   };
 
+  const onDragStart = (event: React.DragEvent, element: any) => {
+    event.dataTransfer.setData('application/json', JSON.stringify(element));
+    event.dataTransfer.effectAllowed = 'copy';
+  };
+
+  const onDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+
+  const onDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    const elementData = JSON.parse(event.dataTransfer.getData('application/json'));
+    
+    const newElement = {
+      ...elementData,
+      id: `${elementData.id}_${Date.now()}`,
+      fieldName: elementData.type === 'layout' ? undefined : (elementData.fieldName || `${elementData.id}_${dragDropElements.length + 1}`),
+      title: elementData.name,
+      placeholder: elementData.type === 'layout' ? undefined : (elementData.schemaProperty?.description || `Enter ${elementData.name.toLowerCase()}`),
+      required: elementData.schemaProperty?.required || false,
+      iconName: elementData.icon || elementData.id, // Store icon name instead of icon component
+      children: elementData.isContainer ? [] : undefined, // Add children array for containers
+      isFromSchema: elementData.isFromSchema || false,
+      schemaProperty: elementData.schemaProperty
+    };
+    
+    setDragDropElements(prev => [...prev, newElement]);
+  };
+
+  const onDropToContainer = (event: React.DragEvent, containerId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const elementData = JSON.parse(event.dataTransfer.getData('application/json'));
+    
+    // Don't allow containers inside containers for simplicity
+    if (elementData.isContainer) return;
+    
+    const newElement = {
+      ...elementData,
+      id: `${elementData.id}_${Date.now()}`,
+      fieldName: `${elementData.id}_${Date.now()}`,
+      title: elementData.name,
+      placeholder: `Enter ${elementData.name.toLowerCase()}`,
+      required: false,
+      iconName: elementData.id,
+      parentId: containerId
+    };
+    
+    setDragDropElements(prev => 
+      prev.map(el => 
+        el.id === containerId 
+          ? { ...el, children: [...(el.children || []), newElement] }
+          : el
+      )
+    );
+  };
+
+  const removeElement = (elementId: string, parentId?: string) => {
+    if (parentId) {
+      // Remove from container
+      setDragDropElements(prev => 
+        prev.map(el => 
+          el.id === parentId 
+            ? { ...el, children: el.children?.filter(child => child.id !== elementId) || [] }
+            : el
+        )
+      );
+    } else {
+      // Remove from root
+      setDragDropElements(prev => prev.filter(el => el.id !== elementId));
+    }
+  };
+
+  const updateElement = (elementId: string, updates: any, parentId?: string) => {
+    if (parentId) {
+      // Update element inside container
+      setDragDropElements(prev => 
+        prev.map(el => 
+          el.id === parentId 
+            ? { 
+                ...el, 
+                children: el.children?.map(child => 
+                  child.id === elementId ? { ...child, ...updates } : child
+                ) || []
+              }
+            : el
+        )
+      );
+    } else {
+      // Update root element
+      setDragDropElements(prev => 
+        prev.map(el => el.id === elementId ? { ...el, ...updates } : el)
+      );
+    }
+  };
+
+  const renderDesigner = () => {
+    return (
+      <div className="flex-1 flex min-h-0">
+        {/* Tools Panel */}
+        <div className="w-64 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col">
+          <div className="p-4 flex-1 overflow-y-auto">
+          {/* Layout Elements */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Layout</h3>
+            <div className="space-y-2">
+              {layoutElements.map((element) => {
+                const IconComponent = element.icon;
+                return (
+                  <div
+                    key={element.id}
+                    draggable
+                    onDragStart={(e) => onDragStart(e, element)}
+                    className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-600 rounded-lg cursor-move hover:border-blue-400 dark:hover:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors shadow-sm"
+                  >
+                    <IconComponent className="h-4 w-4 text-blue-700 dark:text-blue-300" />
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{element.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Dynamic Elements from Schema */}
+          {dynamicElements.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center space-x-2">
+                <Layers className="h-4 w-4" />
+                <span>From Schema</span>
+              </h3>
+              <div className="space-y-2">
+                {dynamicElements.map((element) => {
+                  const getIconComponent = (iconName: string) => {
+                    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+                      text: Type,
+                      email: Type,
+                      password: Type,
+                      number: Hash,
+                      textarea: Type,
+                      date: Calendar,
+                      checkbox: CheckSquare,
+                      radio: ToggleLeft,
+                      select: List,
+                      file: FileUp,
+                      image: Image
+                    };
+                    return iconMap[iconName] || Type;
+                  };
+                  
+                  const IconComponent = getIconComponent(element.icon);
+                  
+                  return (
+                    <div
+                      key={element.id}
+                      draggable
+                      onDragStart={(e) => onDragStart(e, element)}
+                      className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-600 rounded-lg cursor-move hover:border-green-400 dark:hover:border-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors shadow-sm"
+                    >
+                      <IconComponent className="h-4 w-4 text-green-700 dark:text-green-300" />
+                      <span className="text-sm font-medium text-green-800 dark:text-green-200">{element.name}</span>
+                      <div className="ml-auto">
+                        <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
+                          {element.type}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Form Elements */}
+          <div>
+            <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Form Elements</h3>
+            <div className="space-y-2">
+              {uiElements.map((element) => {
+                const IconComponent = element.icon;
+                return (
+                  <div
+                    key={element.id}
+                    draggable
+                    onDragStart={(e) => onDragStart(e, element)}
+                    className="flex items-center space-x-2 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-move hover:border-slate-400 dark:hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                  >
+                    <IconComponent className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{element.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Generate JSON Button */}
+          <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <button
+              onClick={generateSchemaFromElements}
+              className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Code className="h-4 w-4" />
+              <span>Generate JSON</span>
+            </button>
+          </div>
+          </div>
+        </div>
+
+        {/* Drop Area */}
+        <div className="flex-1 p-4">
+          <div
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            className={`h-full border-2 border-dashed rounded-lg p-4 transition-colors overflow-y-auto ${
+              dragDropElements.length === 0 
+                ? 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50' 
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+            }`}
+          >
+            {dragDropElements.length === 0 ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <Layout className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                    Drag & Drop Form Elements
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400">
+                    Drag elements from the left panel to build your form
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 sticky top-0 bg-white dark:bg-slate-800 pb-2 border-b border-slate-200 dark:border-slate-700">Form Preview</h3>
+                {dragDropElements.map((element) => {
+                  // Get icon component from iconName
+                  const getIconComponent = (iconName: string) => {
+                    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+                      text: Type,
+                      email: Type,
+                      password: Type,
+                      number: Hash,
+                      textarea: Type,
+                      date: Calendar,
+                      checkbox: CheckSquare,
+                      radio: ToggleLeft,
+                      select: List,
+                      file: FileUp,
+                      image: Image,
+                      vertical: Rows,
+                      horizontal: Columns,
+                      container: Square
+                    };
+                    return iconMap[iconName] || Type;
+                  };
+                  
+                  const IconComponent = getIconComponent(element.iconName || element.id);
+                  
+                  // Render container layout
+                  if (element.isContainer) {
+                    return (
+                      <div key={element.id} className="group relative border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg bg-blue-50/50 dark:bg-blue-900/10 p-4">
+                        {/* Container Controls */}
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                          <button
+                            onClick={() => removeElement(element.id)}
+                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Container Header */}
+                        <div className="flex items-center space-x-2 mb-3">
+                          <IconComponent className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            {element.title}
+                          </span>
+                          <span className="text-xs text-blue-500 dark:text-blue-400">
+                            ({element.direction === 'row' ? 'Horizontal' : 'Vertical'})
+                          </span>
+                        </div>
+
+                        {/* Container Properties */}
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                              Direction
+                            </label>
+                            <select
+                              value={element.direction || 'column'}
+                              onChange={(e) => updateElement(element.id, { direction: e.target.value })}
+                              className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                            >
+                              <option value="column">Vertical</option>
+                              <option value="row">Horizontal</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                              Columns/Rows
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="12"
+                              value={element.columns || 1}
+                              onChange={(e) => updateElement(element.id, { columns: parseInt(e.target.value) })}
+                              className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                              Gap
+                            </label>
+                            <select
+                              value={element.gap || 'medium'}
+                              onChange={(e) => updateElement(element.id, { gap: e.target.value })}
+                              className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                            >
+                              <option value="small">Small</option>
+                              <option value="medium">Medium</option>
+                              <option value="large">Large</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Container Drop Area */}
+                        <div
+                          onDragOver={onDragOver}
+                          onDrop={(e) => onDropToContainer(e, element.id)}
+                          className={`min-h-[100px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-2 transition-colors ${
+                            element.children && element.children.length > 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50 dark:bg-slate-700'
+                          }`}
+                          style={{
+                            display: element.direction === 'row' ? 'flex' : 'block',
+                            flexDirection: element.direction === 'row' ? 'row' : 'column',
+                            gap: element.gap === 'small' ? '8px' : element.gap === 'large' ? '16px' : '12px'
+                          }}
+                        >
+                          {element.children && element.children.length > 0 ? (
+                            element.children.map((child: any) => {
+                              const ChildIconComponent = getIconComponent(child.iconName || child.id);
+                              return (
+                                <div key={child.id} className="group relative p-3 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-800 flex-1">
+                                  {/* Child Controls */}
+                                  <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => removeElement(child.id, element.id)}
+                                      className="p-0.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-xs"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+
+                                  {/* Child Element */}
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <ChildIconComponent className="h-3 w-3 text-slate-600 dark:text-slate-400" />
+                                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                      {child.title}
+                                    </span>
+                                  </div>
+
+                                  {/* Child Properties */}
+                                  <div className="space-y-2">
+                                    <input
+                                      type="text"
+                                      value={child.fieldName || ''}
+                                      onChange={(e) => updateElement(child.id, { fieldName: e.target.value }, element.id)}
+                                      placeholder="Field name"
+                                      className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={child.placeholder || ''}
+                                      onChange={(e) => updateElement(child.id, { placeholder: e.target.value }, element.id)}
+                                      placeholder="Placeholder"
+                                      className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">
+                              <div className="text-center">
+                                <Layout className="h-8 w-8 mx-auto mb-2" />
+                                <p className="text-xs">Drop form elements here</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Render regular form element
+                  return (
+                    <div key={element.id} className="group relative p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800">
+                      {/* Element Controls */}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => removeElement(element.id)}
+                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* Element Info */}
+                      <div className="flex items-center space-x-2 mb-3">
+                        <IconComponent className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                          {element.title}
+                        </span>
+                      </div>
+
+                      {/* Element Properties */}
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                            Field Name
+                          </label>
+                          <input
+                            type="text"
+                            value={element.fieldName || ''}
+                            onChange={(e) => updateElement(element.id, { fieldName: e.target.value })}
+                            className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                            Title
+                          </label>
+                          <input
+                            type="text"
+                            value={element.title}
+                            onChange={(e) => updateElement(element.id, { title: e.target.value })}
+                            className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                            Placeholder
+                          </label>
+                          <input
+                            type="text"
+                            value={element.placeholder || ''}
+                            onChange={(e) => updateElement(element.id, { placeholder: e.target.value })}
+                            className="w-full px-2 py-1 text-xs border border-slate-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div className="flex items-center">
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={element.required || false}
+                              onChange={(e) => updateElement(element.id, { required: e.target.checked })}
+                              className="rounded border-slate-300 dark:border-slate-600"
+                            />
+                            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Required</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderEditor = () => {
     let content = jsonSchema;
     let onChange = setJsonSchema;
@@ -325,6 +916,8 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
       </div>
     );
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -384,25 +977,27 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
 
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-hidden flex flex-col">
-          {activeTab === 'preview' ? renderPreview() : renderEditor()}
+          {activeTab === 'preview' ? renderPreview() : 
+           activeTab === 'designer' ? renderDesigner() : 
+           renderEditor()}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750">
+        <div className="flex items-center justify-between p-6 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <div className="flex items-center space-x-4">
-            <button className="flex items-center space-x-2 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+            <button className="flex items-center space-x-2 px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 rounded-lg border border-slate-200 dark:border-slate-600 transition-all">
               <Plus className="h-4 w-4" />
-              <span>Add Field</span>
+              <span className="font-medium">Add Field</span>
             </button>
-            <button className="flex items-center space-x-2 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+            <button className="flex items-center space-x-2 px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 rounded-lg border border-slate-200 dark:border-slate-600 transition-all">
               <Copy className="h-4 w-4" />
-              <span>Clone Schema</span>
+              <span className="font-medium">Clone Schema</span>
             </button>
           </div>
           <div className="flex items-center space-x-2">
-            <button className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+            <button className="flex items-center space-x-2 px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 rounded-lg border border-red-200 dark:border-red-800 transition-all">
               <Trash2 className="h-4 w-4" />
-              <span>Clear</span>
+              <span className="font-medium">Clear</span>
             </button>
           </div>
         </div>
