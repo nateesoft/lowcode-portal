@@ -107,7 +107,9 @@ const resources = {
       "save": "Save",
       "close": "Close",
       "open": "Open",
-      "language": "Language"
+      "language": "Language",
+      "currency": "Currency",
+      "selectCurrency": "Select Currency"
     }
   },
   th: {
@@ -214,7 +216,9 @@ const resources = {
       "save": "บันทึก",
       "close": "ปิด",
       "open": "เปิด",
-      "language": "ภาษา"
+      "language": "ภาษา",
+      "currency": "สกุลเงิน",
+      "selectCurrency": "เลือกสกุลเงิน"
     }
   }
 };

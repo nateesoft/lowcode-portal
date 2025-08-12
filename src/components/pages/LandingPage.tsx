@@ -2,6 +2,10 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Code2, Star, Check, Menu, X } from 'lucide-react';
 import { TEMPLATES, TIER_LIMITS } from '@/lib/constants';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
+import CurrencySwitcher from '@/components/ui/CurrencySwitcher';
+import { useTranslation } from 'react-i18next';
 
 interface LandingPageProps {
   mobileMenuOpen: boolean;
@@ -13,6 +17,9 @@ const LandingPage: React.FC<LandingPageProps> = ({
   setMobileMenuOpen,
 }) => {
   const router = useRouter();
+  const { getPricing } = useCurrency();
+  const { t } = useTranslation();
+  const pricing = getPricing();
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
       {/* Navigation */}
@@ -29,6 +36,8 @@ const LandingPage: React.FC<LandingPageProps> = ({
               <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Features</button>
               <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Templates</button>
               <button className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition">Pricing</button>
+              <CurrencySwitcher />
+              <LanguageSwitcher />
               <button 
                 onClick={() => router.push('/login')}
                 className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition transform hover:scale-105"
@@ -125,7 +134,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               <div key={tier} className={`bg-white dark:bg-slate-800 rounded-xl p-8 ${index === 1 ? 'ring-2 ring-blue-600 transform scale-105' : ''}`}>
                 <h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">{tier}</h3>
                 <div className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">
-                  {tier === 'Junior' ? 'Free' : tier === 'Senior' ? '$10/mo' : '$100/mo'}
+                  {pricing[tier]?.monthly}/mo
                 </div>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center text-slate-600 dark:text-slate-300">

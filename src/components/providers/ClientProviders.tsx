@@ -3,6 +3,7 @@
 import React from 'react';
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import "@/lib/i18n";
 
 interface ClientProvidersProps {
@@ -13,7 +14,9 @@ export function ClientProviders({ children }: ClientProvidersProps) {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        {children}
+        <CurrencyProvider>
+          {children}
+        </CurrencyProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

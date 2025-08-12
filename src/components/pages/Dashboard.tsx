@@ -9,6 +9,7 @@ import {
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
+import CurrencySwitcher from '@/components/ui/CurrencySwitcher';
 import { useTranslation } from 'react-i18next';
 
 interface DashboardProps {
@@ -686,6 +687,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
               <Bell className="h-5 w-5" />
             </button>
+            <CurrencySwitcher />
             <LanguageSwitcher />
             <button 
               onClick={() => setDarkMode(!darkMode)}
@@ -707,6 +709,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                 <Bell className="h-5 w-5" />
               </button>
+              <CurrencySwitcher />
               <LanguageSwitcher />
               <button 
                 onClick={() => setDarkMode(!darkMode)}
