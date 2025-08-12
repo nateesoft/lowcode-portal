@@ -528,7 +528,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center space-x-2">
             <Code2 className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">TON Lowcode</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">TON NOW</span>
           </div>
         </div>
 
@@ -681,7 +681,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </button>
           <div className="flex items-center space-x-2">
             <Code2 className="h-6 w-6 text-blue-600" />
-            <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">TON Lowcode</span>
+            <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">TON NOW</span>
           </div>
           <div className="flex items-center space-x-2">
             <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
