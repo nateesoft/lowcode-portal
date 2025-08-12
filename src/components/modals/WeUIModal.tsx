@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Code, Save, Eye, Settings, Plus, Trash2, Copy, FileText, Layout, Type, Hash, Calendar, CheckSquare, ToggleLeft, List, Image, FileUp, Rows, Columns, Square, Layers } from 'lucide-react';
+import { X, Code, Save, Eye, Settings, Plus, Trash2, Copy, FileText, Layout, Type, Hash, Calendar, CheckSquare, ToggleLeft, List, Image, FileUp, Rows, Columns, Square, Layers, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface WeUIModalProps {
   isOpen: boolean;
@@ -16,6 +16,18 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
   const [showTemplates, setShowTemplates] = useState(false);
   const [dragDropElements, setDragDropElements] = useState<any[]>([]);
   const [dragDropSchema, setDragDropSchema] = useState('{}');
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    layout: false,
+    schema: false,
+    elements: false
+  });
+
+  const toggleSection = (sectionName: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [sectionName]: !prev[sectionName]
+    }));
+  };
   const [jsonSchema, setJsonSchema] = useState(`{
   "type": "object",
   "title": "User Registration Form",
@@ -497,93 +509,129 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
           <div className="p-4 flex-1 overflow-y-auto">
           {/* Layout Elements */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Layout</h3>
-            <div className="space-y-2">
-              {layoutElements.map((element) => {
-                const IconComponent = element.icon;
-                return (
-                  <div
-                    key={element.id}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, element)}
-                    className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-600 rounded-lg cursor-move hover:border-blue-400 dark:hover:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors shadow-sm"
-                  >
-                    <IconComponent className="h-4 w-4 text-blue-700 dark:text-blue-300" />
-                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{element.name}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Dynamic Elements from Schema */}
-          {dynamicElements.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3 flex items-center space-x-2">
-                <Layers className="h-4 w-4" />
-                <span>From Schema</span>
-              </h3>
-              <div className="space-y-2">
-                {dynamicElements.map((element) => {
-                  const getIconComponent = (iconName: string) => {
-                    const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-                      text: Type,
-                      email: Type,
-                      password: Type,
-                      number: Hash,
-                      textarea: Type,
-                      date: Calendar,
-                      checkbox: CheckSquare,
-                      radio: ToggleLeft,
-                      select: List,
-                      file: FileUp,
-                      image: Image
-                    };
-                    return iconMap[iconName] || Type;
-                  };
-                  
-                  const IconComponent = getIconComponent(element.icon);
-                  
+            <button
+              onClick={() => toggleSection('layout')}
+              className="w-full flex items-center justify-between text-sm font-medium text-slate-900 dark:text-white mb-3 hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg transition-colors"
+            >
+              <span>Layout</span>
+              {collapsedSections.layout ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+            {!collapsedSections.layout && (
+              <div className="space-y-2 transition-all duration-200 ease-in-out">
+                {layoutElements.map((element) => {
+                  const IconComponent = element.icon;
                   return (
                     <div
                       key={element.id}
                       draggable
                       onDragStart={(e) => onDragStart(e, element)}
-                      className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-600 rounded-lg cursor-move hover:border-green-400 dark:hover:border-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors shadow-sm"
+                      className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-600 rounded-lg cursor-move hover:border-blue-400 dark:hover:border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors shadow-sm"
                     >
-                      <IconComponent className="h-4 w-4 text-green-700 dark:text-green-300" />
-                      <span className="text-sm font-medium text-green-800 dark:text-green-200">{element.name}</span>
-                      <div className="ml-auto">
-                        <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
-                          {element.type}
-                        </span>
-                      </div>
+                      <IconComponent className="h-4 w-4 text-blue-700 dark:text-blue-300" />
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{element.name}</span>
                     </div>
                   );
                 })}
               </div>
+            )}
+          </div>
+
+          {/* Dynamic Elements from Schema */}
+          {dynamicElements.length > 0 && (
+            <div className="mb-6">
+              <button
+                onClick={() => toggleSection('schema')}
+                className="w-full flex items-center justify-between text-sm font-medium text-slate-900 dark:text-white mb-3 hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg transition-colors"
+              >
+                <div className="flex items-center space-x-2">
+                  <Layers className="h-4 w-4" />
+                  <span>From Schema</span>
+                </div>
+                {collapsedSections.schema ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
+              {!collapsedSections.schema && (
+                <div className="space-y-2 transition-all duration-200 ease-in-out">
+                  {dynamicElements.map((element) => {
+                    const getIconComponent = (iconName: string) => {
+                      const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+                        text: Type,
+                        email: Type,
+                        password: Type,
+                        number: Hash,
+                        textarea: Type,
+                        date: Calendar,
+                        checkbox: CheckSquare,
+                        radio: ToggleLeft,
+                        select: List,
+                        file: FileUp,
+                        image: Image
+                      };
+                      return iconMap[iconName] || Type;
+                    };
+                    
+                    const IconComponent = getIconComponent(element.icon);
+                    
+                    return (
+                      <div
+                        key={element.id}
+                        draggable
+                        onDragStart={(e) => onDragStart(e, element)}
+                        className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-600 rounded-lg cursor-move hover:border-green-400 dark:hover:border-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors shadow-sm"
+                      >
+                        <IconComponent className="h-4 w-4 text-green-700 dark:text-green-300" />
+                        <span className="text-sm font-medium text-green-800 dark:text-green-200">{element.name}</span>
+                        <div className="ml-auto">
+                          <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
+                            {element.type}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
           {/* Form Elements */}
           <div>
-            <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">Form Elements</h3>
-            <div className="space-y-2">
-              {uiElements.map((element) => {
-                const IconComponent = element.icon;
-                return (
-                  <div
-                    key={element.id}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, element)}
-                    className="flex items-center space-x-2 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-move hover:border-slate-400 dark:hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors shadow-sm"
-                  >
-                    <IconComponent className="h-4 w-4 text-slate-700 dark:text-slate-300" />
-                    <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{element.name}</span>
-                  </div>
-                );
-              })}
-            </div>
+            <button
+              onClick={() => toggleSection('elements')}
+              className="w-full flex items-center justify-between text-sm font-medium text-slate-900 dark:text-white mb-3 hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded-lg transition-colors"
+            >
+              <span>Form Elements</span>
+              {collapsedSections.elements ? (
+                <ChevronRight className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+            {!collapsedSections.elements && (
+              <div className="space-y-2 transition-all duration-200 ease-in-out">
+                {uiElements.map((element) => {
+                  const IconComponent = element.icon;
+                  return (
+                    <div
+                      key={element.id}
+                      draggable
+                      onDragStart={(e) => onDragStart(e, element)}
+                      className="flex items-center space-x-2 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-move hover:border-slate-400 dark:hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                    >
+                      <IconComponent className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+                      <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{element.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
           
           {/* Generate JSON Button */}
