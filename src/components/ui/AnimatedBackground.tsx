@@ -5,6 +5,12 @@ import React, { useEffect, useState } from 'react';
 const AnimatedBackground: React.FC = () => {
   const [scrollY, setScrollY] = useState(0);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isClient, setIsClient] = useState(false);
+
+  // Client-side hydration check
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Track scroll position for parallax effect with throttling
   useEffect(() => {
@@ -116,19 +122,28 @@ const AnimatedBackground: React.FC = () => {
       />
 
       {/* Floating particles */}
-      {[...Array(12)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-2 h-2 bg-blue-500/20 rounded-full animate-pulse will-change-transform"
-          style={{
-            top: `${Math.random() * 100}%`,
-            left: `${Math.random() * 100}%`,
-            transform: `translate3d(${mousePosition.x * (0.01 + Math.random() * 0.02)}px, ${scrollY * -(0.1 + Math.random() * 0.2)}px, 0)`,
-            animationDuration: `${3 + Math.random() * 4}s`,
-            animationDelay: `${Math.random() * 3}s`
-          }}
-        />
-      ))}
+      {isClient && [...Array(12)].map((_, i) => {
+        const seed = i * 123.456;
+        const pseudoRandom1 = (Math.sin(seed) + 1) / 2;
+        const pseudoRandom2 = (Math.sin(seed * 2) + 1) / 2;
+        const pseudoRandom3 = (Math.sin(seed * 3) + 1) / 2;
+        const pseudoRandom4 = (Math.sin(seed * 4) + 1) / 2;
+        const pseudoRandom5 = (Math.sin(seed * 5) + 1) / 2;
+        
+        return (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-blue-500/20 rounded-full animate-pulse will-change-transform"
+            style={{
+              top: `${pseudoRandom1 * 100}%`,
+              left: `${pseudoRandom2 * 100}%`,
+              transform: `translate3d(${mousePosition.x * (0.01 + pseudoRandom3 * 0.02)}px, ${scrollY * -(0.1 + pseudoRandom4 * 0.2)}px, 0)`,
+              animationDuration: `${3 + pseudoRandom5 * 4}s`,
+              animationDelay: `${pseudoRandom1 * 3}s`
+            }}
+          />
+        );
+      })}
 
       {/* Additional flowing gradients for depth */}
       <div 
