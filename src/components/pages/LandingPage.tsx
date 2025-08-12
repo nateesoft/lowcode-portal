@@ -6,6 +6,7 @@ import { useCurrency } from '@/contexts/CurrencyContext';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import CurrencySwitcher from '@/components/ui/CurrencySwitcher';
 import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
+import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import { useTranslation } from 'react-i18next';
 import { useScrollToSection } from '@/hooks/useScrollToSection';
 
@@ -24,9 +25,12 @@ const LandingPage: React.FC<LandingPageProps> = ({
   const { activeSection, scrollToSection } = useScrollToSection();
   const pricing = getPricing();
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen relative">
+      {/* Animated Background */}
+      <AnimatedBackground />
+      
       {/* Navigation */}
-      <nav className="border-b border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+      <nav className="border-b border-white/20 dark:border-slate-700/20 bg-white/10 dark:bg-slate-900/10 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
@@ -154,26 +158,26 @@ const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white dark:bg-slate-800">
+      <section id="features" className="py-20 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">{t('powerfulFeatures')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center p-8 bg-white/20 dark:bg-slate-800/20 backdrop-blur-md rounded-2xl border border-white/20 dark:border-slate-700/20 hover:bg-white/30 dark:hover:bg-slate-800/30 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500/30 to-blue-600/30 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Code2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">{t('visualDevelopment')}</h3>
               <p className="text-slate-600 dark:text-slate-400">{t('visualDevelopmentDesc')}</p>
             </div>
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center p-8 bg-white/20 dark:bg-slate-800/20 backdrop-blur-md rounded-2xl border border-white/20 dark:border-slate-700/20 hover:bg-white/30 dark:hover:bg-slate-800/30 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500/30 to-green-600/30 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Star className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">{t('aiPowered')}</h3>
               <p className="text-slate-600 dark:text-slate-400">{t('aiPoweredDesc')}</p>
             </div>
-            <div className="text-center p-6">
-              <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center p-8 bg-white/20 dark:bg-slate-800/20 backdrop-blur-md rounded-2xl border border-white/20 dark:border-slate-700/20 hover:bg-white/30 dark:hover:bg-slate-800/30 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500/30 to-purple-600/30 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <Check className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
               <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">{t('productionReady')}</h3>
@@ -184,12 +188,12 @@ const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Templates Section */}
-      <section id="templates" className="py-20 bg-slate-50 dark:bg-slate-900">
+      <section id="templates" className="py-20 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">Start with Production-Ready Templates</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {TEMPLATES.map(template => (
-              <div key={template.id} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-6 hover:shadow-xl transition transform hover:scale-105 cursor-pointer">
+              <div key={template.id} className="bg-white/25 dark:bg-slate-800/25 backdrop-blur-md rounded-2xl p-6 border border-white/20 dark:border-slate-700/20 hover:bg-white/35 dark:hover:bg-slate-800/35 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer">
                 <div className="text-4xl mb-4">{template.icon}</div>
                 <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">{template.name}</h3>
                 <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 rounded text-sm mb-3">
@@ -210,12 +214,12 @@ const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-white dark:bg-slate-800">
+      <section id="pricing" className="py-20 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">Simple, Transparent Pricing</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {['Junior', 'Senior', 'Specialist'].map((tier, index) => (
-              <div key={tier} className={`bg-white dark:bg-slate-800 rounded-xl p-8 ${index === 1 ? 'ring-2 ring-blue-600 transform scale-105' : ''}`}>
+              <div key={tier} className={`bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-8 border border-white/20 dark:border-slate-700/20 hover:bg-white/40 dark:hover:bg-slate-800/40 transition-all duration-300 hover:shadow-2xl ${index === 1 ? 'ring-2 ring-blue-500/50 transform scale-105 bg-white/40 dark:bg-slate-800/40' : ''}`}>
                 <h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">{tier}</h3>
                 <div className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">
                   {pricing[tier]?.monthly}/mo
