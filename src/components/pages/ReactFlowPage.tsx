@@ -14,15 +14,19 @@ import ReactFlow, {
   ReactFlowProvider,
   ReactFlowInstance,
   NodeTypes,
+  EdgeTypes,
   Handle,
   Position,
-  MarkerType
+  MarkerType,
+  getBezierPath,
+  EdgeLabelRenderer,
+  BaseEdge
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
   ArrowLeft, Save, Play, Download, Upload, 
   Database, Cpu, Box, Zap,
-  Menu, ChevronDown, ChevronRight
+  Menu, ChevronDown, ChevronRight, Plus
 } from 'lucide-react';
 import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
 
@@ -79,8 +83,54 @@ const CustomNode = ({ data, selected }: { data: NodeData; selected?: boolean }) 
   );
 };
 
+// Custom Edge with + button
+const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style = {}, markerEnd, data }: any) => {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  const onEdgeClick = (event: React.MouseEvent, edgeId: string) => {
+    event.stopPropagation();
+    // This will be handled by the parent component
+    window.dispatchEvent(new CustomEvent('edgeButtonClick', { detail: { edgeId, x: labelX, y: labelY } }));
+  };
+
+  return (
+    <>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            fontSize: 12,
+            pointerEvents: 'all',
+          }}
+          className="nodrag nopan"
+        >
+          <button
+            className="w-6 h-6 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center text-xs border-2 border-white shadow-lg transition-colors"
+            onClick={(event) => onEdgeClick(event, id)}
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+};
+
 const nodeTypes: NodeTypes = {
   custom: CustomNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  custom: CustomEdge,
 };
 
 // Initial nodes and edges
@@ -114,7 +164,7 @@ const initialEdges: Edge[] = [
     target: '2',
     sourceHandle: 'output',
     targetHandle: 'input',
-    type: 'default',
+    type: 'custom',
     animated: true,
     style: { stroke: '#3b82f6', strokeWidth: 2 },
     markerEnd: {
@@ -142,12 +192,13 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [showNodeSelector, setShowNodeSelector] = useState<{show: boolean, edgeId: string, position: {x: number, y: number}} | null>(null);
 
   const onConnect: OnConnect = useCallback(
     (params) => {
       const newEdge = {
         ...params,
-        type: 'default',
+        type: 'custom',
         animated: true,
         style: { stroke: '#3b82f6', strokeWidth: 2 },
         markerEnd: {
@@ -160,7 +211,26 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     [setEdges],
   );
 
-  const onInit = (rfi: ReactFlowInstance) => setReactFlowInstance(rfi);
+  const onInit = (rfi: ReactFlowInstance) => {
+    setReactFlowInstance(rfi);
+    
+    // Listen for edge button clicks
+    const handleEdgeButtonClick = (event: any) => {
+      const { edgeId, x, y } = event.detail;
+      const screenPos = rfi.flowToScreenPosition({ x, y });
+      setShowNodeSelector({
+        show: true,
+        edgeId,
+        position: { x: screenPos.x, y: screenPos.y }
+      });
+    };
+    
+    window.addEventListener('edgeButtonClick', handleEdgeButtonClick);
+    
+    return () => {
+      window.removeEventListener('edgeButtonClick', handleEdgeButtonClick);
+    };
+  };
 
   const onSelectionChange = useCallback(
     ({ nodes: selectedNodes, edges: selectedEdges }: { nodes: Node[]; edges: Edge[] }) => {
@@ -247,8 +317,11 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           y: event.clientY - reactFlowBounds.top,
         });
 
+        // Check if dropping on an edge
+        const edgeAtPosition = findEdgeAtPosition(position.x, position.y);
+        
         const newNode: Node = {
-          id: `${nodes.length + 1}`,
+          id: `${Date.now()}`, // Use timestamp for unique ID
           type: 'custom',
           position,
           data: {
@@ -258,10 +331,16 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           },
         };
 
-        setNodes((nds) => nds.concat(newNode));
+        if (edgeAtPosition) {
+          // Insert node between connected nodes
+          insertNodeOnEdge(newNode, edgeAtPosition);
+        } else {
+          // Add node normally
+          setNodes((nds) => nds.concat(newNode));
+        }
       }
     },
-    [reactFlowInstance, nodes, setNodes],
+    [reactFlowInstance, nodes, setNodes, edges],
   );
 
   const getNodeDescription = (type: string) => {
@@ -328,6 +407,137 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       }
       return newSet;
     });
+  };
+
+  // Helper function to find edge at position
+  const findEdgeAtPosition = (x: number, y: number) => {
+    const tolerance = 20; // pixels
+    
+    for (const edge of edges) {
+      const sourceNode = nodes.find(node => node.id === edge.source);
+      const targetNode = nodes.find(node => node.id === edge.target);
+      
+      if (!sourceNode || !targetNode) continue;
+      
+      // Simple distance check for straight lines
+      const sourceX = sourceNode.position.x + 100; // Approximate node center
+      const sourceY = sourceNode.position.y + 25;
+      const targetX = targetNode.position.x + 100;
+      const targetY = targetNode.position.y + 25;
+      
+      // Check if point is near the line between source and target
+      const distanceToLine = distancePointToLine(x, y, sourceX, sourceY, targetX, targetY);
+      
+      if (distanceToLine < tolerance) {
+        return edge;
+      }
+    }
+    
+    return null;
+  };
+
+  // Helper function to calculate distance from point to line
+  const distancePointToLine = (px: number, py: number, x1: number, y1: number, x2: number, y2: number) => {
+    const A = px - x1;
+    const B = py - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+    
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+    
+    if (lenSq !== 0) {
+      param = dot / lenSq;
+    }
+    
+    let xx, yy;
+    
+    if (param < 0) {
+      xx = x1;
+      yy = y1;
+    } else if (param > 1) {
+      xx = x2;
+      yy = y2;
+    } else {
+      xx = x1 + param * C;
+      yy = y1 + param * D;
+    }
+    
+    const dx = px - xx;
+    const dy = py - yy;
+    
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // Helper function to insert node on edge
+  const insertNodeOnEdge = (newNode: Node, edge: Edge) => {
+    // Add the new node
+    setNodes((nds) => nds.concat(newNode));
+    
+    // Remove the original edge and create two new edges
+    setEdges((eds) => {
+      const filteredEdges = eds.filter(e => e.id !== edge.id);
+      
+      const newEdge1: Edge = {
+        id: `${edge.source}-${newNode.id}`,
+        source: edge.source,
+        target: newNode.id,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: 'input',
+        type: edge.type || 'custom',
+        animated: edge.animated,
+        style: edge.style,
+        markerEnd: edge.markerEnd
+      };
+      
+      const newEdge2: Edge = {
+        id: `${newNode.id}-${edge.target}`,
+        source: newNode.id,
+        target: edge.target,
+        sourceHandle: 'output',
+        targetHandle: edge.targetHandle,
+        type: edge.type || 'custom',
+        animated: edge.animated,
+        style: edge.style,
+        markerEnd: edge.markerEnd
+      };
+      
+      return [...filteredEdges, newEdge1, newEdge2];
+    });
+  };
+
+  // Handle node selection from edge button
+  const handleNodeSelection = (nodeType: string) => {
+    if (!showNodeSelector || !reactFlowInstance) return;
+    
+    const edge = edges.find(e => e.id === showNodeSelector.edgeId);
+    if (!edge) return;
+    
+    // Calculate position at the middle of the edge
+    const sourceNode = nodes.find(n => n.id === edge.source);
+    const targetNode = nodes.find(n => n.id === edge.target);
+    
+    if (!sourceNode || !targetNode) return;
+    
+    const position = {
+      x: (sourceNode.position.x + targetNode.position.x) / 2,
+      y: (sourceNode.position.y + targetNode.position.y) / 2,
+    };
+    
+    const newNode: Node = {
+      id: `${Date.now()}`,
+      type: 'custom',
+      position,
+      data: {
+        label: nodeType,
+        description: getNodeDescription(nodeType),
+        icon: getNodeIcon(nodeType)
+      },
+    };
+    
+    insertNodeOnEdge(newNode, edge);
+    setShowNodeSelector(null);
   };
 
   return (
@@ -466,6 +676,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
             onDragOver={onDragOver}
             onSelectionChange={onSelectionChange}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             fitView
             className="bg-teal-50 dark:bg-slate-900"
           >
@@ -497,6 +708,41 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
               onUpdateNode={onUpdateNode}
               onUpdateEdge={onUpdateEdge}
             />
+          </div>
+        </>
+      )}
+
+      {/* Node Selector Modal */}
+      {showNodeSelector && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/20 z-50"
+            onClick={() => setShowNodeSelector(null)}
+          />
+          
+          {/* Node Selector Popup */}
+          <div 
+            className="fixed z-50 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 p-3 min-w-48"
+            style={{
+              left: showNodeSelector.position.x - 96, // Center the popup
+              top: showNodeSelector.position.y - 60, // Position above the button
+            }}
+          >
+            <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Select Node Type
+            </div>
+            <div className="space-y-1">
+              {nodeCategories.flatMap(category => category.items).map((nodeType) => (
+                <button
+                  key={nodeType}
+                  onClick={() => handleNodeSelection(nodeType)}
+                  className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 text-slate-700 dark:text-slate-300 transition-colors"
+                >
+                  {nodeType}
+                </button>
+              ))}
+            </div>
           </div>
         </>
       )}
