@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
+import { useTranslation } from 'react-i18next';
 
 interface DashboardProps {
   projects: Project[];
@@ -41,6 +43,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onShowCreateSmartFlowModal,
 }) => {
   const router = useRouter();
+  const { t } = useTranslation();
   const [showSiteMap, setShowSiteMap] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const stats = {
@@ -56,14 +59,14 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">My Projects</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('myProjects')}</h2>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button 
                   onClick={() => onShowCreateSmartFlowModal?.()}
                   className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Project
+                  {t('createProject')}
                 </button>
               </div>
             </div>
@@ -128,10 +131,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Pages</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('pages')}</h2>
               <button className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center">
                 <Plus className="h-4 w-4 mr-2" />
-                New Page
+                {t('newPage')}
               </button>
             </div>
             <div className="p-4 sm:p-6">
@@ -174,10 +177,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Services</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('services')}</h2>
               <button className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center">
                 <Plus className="h-4 w-4 mr-2" />
-                New Service
+                {t('newService')}
               </button>
             </div>
             <div className="p-4 sm:p-6">
@@ -229,10 +232,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Components</h2>
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('components')}</h2>
               <button className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center">
                 <Plus className="h-4 w-4 mr-2" />
-                New Component
+                {t('newComponent')}
               </button>
             </div>
             <div className="p-4 sm:p-6">
@@ -538,7 +541,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             }`}
           >
             <Home className="h-5 w-5" />
-            <span className="font-medium">Dashboard</span>
+            <span className="font-medium">{t('dashboard')}</span>
           </button>
           <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
           <button 
@@ -550,7 +553,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             }`}
           >
             <Layers className="h-5 w-5" />
-            <span>My Projects</span>
+            <span>{t('myProjects')}</span>
           </button>
           
           <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
@@ -564,7 +567,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             }`}
           >
             <Globe2 className="h-5 w-5" />
-            <span>Pages</span>
+            <span>{t('pages')}</span>
           </button>
           <button 
             onClick={() => setActiveView('services')}
@@ -575,7 +578,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             }`}
           >
             <ServerIcon className="h-5 w-5" />
-            <span>Services</span>
+            <span>{t('services')}</span>
           </button>
           <button 
             onClick={() => setActiveView('components')}
@@ -586,7 +589,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             }`}
           >
             <Component className="h-5 w-5" />
-            <span>Components</span>
+            <span>{t('components')}</span>
           </button>
           <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
           <button 
@@ -598,7 +601,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             }`}
           >
             <Settings className="h-5 w-5" />
-            <span>Settings</span>
+            <span>{t('settings')}</span>
           </button>
           {userRole === 'admin' && (
             <>
@@ -610,7 +613,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300"
               >
                 <Shield className="h-5 w-5" />
-                <span>Admin Panel</span>
+                <span>{t('adminPanel')}</span>
               </button>
               <button 
                 onClick={() => setActiveView('users')}
@@ -621,7 +624,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 }`}
               >
                 <Users className="h-5 w-5" />
-                <span>Users</span>
+                <span>{t('users')}</span>
               </button>
               <button 
                 onClick={() => setActiveView('analytics')}
@@ -632,7 +635,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 }`}
               >
                 <Activity className="h-5 w-5" />
-                <span>Analytics</span>
+                <span>{t('analytics')}</span>
               </button>
             </>
           )}
@@ -660,7 +663,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </button>
           </div>
           <button className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition">
-            Upgrade Plan
+{t('upgradePlan')}
           </button>
         </div>
       </div>
@@ -683,6 +686,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
               <Bell className="h-5 w-5" />
             </button>
+            <LanguageSwitcher />
             <button 
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
@@ -696,13 +700,14 @@ const Dashboard: React.FC<DashboardProps> = ({
           {/* Header - Desktop only */}
           <div className="hidden lg:flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Welcome back!</h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">Here's what's happening with your projects</p>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('welcomeBack')}</h1>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">{t('whatsHappening')}</p>
             </div>
             <div className="flex items-center space-x-4">
               <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                 <Bell className="h-5 w-5" />
               </button>
+              <LanguageSwitcher />
               <button 
                 onClick={() => setDarkMode(!darkMode)}
                 className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
@@ -714,8 +719,8 @@ const Dashboard: React.FC<DashboardProps> = ({
           
           {/* Mobile Header */}
           <div className="lg:hidden mb-6">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome back!</h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">Here's what's happening</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('welcomeBack')}</h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">{t('whatsHappeningMobile')}</p>
           </div>
 
           {/* Render content based on active view */}
@@ -734,7 +739,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                   </div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalProjects}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Total Projects</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">{t('totalProjects')}</div>
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
@@ -748,7 +753,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                   </div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.published}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Published</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">{t('published')}</div>
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
@@ -762,7 +767,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                   </div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalTasks}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Total Tasks</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">{t('totalTasks')}</div>
                 </div>
 
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
@@ -775,21 +780,21 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </span>
                   </div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.completedTasks}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">Completed Tasks</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400">{t('completedTasks')}</div>
                 </div>
               </div>
 
               {/* Recent Projects */}
               <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Recent Projects</h2>
+                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('recentProjects')}</h2>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button 
                       onClick={() => setShowCreateModal(true)}
                       className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      New Project (Demo)
+                      {t('newProjectDemo')}
                     </button>
                   </div>
                 </div>
@@ -815,7 +820,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                         <div className="mb-3">
                           <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-sm text-slate-600 dark:text-slate-400">Progress:</span>
+                            <span className="text-sm text-slate-600 dark:text-slate-400">{t('progress')}:</span>
                             <span className="text-sm text-slate-600 dark:text-slate-400">
                               {project.completed}/{project.tasks}
                             </span>
@@ -853,12 +858,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <table className="w-full">
                       <thead>
                         <tr className="text-left text-sm text-slate-600 dark:text-slate-400">
-                          <th className="pb-4">Project Name</th>
-                          <th className="pb-4">Type</th>
-                          <th className="pb-4">Status</th>
-                          <th className="pb-4">Progress</th>
-                          <th className="pb-4">Last Modified</th>
-                          <th className="pb-4">Actions</th>
+                          <th className="pb-4">{t('projectName')}</th>
+                          <th className="pb-4">{t('type')}</th>
+                          <th className="pb-4">{t('status')}</th>
+                          <th className="pb-4">{t('progress')}</th>
+                          <th className="pb-4">{t('lastModified')}</th>
+                          <th className="pb-4">{t('actions')}</th>
                         </tr>
                       </thead>
                       <tbody className="space-y-2">
@@ -948,14 +953,16 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Project Type</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {['Full-Stack', 'Single Web', 'Microservice', 'Script Logic'].map(type => (
-                    <button key={type} className="p-4 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition text-left">
-                      <div className="font-medium text-slate-900 dark:text-white">{type}</div>
+                  {[
+                    { key: 'Full-Stack', label: t('fullStack'), desc: t('fullStackDesc') },
+                    { key: 'Single Web', label: t('singleWeb'), desc: t('singleWebDesc') },
+                    { key: 'Microservice', label: t('microservice'), desc: t('microserviceDesc') },
+                    { key: 'Script Logic', label: t('scriptLogic'), desc: t('scriptLogicDesc') }
+                  ].map(type => (
+                    <button key={type.key} className="p-4 border-2 border-slate-300 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition text-left">
+                      <div className="font-medium text-slate-900 dark:text-white">{type.label}</div>
                       <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                        {type === 'Full-Stack' && 'Complete web application'}
-                        {type === 'Single Web' && 'Single page application'}
-                        {type === 'Microservice' && 'API service'}
-                        {type === 'Script Logic' && 'Automation workflow'}
+                        {type.desc}
                       </div>
                     </button>
                   ))}
