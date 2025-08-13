@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Code2, Layers, Package, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
+  Code2, Layers, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
   Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon,
-  Globe2
+  Globe2, MessageCircle
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
@@ -13,6 +13,7 @@ import CurrencySwitcher from '@/components/ui/CurrencySwitcher';
 import { useTranslation } from 'react-i18next';
 import WeUIModal from '@/components/modals/WeUIModal';
 import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
+import { useChatbot } from '@/contexts/ChatbotContext';
 
 interface DashboardProps {
   projects: Project[];
@@ -37,16 +38,17 @@ const Dashboard: React.FC<DashboardProps> = ({
   darkMode,
   mobileSidebarOpen,
   showCreateModal,
-  selectedProject,
+  selectedProject: _selectedProject,
   setMobileSidebarOpen,
   setDarkMode,
   setShowCreateModal,
   setSelectedProject,
   setIsAuthenticated,
-  onShowCreateSmartFlowModal,
+  onShowCreateSmartFlowModal
 }) => {
   const router = useRouter();
   const { t } = useTranslation();
+  const { openChatbot } = useChatbot();
   const [showSiteMap, setShowSiteMap] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const [showWeUIModal, setShowWeUIModal] = useState(false);
@@ -721,6 +723,13 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="flex items-center space-x-4">
               <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
                 <Bell className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={openChatbot}
+                className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                title="เปิด AI Assistant"
+              >
+                <MessageCircle className="h-5 w-5" />
               </button>
               <CurrencySwitcher />
               <LanguageSwitcher />
