@@ -57,12 +57,12 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
   const isServiceNode = !isFlowchartNode;
 
   return (
-    <div className="w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col h-full shadow-2xl">
+    <div className="w-64 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col h-full shadow-2xl">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750">
+      <div className="flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-green-100 to-slate-50 dark:bg-gradient-to-r dark:from-green-900/20 dark:to-slate-900">
         <div className="flex items-center space-x-2">
           <Settings className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-          <h3 className="font-semibold text-slate-900 dark:text-white">
+          <h3 className="font-semibold text-white dark:text-white">
             {isFlowchartNode ? 'Shape Properties' : 'Service Properties'}
           </h3>
         </div>
@@ -82,7 +82,7 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
         <div className="h-full overflow-y-auto scrollbar-thin p-4">
           <div className="space-y-6 pb-8 pt-2">
             {/* Node Header */}
-            <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+            <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-green-50 to-slate-50 dark:bg-gradient-to-r dark:from-green-900/30 dark:to-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
               <IconComponent className="h-6 w-6 text-green-600 dark:text-green-400" />
               <div>
                 <div className="font-medium text-slate-900 dark:text-white">
@@ -96,7 +96,7 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
 
             {/* Basic Properties */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Basic Properties</h4>
+              <h4 className="font-medium text-white dark:text-white">Basic Properties</h4>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -126,7 +126,7 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
 
             {/* Position Properties */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Position</h4>
+              <h4 className="font-medium text-white dark:text-white">Position</h4>
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -157,7 +157,7 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
             {/* Service-specific Properties */}
             {isServiceNode && (
               <div className="space-y-4">
-                <h4 className="font-medium text-slate-900 dark:text-white">Service Configuration</h4>
+                <h4 className="font-medium text-white dark:text-white">Service Configuration</h4>
                 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -210,7 +210,7 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
             {/* Flowchart-specific Properties */}
             {isFlowchartNode && (
               <div className="space-y-4">
-                <h4 className="font-medium text-slate-900 dark:text-white">Flowchart Configuration</h4>
+                <h4 className="font-medium text-white dark:text-white">Flowchart Configuration</h4>
                 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -247,7 +247,7 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
 
             {/* Styling Properties */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Styling</h4>
+              <h4 className="font-medium text-white dark:text-white">Styling</h4>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -276,7 +276,7 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
 
             {/* Code Generation */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Code Generation</h4>
+              <h4 className="font-medium text-white dark:text-white">Code Generation</h4>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">

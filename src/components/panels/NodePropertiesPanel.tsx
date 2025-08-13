@@ -67,12 +67,12 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
   ];
 
   return (
-    <div className="w-80 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col h-full shadow-2xl">
+    <div className="w-56 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col h-full shadow-2xl">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750">
+      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-slate-50 dark:bg-gradient-to-r dark:from-blue-900/20 dark:to-slate-900">
         <div className="flex items-center space-x-2">
           <Settings className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-          <h3 className="font-semibold text-slate-900 dark:text-blue">
+          <h3 className="font-semibold text-white dark:text-white">
             {selectedNode ? 'Node Properties' : 'Edge Properties'}
           </h3>
         </div>
@@ -92,7 +92,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
         <div className="h-full overflow-y-auto scrollbar-thin p-4">
           <div className="space-y-6 pb-8 pt-2">
             {/* Header */}
-            <div className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+            <div className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-slate-50 dark:bg-gradient-to-r dark:from-blue-900/30 dark:to-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
               <IconComponent className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               <div>
                 <div className="font-medium text-slate-900 dark:text-white">
@@ -108,7 +108,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
             {selectedEdge && (
               <>
                 <div className="space-y-4">
-                  <h4 className="font-medium text-slate-900 dark:text-white">Connection Type</h4>
+                  <h4 className="font-medium text-white dark:text-white">Connection Type</h4>
                   
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -174,7 +174,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                         ...(selectedEdge.style || {}),
                         stroke: e.target.value
                       })}
-                      className="w-full h-10 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer"
+                      className="w-full h-10 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer bg-white dark:bg-slate-700"
                     />
                   </div>
 
@@ -206,7 +206,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
               <>
                 {/* Basic Properties */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-slate-900 dark:text-white">Basic Properties</h4>
+                  <h4 className="font-medium text-white dark:text-white">Basic Properties</h4>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -216,7 +216,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   type="text"
                   value={selectedNode.data.label || ''}
                   onChange={(e) => handleInputChange('label', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                 />
               </div>
 
@@ -228,14 +228,14 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   type="text"
                   value={selectedNode.data.description || ''}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                 />
               </div>
             </div>
 
             {/* Position Properties */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Position</h4>
+              <h4 className="font-medium text-white dark:text-white">Position</h4>
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -266,7 +266,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
             {/* Node-specific Properties */}
             {selectedNode.data.label === 'API Call' && (
               <div className="space-y-4">
-                <h4 className="font-medium text-slate-900 dark:text-white">API Configuration</h4>
+                <h4 className="font-medium text-white dark:text-white">API Configuration</h4>
                 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -277,7 +277,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                     value={selectedNode.data.url || ''}
                     onChange={(e) => handleInputChange('url', e.target.value)}
                     placeholder="https://api.example.com/endpoint"
-                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                   />
                 </div>
 
@@ -288,7 +288,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   <select
                     value={selectedNode.data.method || 'GET'}
                     onChange={(e) => handleInputChange('method', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                   >
                     <option value="GET">GET</option>
                     <option value="POST">POST</option>
@@ -301,7 +301,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
 
             {selectedNode.data.label === 'UI Component' && (
               <div className="space-y-4">
-                <h4 className="font-medium text-slate-900 dark:text-white">UI Configuration</h4>
+                <h4 className="font-medium text-white dark:text-white">UI Configuration</h4>
                 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -310,7 +310,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   <select
                     value={selectedNode.data.componentType || 'Button'}
                     onChange={(e) => handleInputChange('componentType', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                   >
                     <option value="Button">Button</option>
                     <option value="Input">Input</option>
@@ -328,7 +328,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                     value={selectedNode.data.textContent || ''}
                     onChange={(e) => handleInputChange('textContent', e.target.value)}
                     placeholder="Enter text content..."
-                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                    className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                   />
                 </div>
               </div>
@@ -336,7 +336,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
 
             {/* Style Properties */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Styling</h4>
+              <h4 className="font-medium text-white dark:text-white">Styling</h4>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -346,7 +346,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   type="color"
                   value={selectedNode.data.backgroundColor || '#ffffff'}
                   onChange={(e) => handleInputChange('backgroundColor', e.target.value)}
-                  className="w-full h-10 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer"
+                  className="w-full h-10 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer bg-white dark:bg-slate-700"
                 />
               </div>
 
@@ -358,7 +358,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   type="color"
                   value={selectedNode.data.borderColor || '#e2e8f0'}
                   onChange={(e) => handleInputChange('borderColor', e.target.value)}
-                  className="w-full h-10 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer"
+                  className="w-full h-10 border border-slate-300 dark:border-slate-600 rounded-md cursor-pointer bg-white dark:bg-slate-700"
                 />
               </div>
 
@@ -369,7 +369,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                 <select
                   value={selectedNode.data.borderWidth || '2'}
                   onChange={(e) => handleInputChange('borderWidth', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                 >
                   <option value="1">1px</option>
                   <option value="2">2px</option>
@@ -385,7 +385,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                 <select
                   value={selectedNode.data.shadow || 'shadow-lg'}
                   onChange={(e) => handleInputChange('shadow', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                 >
                   <option value="shadow-none">None</option>
                   <option value="shadow-sm">Small</option>
@@ -399,7 +399,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
 
             {/* Advanced Properties */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Advanced</h4>
+              <h4 className="font-medium text-white dark:text-white">Advanced</h4>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -410,7 +410,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   value={selectedNode.data.width || 'auto'}
                   onChange={(e) => handleInputChange('width', e.target.value)}
                   placeholder="auto, 200px, 50%"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                 />
               </div>
 
@@ -434,7 +434,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
 
             {/* Animation Properties */}
             <div className="space-y-4">
-              <h4 className="font-medium text-slate-900 dark:text-white">Animation</h4>
+              <h4 className="font-medium text-white dark:text-white">Animation</h4>
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -443,7 +443,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                 <select
                   value={selectedNode.data.transitionDuration || 'duration-200'}
                   onChange={(e) => handleInputChange('transitionDuration', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm border border-purple-300 dark:border-purple-600 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/80 dark:bg-purple-800/50 text-slate-900 dark:text-white backdrop-blur-sm"
                 >
                   <option value="duration-150">150ms</option>
                   <option value="duration-200">200ms</option>
@@ -481,12 +481,12 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
 
                 {/* Action Buttons */}
                 <div className="space-y-4">
-                  <h4 className="font-medium text-slate-900 dark:text-white">Actions</h4>
+                  <h4 className="font-medium text-white dark:text-white">Actions</h4>
                   
                   <div className="space-y-3">
                     <button
                       onClick={() => setShowWeUIModal(true)}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-blue-300/50"
                     >
                       <Code className="h-4 w-4" />
                       <span>Open WeUI</span>
@@ -494,7 +494,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                     
                     <button
                       onClick={() => setShowServiceFlowModal(true)}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-slate-300/50"
                     >
                       <Workflow className="h-4 w-4" />
                       <span>Open Service Flow</span>

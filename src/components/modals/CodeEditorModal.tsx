@@ -299,7 +299,7 @@ ${JSON.stringify({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-green-50 to-slate-50 dark:bg-gradient-to-r dark:from-green-900/20 dark:to-slate-900">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
               <FileCode className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -332,7 +332,7 @@ ${JSON.stringify({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 dark:border-slate-700">
+        <div className="flex border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-100 to-green-50 dark:bg-gradient-to-r dark:from-slate-800 dark:to-green-900/20">
           {tabs.map((tab) => {
             const IconComponent = tab.icon;
             return (
@@ -356,7 +356,7 @@ ${JSON.stringify({
         <div className="flex-1 overflow-hidden">
           {activeTab === 'editor' && (
             <div className="h-full flex flex-col">
-              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750">
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-100 to-blue-50 dark:bg-gradient-to-r dark:from-slate-800 dark:to-blue-900/30">
                 <div className="flex items-center space-x-4">
                   <select
                     value={language}
