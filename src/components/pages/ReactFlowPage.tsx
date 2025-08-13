@@ -26,7 +26,7 @@ import 'reactflow/dist/style.css';
 import {
   ArrowLeft, Save, Play, Download, Upload, 
   Database, Cpu, Box, Zap,
-  Menu, ChevronDown, ChevronRight, Plus
+  Menu, ChevronDown, ChevronRight, Plus, Square, Layers
 } from 'lucide-react';
 import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
 
@@ -37,15 +37,136 @@ interface NodeData {
   icon?: React.ComponentType<{ className?: string }>;
   backgroundColor?: string;
   borderColor?: string;
+  isGroup?: boolean;
+  width?: number;
+  height?: number;
+  opacity?: number;
   [key: string]: unknown;
 }
 
-const CustomNode = ({ data, selected }: { data: NodeData; selected?: boolean }) => {
+const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean; id?: string }) => {
+  const [isResizing, setIsResizing] = useState(false);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [startSize, setStartSize] = useState({ width: 0, height: 0 });
+
   const nodeStyle = {
     backgroundColor: data.backgroundColor || '#ffffff',
     borderColor: selected ? '#3b82f6' : (data.borderColor || '#a1a1aa'),
+    width: data.width || 'auto',
+    height: data.height || 'auto',
+    opacity: data.opacity || 1,
   };
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setStartPos({ x: e.clientX, y: e.clientY });
+    setStartSize({ width: data.width || 400, height: data.height || 300 });
+  };
+
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || !id) return;
+    
+    const deltaX = e.clientX - startPos.x;
+    const deltaY = e.clientY - startPos.y;
+    
+    const newWidth = Math.max(200, startSize.width + deltaX);
+    const newHeight = Math.max(150, startSize.height + deltaY);
+    
+    // Dispatch event to parent component
+    window.dispatchEvent(new CustomEvent('updateNodeSize', { 
+      detail: { 
+        nodeId: id, 
+        width: newWidth, 
+        height: newHeight 
+      } 
+    }));
+  }, [isResizing, startPos, startSize, id]);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
+
+  // Group/Frame Node for organizing flows
+  if (data.isGroup) {
+    return (
+      <div 
+        className={`rounded-lg border-2 transition-colors relative ${
+          selected ? 'border-blue-500 shadow-blue-200' : 'border-slate-300'
+        }`}
+        style={{
+          ...nodeStyle,
+          minWidth: data.width || 400,
+          minHeight: data.height || 300,
+          backgroundColor: data.backgroundColor || 'rgba(248, 250, 252, 0.8)',
+          borderStyle: 'dashed',
+          borderWidth: '2px',
+          zIndex: -1, // ให้ group node อยู่ล่างสุด
+          pointerEvents: selected ? 'auto' : 'none', // ไม่รับ mouse events เมื่อไม่ได้เลือก
+        }}
+      >
+        {/* Group Header */}
+        <div 
+          className="absolute -top-6 left-2 bg-white dark:bg-slate-800 px-2 py-1 rounded-t border border-b-0 border-slate-300"
+          style={{ pointerEvents: 'auto' }} // Header สามารถคลิกได้
+        >
+          <div className="flex items-center space-x-1">
+            {data.icon && <data.icon className="h-3 w-3 text-slate-500" />}
+            <span className="text-xs font-medium text-slate-600">{data.label}</span>
+          </div>
+        </div>
+        
+        {/* Group Content Area */}
+        <div 
+          className="h-full w-full p-4 flex items-center justify-center"
+          style={{ pointerEvents: selected ? 'auto' : 'none' }}
+        >
+          <div className="text-center text-slate-400">
+            <Layers className="h-8 w-8 mx-auto mb-2" />
+            <div className="text-sm">Drop nodes here to group</div>
+          </div>
+        </div>
+
+        {/* Resize Handles */}
+        {selected && (
+          <>
+            {/* Bottom-right corner resize handle */}
+            <div
+              className="absolute bottom-0 right-0 w-3 h-3 bg-blue-500 cursor-se-resize z-10 nodrag"
+              style={{ margin: '-1.5px', pointerEvents: 'auto' }}
+              onMouseDown={handleResizeStart}
+            />
+            {/* Bottom edge resize handle */}
+            <div
+              className="absolute bottom-0 left-1/2 w-6 h-2 bg-blue-500 cursor-ns-resize z-10 transform -translate-x-1/2 nodrag"
+              style={{ marginBottom: '-1px', pointerEvents: 'auto' }}
+              onMouseDown={handleResizeStart}
+            />
+            {/* Right edge resize handle */}
+            <div
+              className="absolute right-0 top-1/2 w-2 h-6 bg-blue-500 cursor-ew-resize z-10 transform -translate-y-1/2 nodrag"
+              style={{ marginRight: '-1px', pointerEvents: 'auto' }}
+              onMouseDown={handleResizeStart}
+            />
+          </>
+        )}
+      </div>
+    );
+  }
   
+  // Regular Node
   return (
     <div 
       className={`px-4 py-2 shadow-lg rounded-lg border-2 transition-colors relative ${
@@ -58,8 +179,8 @@ const CustomNode = ({ data, selected }: { data: NodeData; selected?: boolean }) 
         type="target"
         position={Position.Left}
         id="input"
-        className="w-3 h-3 !bg-blue-500 !border-2 !border-white shadow-md"
-        style={{ left: -6 }}
+        className="w-4 h-4 !bg-blue-500 !border-2 !border-white shadow-lg hover:w-5 hover:h-5 transition-all"
+        style={{ left: -8 }}
       />
       
       {/* Node Content */}
@@ -76,8 +197,8 @@ const CustomNode = ({ data, selected }: { data: NodeData; selected?: boolean }) 
         type="source"
         position={Position.Right}
         id="output"
-        className="w-3 h-3 !bg-green-500 !border-2 !border-white shadow-md"
-        style={{ right: -6 }}
+        className="w-4 h-4 !bg-green-500 !border-2 !border-white shadow-lg hover:w-5 hover:h-5 transition-all"
+        style={{ right: -8 }}
       />
     </div>
   );
@@ -125,8 +246,13 @@ const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, sourcePosition, ta
   );
 };
 
+// Create a wrapper component that passes the node id
+const CustomNodeWrapper = (props: any) => {
+  return <CustomNode {...props} id={props.id} />;
+};
+
 const nodeTypes: NodeTypes = {
-  custom: CustomNode,
+  custom: CustomNodeWrapper,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -139,6 +265,7 @@ const initialNodes: Node[] = [
     id: '1',
     type: 'custom',
     position: { x: 250, y: 25 },
+    zIndex: 1,
     data: {
       label: 'API Call',
       description: 'HTTP Request',
@@ -149,6 +276,7 @@ const initialNodes: Node[] = [
     id: '2',
     type: 'custom',
     position: { x: 100, y: 125 },
+    zIndex: 1,
     data: {
       label: 'UI Component',
       description: 'Button/Form',
@@ -224,11 +352,25 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         position: { x: screenPos.x, y: screenPos.y }
       });
     };
+
+    // Listen for node size updates
+    const handleUpdateNodeSize = (event: any) => {
+      const { nodeId, width, height } = event.detail;
+      setNodes((nds) =>
+        nds.map((node) =>
+          node.id === nodeId
+            ? { ...node, data: { ...node.data, width, height } }
+            : node
+        )
+      );
+    };
     
     window.addEventListener('edgeButtonClick', handleEdgeButtonClick);
+    window.addEventListener('updateNodeSize', handleUpdateNodeSize);
     
     return () => {
       window.removeEventListener('edgeButtonClick', handleEdgeButtonClick);
+      window.removeEventListener('updateNodeSize', handleUpdateNodeSize);
     };
   };
 
@@ -320,14 +462,23 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         // Check if dropping on an edge
         const edgeAtPosition = findEdgeAtPosition(position.x, position.y);
         
+        // Check if it's a group type
+        const isGroupType = ['Group', 'Frame', 'Section'].includes(type);
+        
         const newNode: Node = {
           id: `${Date.now()}`, // Use timestamp for unique ID
           type: 'custom',
           position,
+          zIndex: isGroupType ? -100 : 1, // Group nodes ด้านล่าง, regular nodes ด้านบน
           data: {
             label: type,
             description: getNodeDescription(type),
-            icon: getNodeIcon(type)
+            icon: getNodeIcon(type),
+            isGroup: isGroupType,
+            width: isGroupType ? 400 : undefined,
+            height: isGroupType ? 300 : undefined,
+            backgroundColor: isGroupType ? getGroupBackgroundColor(type) : undefined,
+            opacity: isGroupType ? 0.8 : 1,
           },
         };
 
@@ -351,7 +502,10 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       'Logic': 'Business Logic',
       'Condition': 'If/Else Logic',
       'Loop': 'Iteration',
-      'Transform': 'Data Transform'
+      'Transform': 'Data Transform',
+      'Group': 'Flow Grouping',
+      'Frame': 'Visual Frame',
+      'Section': 'Flow Section'
     };
     return descriptions[type] || 'Custom Node';
   };
@@ -364,12 +518,28 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       'Logic': Zap,
       'Condition': Zap,
       'Loop': Zap,
-      'Transform': Cpu
+      'Transform': Cpu,
+      'Group': Layers,
+      'Frame': Square,
+      'Section': Square
     };
     return icons[type] || Box;
   };
 
+  const getGroupBackgroundColor = (type: string) => {
+    const colors: { [key: string]: string } = {
+      'Group': 'rgba(59, 130, 246, 0.1)', // Blue
+      'Frame': 'rgba(16, 185, 129, 0.1)', // Green  
+      'Section': 'rgba(245, 158, 11, 0.1)' // Yellow
+    };
+    return colors[type] || 'rgba(248, 250, 252, 0.8)';
+  };
+
   const nodeCategories = [
+    {
+      title: 'Organization',
+      items: ['Group', 'Frame', 'Section']
+    },
     {
       title: 'Application',
       items: ['User', 'Page', 'Service']
@@ -525,14 +695,23 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       y: (sourceNode.position.y + targetNode.position.y) / 2,
     };
     
+    // Check if it's a group type
+    const isGroupType = ['Group', 'Frame', 'Section'].includes(nodeType);
+    
     const newNode: Node = {
       id: `${Date.now()}`,
       type: 'custom',
       position,
+      zIndex: isGroupType ? -100 : 1, // Group nodes ด้านล่าง, regular nodes ด้านบน
       data: {
         label: nodeType,
         description: getNodeDescription(nodeType),
-        icon: getNodeIcon(nodeType)
+        icon: getNodeIcon(nodeType),
+        isGroup: isGroupType,
+        width: isGroupType ? 400 : undefined,
+        height: isGroupType ? 300 : undefined,
+        backgroundColor: isGroupType ? getGroupBackgroundColor(nodeType) : undefined,
+        opacity: isGroupType ? 0.8 : 1,
       },
     };
     
