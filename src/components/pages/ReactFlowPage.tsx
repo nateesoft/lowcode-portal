@@ -340,6 +340,8 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   const [isExecuting, setIsExecuting] = useState(false);
   const [executingNodeId, setExecutingNodeId] = useState<string | null>(null);
   const [isGeneratingWebsite, setIsGeneratingWebsite] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
 
   // Update global execution state for visual feedback
   React.useEffect(() => {
@@ -1112,13 +1114,80 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     `;
   };
 
+  // Template Definitions
+  const websiteTemplates = {
+    modern: {
+      name: 'Modern',
+      description: 'Clean and modern design with gradients',
+      preview: '🎨',
+      primaryColor: '#6366f1',
+      backgroundColor: '#f8fafc',
+      headerStyle: 'gradient',
+      fontFamily: 'Inter, sans-serif'
+    },
+    classic: {
+      name: 'Classic',
+      description: 'Traditional corporate design',
+      preview: '🏢',
+      primaryColor: '#1f2937',
+      backgroundColor: '#ffffff',
+      headerStyle: 'solid',
+      fontFamily: 'Georgia, serif'
+    },
+    creative: {
+      name: 'Creative',
+      description: 'Colorful and playful design',
+      preview: '🌈',
+      primaryColor: '#ec4899',
+      backgroundColor: '#fef7ff',
+      headerStyle: 'artistic',
+      fontFamily: 'Poppins, sans-serif'
+    },
+    minimal: {
+      name: 'Minimal',
+      description: 'Simple and clean layout',
+      preview: '⭕',
+      primaryColor: '#64748b',
+      backgroundColor: '#fafafa',
+      headerStyle: 'minimal',
+      fontFamily: 'system-ui, sans-serif'
+    },
+    dark: {
+      name: 'Dark Mode',
+      description: 'Dark theme with neon accents',
+      preview: '🌙',
+      primaryColor: '#00d9ff',
+      backgroundColor: '#0f172a',
+      headerStyle: 'dark',
+      fontFamily: 'JetBrains Mono, monospace'
+    }
+  };
+
+  // Open template selector
+  const openTemplateSelector = () => {
+    // Check if there are nodes first
+    const nonGroupNodes = nodes.filter(node => !node.data.isGroup);
+    if (nonGroupNodes.length === 0) {
+      alert('กรุณาเพิ่มโหนดในแคนวาสก่อนสร้างเว็บไซต์');
+      return;
+    }
+    
+    setShowTemplateSelector(true);
+  };
+
   // Website Generation Engine
-  const generateWebsite = async () => {
+  const generateWebsite = async (templateId: string) => {
     if (isGeneratingWebsite) return;
     
     setIsGeneratingWebsite(true);
+    setShowTemplateSelector(false);
     
     try {
+      // Validate template ID
+      if (!templateId || !websiteTemplates[templateId as keyof typeof websiteTemplates]) {
+        console.warn('Invalid template ID, using default:', templateId);
+      }
+
       // Find starting node (node without incoming edges)
       const startingNodes = nodes.filter(node => 
         !edges.some(edge => edge.target === node.id) && !node.data.isGroup
@@ -1130,11 +1199,18 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         return;
       }
 
+      // Get selected template with fallback
+      const template = websiteTemplates[templateId as keyof typeof websiteTemplates] || websiteTemplates.modern;
+
+      if (!template) {
+        throw new Error('ไม่สามารถโหลด template ได้');
+      }
+
       // Build website structure
       const websiteStructure = buildWebsiteStructure();
       
-      // Generate all pages
-      const websitePages = generateWebsitePages(websiteStructure);
+      // Generate all pages with template
+      const websitePages = generateWebsitePages(websiteStructure, template);
       
       // Create main index page
       const indexPageHTML = generateIndexPage(websitePages, startingNodes[0]);
@@ -1181,20 +1257,95 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     return structure;
   };
 
-  const generateWebsitePages = (structure: { [nodeId: string]: { node: Node; connections: string[] } }) => {
+  const generateWebsitePages = (structure: { [nodeId: string]: { node: Node; connections: string[] } }, template: any) => {
     const pages: { [nodeId: string]: string } = {};
     
+    // Use default template if not provided
+    const safeTemplate = template || websiteTemplates.modern;
+    
     Object.entries(structure).forEach(([nodeId, { node, connections }]) => {
-      pages[nodeId] = generateNodePage(node, connections, structure);
+      try {
+        pages[nodeId] = generateNodePage(node, connections, structure, safeTemplate);
+      } catch (error) {
+        console.error(`Error generating page for node ${nodeId}:`, error);
+        // Generate a simple fallback page
+        pages[nodeId] = generateFallbackPage(node, connections, structure);
+      }
     });
     
     return pages;
   };
 
-  const generateNodePage = (node: Node, connections: string[], structure: { [nodeId: string]: { node: Node; connections: string[] } }): string => {
+  const generateFallbackPage = (node: Node, connections: string[], structure: { [nodeId: string]: { node: Node; connections: string[] } }): string => {
+    const navigationButtons = connections.map(connectedNodeId => {
+      const connectedNode = structure[connectedNodeId]?.node;
+      if (!connectedNode) return '';
+      
+      return `
+        <button 
+          onclick="navigateToPage('${connectedNodeId}')" 
+          class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors mr-4 mb-4"
+        >
+          ไปยัง ${connectedNode.data.label}
+        </button>
+      `;
+    }).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html lang="th">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${node.data.label} - Simple Page</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+      </head>
+      <body class="min-h-screen bg-gray-50">
+          <div class="container mx-auto px-6 py-12">
+              <div class="bg-white rounded-lg shadow-lg p-8">
+                  <h1 class="text-3xl font-bold mb-6">${node.data.label}</h1>
+                  <p class="text-lg mb-8">Welcome to ${node.data.label} page</p>
+                  ${navigationButtons ? `
+                      <div class="mt-8">
+                          <h3 class="text-xl font-semibold mb-4">Navigation</h3>
+                          <div class="flex flex-wrap">
+                              ${navigationButtons}
+                          </div>
+                      </div>
+                  ` : ''}
+              </div>
+          </div>
+          <script>
+              window.__currentNodeId = '${node.id}';
+              function navigateToPage(targetNodeId) {
+                  alert('กำลังนำทางไปยัง ' + targetNodeId);
+              }
+          </script>
+      </body>
+      </html>
+    `;
+  };
+
+  const generateNodePage = (node: Node, connections: string[], structure: { [nodeId: string]: { node: Node; connections: string[] } }, template: any): string => {
+    // Set default template if not provided
+    const defaultTemplate = websiteTemplates.modern;
+    const safeTemplate = template || defaultTemplate;
+    
+    // Debug logging
+    if (!template) {
+      console.warn('Template not provided for node:', node.id, 'using default template');
+    }
+    
+    if (!safeTemplate || !safeTemplate.backgroundColor) {
+      console.error('Safe template is invalid:', safeTemplate);
+      throw new Error('Template configuration is invalid');
+    }
+    
     const nodeType = node.data.label;
-    const backgroundColor = node.data.backgroundColor || '#ffffff';
+    const backgroundColor = node.data.backgroundColor || safeTemplate.backgroundColor || '#ffffff';
     const textContent = node.data.textContent || `Welcome to ${node.data.label} Page`;
+    const primaryColor = safeTemplate.primaryColor || '#6366f1';
+    const isDark = safeTemplate.name === 'Dark Mode';
     
     // Generate navigation buttons for connected nodes
     const navigationButtons = connections.map(connectedNodeId => {
@@ -1204,7 +1355,12 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       return `
         <button 
           onclick="navigateToPage('${connectedNodeId}')" 
-          class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors mr-4 mb-4 flex items-center"
+          class="px-6 py-3 rounded-lg transition-colors mr-4 mb-4 flex items-center ${
+            isDark 
+              ? 'bg-slate-700 hover:bg-slate-600 text-cyan-400 border border-cyan-500/30'
+              : `bg-blue-600 hover:bg-blue-700 text-white`
+          }"
+          style="background-color: ${primaryColor}; border-color: ${primaryColor};"
         >
           <span class="mr-2">🔗</span>
           ไปยัง ${connectedNode.data.label}
@@ -1220,11 +1376,11 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       case 'Button':
         pageContent = `
           <div class="text-center">
-            <h2 class="text-3xl font-bold mb-6">${node.data.label}</h2>
+            <h2 class="text-3xl font-bold mb-6 text-primary">${node.data.label}</h2>
             <p class="text-lg mb-8">${textContent}</p>
             <div class="space-y-4">
               ${node.data.componentType === 'Button' ? `
-                <button class="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg text-xl">
+                <button class="btn-primary text-white px-8 py-4 rounded-lg text-xl transition-all hover:scale-105">
                   ${node.data.textContent || 'Click Me'}
                 </button>
               ` : ''}
@@ -1236,21 +1392,21 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       case 'Form':
         pageContent = `
           <div class="max-w-md mx-auto">
-            <h2 class="text-3xl font-bold mb-6 text-center">${node.data.label}</h2>
+            <h2 class="text-3xl font-bold mb-6 text-center text-primary">${node.data.label}</h2>
             <form class="space-y-4">
               <div>
                 <label class="block text-sm font-medium mb-2">ชื่อ</label>
-                <input type="text" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="กรอกชื่อของคุณ">
+                <input type="text" class="w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all" style="border-color: ${primaryColor}; focus:ring-color: ${primaryColor};" placeholder="กรอกชื่อของคุณ">
               </div>
               <div>
                 <label class="block text-sm font-medium mb-2">อีเมล</label>
-                <input type="email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="กรอกอีเมลของคุณ">
+                <input type="email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 transition-all" style="border-color: ${primaryColor}; focus:ring-color: ${primaryColor};" placeholder="กรอกอีเมลของคุณ">
               </div>
               <div>
                 <label class="block text-sm font-medium mb-2">ข้อความ</label>
-                <textarea class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 h-32" placeholder="กรอกข้อความ"></textarea>
+                <textarea class="w-full px-4 py-2 border rounded-lg focus:ring-2 h-32 transition-all" style="border-color: ${primaryColor}; focus:ring-color: ${primaryColor};" placeholder="กรอกข้อความ"></textarea>
               </div>
-              <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg">ส่งข้อมูล</button>
+              <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg transition-all hover:scale-105">ส่งข้อมูล</button>
             </form>
           </div>
         `;
@@ -1432,18 +1588,41 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         `;
     }
 
+    // Get template styles
+    const getHeaderStyle = () => {
+      switch (safeTemplate.headerStyle) {
+        case 'gradient':
+          return `background: linear-gradient(135deg, ${primaryColor}, #8b5cf6);`;
+        case 'artistic':
+          return `background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);`;
+        case 'dark':
+          return `background: linear-gradient(135deg, #0f172a, #1e293b); border-bottom: 1px solid #334155;`;
+        case 'minimal':
+          return `background: ${backgroundColor}; border-bottom: 1px solid #e5e7eb;`;
+        default:
+          return `background: #ffffff; border-bottom: 1px solid #e5e7eb;`;
+      }
+    };
+
     return `
       <!DOCTYPE html>
       <html lang="th">
       <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${node.data.label} - Generated Website</title>
+          <title>${node.data.label} - ${safeTemplate.name || 'Generated'} Website</title>
           <script src="https://cdn.tailwindcss.com"></script>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
           <style>
+              :root {
+                  --primary-color: ${primaryColor};
+                  --bg-color: ${backgroundColor};
+                  --font-family: ${safeTemplate.fontFamily || 'system-ui, sans-serif'};
+              }
               body { 
-                  background-color: ${backgroundColor}; 
-                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                  background-color: var(--bg-color); 
+                  font-family: var(--font-family);
+                  color: ${isDark ? '#f1f5f9' : '#1f2937'};
               }
               .page-container {
                   animation: fadeIn 0.5s ease-in;
@@ -1452,21 +1631,49 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
                   from { opacity: 0; transform: translateY(20px); }
                   to { opacity: 1; transform: translateY(0); }
               }
+              .header-custom {
+                  ${getHeaderStyle()}
+              }
+              .card-custom {
+                  background: ${isDark ? '#1e293b' : '#ffffff'};
+                  border: 1px solid ${isDark ? '#334155' : '#e5e7eb'};
+                  color: ${isDark ? '#f1f5f9' : '#1f2937'};
+              }
+              .text-primary {
+                  color: var(--primary-color);
+              }
+              .btn-primary {
+                  background-color: var(--primary-color);
+                  border-color: var(--primary-color);
+              }
+              .btn-primary:hover {
+                  opacity: 0.9;
+              }
           </style>
       </head>
       <body class="min-h-screen">
           <div class="page-container">
               <!-- Header -->
-              <header class="bg-white shadow-lg border-b">
+              <header class="header-custom shadow-lg">
                   <div class="container mx-auto px-6 py-4">
                       <div class="flex items-center justify-between">
                           <div class="flex items-center space-x-4">
-                              <h1 class="text-2xl font-bold text-gray-900">🌐 Generated Website</h1>
-                              <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                              <h1 class="text-2xl font-bold ${isDark ? 'text-cyan-400' : safeTemplate.headerStyle === 'gradient' || safeTemplate.headerStyle === 'artistic' ? 'text-white' : 'text-gray-900'}">
+                                  ${safeTemplate.preview || '🌐'} ${safeTemplate.name || 'Generated'} Website
+                              </h1>
+                              <span class="px-3 py-1 rounded-full text-sm ${
+                                isDark ? 'bg-slate-700 text-cyan-400 border border-cyan-500/30' :
+                                safeTemplate.headerStyle === 'gradient' || safeTemplate.headerStyle === 'artistic' ? 'bg-white/20 text-white' :
+                                'bg-blue-100 text-blue-800'
+                              }">
                                   Current: ${node.data.label}
                               </span>
                           </div>
-                          <button onclick="showPageMap()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">
+                          <button onclick="showPageMap()" class="px-4 py-2 rounded-lg transition-colors ${
+                            isDark ? 'bg-slate-700 hover:bg-slate-600 text-cyan-400' :
+                            safeTemplate.headerStyle === 'gradient' || safeTemplate.headerStyle === 'artistic' ? 'bg-white/20 hover:bg-white/30 text-white' :
+                            'bg-gray-600 hover:bg-gray-700 text-white'
+                          }">
                               📍 Site Map
                           </button>
                       </div>
@@ -1475,12 +1682,14 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
 
               <!-- Main Content -->
               <main class="container mx-auto px-6 py-12">
-                  ${pageContent}
+                  <div class="card-custom rounded-lg shadow-lg p-8 mb-8">
+                      ${pageContent}
+                  </div>
                   
                   <!-- Navigation Section -->
                   ${navigationButtons ? `
-                      <div class="mt-12 pt-8 border-t">
-                          <h3 class="text-xl font-semibold mb-4">🔗 การนำทาง</h3>
+                      <div class="card-custom rounded-lg shadow-lg p-6">
+                          <h3 class="text-xl font-semibold mb-4 text-primary">🔗 การนำทาง</h3>
                           <div class="flex flex-wrap">
                               ${navigationButtons}
                           </div>
@@ -1489,10 +1698,12 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
               </main>
 
               <!-- Footer -->
-              <footer class="bg-gray-800 text-white py-8 mt-16">
+              <footer class="${isDark ? 'bg-slate-900 border-t border-slate-700' : 'bg-gray-800'} text-white py-8 mt-16">
                   <div class="container mx-auto px-6 text-center">
-                      <p>🚀 Generated by TON Low-Code Platform</p>
-                      <p class="text-sm text-gray-400 mt-2">Node ID: ${node.id} | Type: ${nodeType}</p>
+                      <p>🚀 Generated by TON Low-Code Platform - ${safeTemplate.name || 'Default'} Template</p>
+                      <p class="text-sm ${isDark ? 'text-slate-400' : 'text-gray-400'} mt-2">
+                          Node ID: ${node.id} | Type: ${nodeType} | Template: ${safeTemplate.name || 'Default'}
+                      </p>
                   </div>
               </footer>
           </div>
@@ -1744,7 +1955,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
                 )}
               </button>
               <button 
-                onClick={generateWebsite}
+                onClick={openTemplateSelector}
                 disabled={isExecuting || isGeneratingWebsite}
                 className={`px-4 py-2 text-white rounded-lg flex items-center transition-colors ${
                   isGeneratingWebsite 
@@ -1847,6 +2058,132 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
                   {nodeType}
                 </button>
               ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Template Selector Modal */}
+      {showTemplateSelector && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setShowTemplateSelector(false)}
+          />
+          
+          {/* Template Selector */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+              {/* Header */}
+              <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                      🎨 เลือก Template สำหรับเว็บไซต์
+                    </h2>
+                    <p className="text-slate-600 dark:text-slate-400 mt-1">
+                      เลือกเทมเพลตที่คุณต้องการสำหรับเว็บไซต์ของคุณ
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowTemplateSelector(false)}
+                    className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    <div className="w-6 h-6">✕</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Template Grid */}
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.entries(websiteTemplates).map(([templateId, template]) => (
+                    <div
+                      key={templateId}
+                      className={`relative p-6 rounded-lg border-2 cursor-pointer transition-all hover:scale-105 ${
+                        selectedTemplate === templateId
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                      }`}
+                      onClick={() => setSelectedTemplate(templateId)}
+                    >
+                      {/* Template Preview */}
+                      <div 
+                        className="w-full h-32 rounded-lg mb-4 flex items-center justify-center text-4xl"
+                        style={{ 
+                          backgroundColor: template.backgroundColor,
+                          color: template.primaryColor,
+                          fontFamily: template.fontFamily
+                        }}
+                      >
+                        {template.preview}
+                      </div>
+                      
+                      {/* Template Info */}
+                      <div className="text-center">
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                          {template.name}
+                        </h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                          {template.description}
+                        </p>
+                        
+                        {/* Template Features */}
+                        <div className="text-xs space-y-1">
+                          <div style={{ color: template.primaryColor }} className="font-medium">
+                            Primary: {template.primaryColor}
+                          </div>
+                          <div className="text-slate-500 dark:text-slate-400">
+                            Font: {template.fontFamily.split(',')[0]}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Selected Indicator */}
+                      {selectedTemplate === templateId && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
+                          ✓
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-slate-600 dark:text-slate-400">
+                    Template ที่เลือก: <strong>{websiteTemplates[selectedTemplate as keyof typeof websiteTemplates]?.name}</strong>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => setShowTemplateSelector(false)}
+                      className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      onClick={() => generateWebsite(selectedTemplate)}
+                      disabled={isGeneratingWebsite}
+                      className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center"
+                    >
+                      {isGeneratingWebsite ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                          สร้างเว็บไซต์...
+                        </>
+                      ) : (
+                        <>
+                          <Globe className="h-4 w-4 mr-2" />
+                          สร้างเว็บไซต์
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </>
