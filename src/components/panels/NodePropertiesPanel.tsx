@@ -72,7 +72,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
       <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750">
         <div className="flex items-center space-x-2">
           <Settings className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-          <h3 className="font-semibold text-slate-900 dark:text-white">
+          <h3 className="font-semibold text-slate-900 dark:text-blue">
             {selectedNode ? 'Node Properties' : 'Edge Properties'}
           </h3>
         </div>

@@ -227,28 +227,87 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
 
   const generateSchemaFromElements = () => {
     const properties: any = {};
-    const uiSchemaObj: any = {};
+    const uiSchemaElements: any[] = [];
     const required: string[] = [];
 
+    // Generate JSON Schema
     dragDropElements.forEach((element, index) => {
-      const fieldName = element.fieldName || `field_${index + 1}`;
-      
-      properties[fieldName] = {
-        type: element.type,
-        title: element.title || element.name,
-        ...(element.enum && { enum: element.enum }),
-        ...(element.default !== undefined && { default: element.default })
-      };
+      if (element.isContainer) {
+        // Handle containers
+        if (element.children && element.children.length > 0) {
+          element.children.forEach((child: any) => {
+            const fieldName = child.fieldName || `field_${index + 1}_${child.id}`;
+            properties[fieldName] = {
+              type: child.type,
+              title: child.title || child.name,
+              ...(child.enum && { enum: child.enum }),
+              ...(child.default !== undefined && { default: child.default })
+            };
 
-      if (element.required) {
-        required.push(fieldName);
+            if (child.required) {
+              required.push(fieldName);
+            }
+          });
+        }
+      } else {
+        // Handle regular elements
+        const fieldName = element.fieldName || `field_${index + 1}`;
+        properties[fieldName] = {
+          type: element.type,
+          title: element.title || element.name,
+          ...(element.enum && { enum: element.enum }),
+          ...(element.default !== undefined && { default: element.default })
+        };
+
+        if (element.required) {
+          required.push(fieldName);
+        }
       }
+    });
 
-      uiSchemaObj[fieldName] = {
-        'ui:widget': element.widget,
-        ...(element.placeholder && { 'ui:placeholder': element.placeholder }),
-        ...(element.help && { 'ui:help': element.help })
-      };
+    // Generate jsonforms.io compatible UI Schema
+    dragDropElements.forEach((element, index) => {
+      if (element.isContainer) {
+        // Create layout element
+        const layoutType = element.direction === 'row' ? 'HorizontalLayout' : 'VerticalLayout';
+        const layoutElement: any = {
+          type: layoutType,
+          elements: []
+        };
+
+        if (element.children && element.children.length > 0) {
+          element.children.forEach((child: any) => {
+            const fieldName = child.fieldName || `field_${index + 1}_${child.id}`;
+            layoutElement.elements.push({
+              type: 'Control',
+              scope: `#/properties/${fieldName}`,
+              ...(child.title && { label: child.title }),
+              ...(child.placeholder || child.help ? {
+                options: {
+                  ...(child.placeholder && { placeholder: child.placeholder }),
+                  ...(child.help && { help: child.help })
+                }
+              } : {})
+            });
+          });
+        }
+
+        uiSchemaElements.push(layoutElement);
+      } else {
+        // Create control element
+        const fieldName = element.fieldName || `field_${index + 1}`;
+        uiSchemaElements.push({
+          type: 'Control',
+          scope: `#/properties/${fieldName}`,
+          ...(element.title && { label: element.title }),
+          ...(element.placeholder || element.help ? {
+            options: {
+              ...(element.placeholder && { placeholder: element.placeholder }),
+              ...(element.help && { help: element.help })
+            }
+          } : {})
+        });
+      }
     });
 
     const schema = {
@@ -258,11 +317,32 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
       ...(required.length > 0 && { required })
     };
 
-    // Update the schemas
-    setJsonSchema(JSON.stringify(schema, null, 2));
-    setUISchema(JSON.stringify(uiSchemaObj, null, 2));
+    // Create the final UI Schema structure for jsonforms.io
+    const uiSchema = uiSchemaElements.length === 1 
+      ? uiSchemaElements[0] 
+      : {
+          type: 'VerticalLayout',
+          elements: uiSchemaElements
+        };
 
-    return { schema, uiSchema: uiSchemaObj };
+    // Update only JSON Schema, UI Schema will be updated separately
+    setJsonSchema(JSON.stringify(schema, null, 2));
+    
+    // Validate and update UI Schema
+    try {
+      const validatedUISchema = JSON.stringify(uiSchema, null, 2);
+      JSON.parse(validatedUISchema); // Test if it's valid JSON
+      setUISchema(validatedUISchema);
+    } catch (error) {
+      console.error('Generated UI Schema is invalid:', error);
+      // Fall back to empty schema if validation fails
+      setUISchema('{}');
+    }
+
+    // Switch to UI Schema tab after generation
+    setActiveTab('ui');
+
+    return { schema, uiSchema };
   };
 
   // Parse JSON Schema to extract dynamic elements
