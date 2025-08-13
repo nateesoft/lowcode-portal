@@ -25,7 +25,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import {
   ArrowLeft, Save, Play, Download, Upload, 
-  Database, Cpu, Box, Zap,
+  Database, Cpu, Box, Zap, Globe,
   Menu, ChevronDown, ChevronRight, Plus, Square, Layers
 } from 'lucide-react';
 import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
@@ -49,12 +49,17 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [startSize, setStartSize] = useState({ width: 0, height: 0 });
 
+  // Get execution state from window object (global state)
+  const isExecuting = (window as any).__reactFlowExecutingNodeId === id;
+
   const nodeStyle = {
-    backgroundColor: data.backgroundColor || '#ffffff',
-    borderColor: selected ? '#3b82f6' : (data.borderColor || '#a1a1aa'),
+    backgroundColor: isExecuting ? '#fef3c7' : (data.backgroundColor || '#ffffff'),
+    borderColor: isExecuting ? '#f59e0b' : (selected ? '#3b82f6' : (data.borderColor || '#a1a1aa')),
     width: data.width || 'auto',
     height: data.height || 'auto',
     opacity: data.opacity || 1,
+    boxShadow: isExecuting ? '0 0 20px rgba(245, 158, 11, 0.5)' : undefined,
+    animation: isExecuting ? 'pulse 1s infinite' : undefined,
   };
 
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -169,11 +174,19 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
   // Regular Node
   return (
     <div 
-      className={`px-4 py-2 shadow-lg rounded-lg border-2 transition-colors relative ${
+      className={`px-4 py-2 shadow-lg rounded-lg border-2 transition-all duration-300 relative ${
+        isExecuting ? 'animate-pulse border-amber-500 shadow-amber-200' : 
         selected ? 'border-blue-500 shadow-blue-200' : ''
       }`}
       style={nodeStyle}
     >
+      {/* Execution indicator */}
+      {isExecuting && (
+        <div className="absolute -top-2 -right-2 w-4 h-4 bg-amber-500 rounded-full animate-ping">
+          <div className="absolute inset-0 w-4 h-4 bg-amber-500 rounded-full animate-pulse"></div>
+        </div>
+      )}
+      
       {/* Input Handle - Left side */}
       <Handle
         type="target"
@@ -185,9 +198,12 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
       
       {/* Node Content */}
       <div className="flex items-center">
-        {data.icon && <data.icon className="h-4 w-4 mr-2 text-blue-600" />}
+        {data.icon && <data.icon className={`h-4 w-4 mr-2 ${isExecuting ? 'text-amber-600' : 'text-blue-600'}`} />}
         <div className="ml-2">
-          <div className="text-lg font-bold text-slate-900">{data.label}</div>
+          <div className={`text-lg font-bold ${isExecuting ? 'text-amber-900' : 'text-slate-900'}`}>
+            {data.label}
+            {isExecuting && <span className="ml-2 text-xs">⚡ กำลังทำงาน...</span>}
+          </div>
           <div className="text-gray-500 text-sm">{data.description}</div>
         </div>
       </div>
@@ -246,7 +262,7 @@ const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, sourcePosition, ta
   );
 };
 
-// Create a wrapper component that passes the node id
+// Create a wrapper component that passes the node id and execution state
 const CustomNodeWrapper = (props: any) => {
   return <CustomNode {...props} id={props.id} />;
 };
@@ -321,6 +337,18 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [showNodeSelector, setShowNodeSelector] = useState<{show: boolean, edgeId: string, position: {x: number, y: number}} | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executingNodeId, setExecutingNodeId] = useState<string | null>(null);
+  const [isGeneratingWebsite, setIsGeneratingWebsite] = useState(false);
+
+  // Update global execution state for visual feedback
+  React.useEffect(() => {
+    (window as any).__reactFlowExecutingNodeId = executingNodeId;
+    // Force re-render of all nodes
+    if (reactFlowInstance) {
+      reactFlowInstance.setNodes(nds => [...nds]);
+    }
+  }, [executingNodeId, reactFlowInstance]);
 
   const onConnect: OnConnect = useCallback(
     (params) => {
@@ -677,6 +705,866 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     });
   };
 
+  // Flow Execution Engine
+  const executeFlow = async () => {
+    if (isExecuting) return;
+    
+    setIsExecuting(true);
+    const executionResults: any[] = [];
+    const executionSteps: any[] = [];
+    
+    try {
+      // Find starting nodes (nodes without incoming edges)
+      const startingNodes = nodes.filter(node => 
+        !edges.some(edge => edge.target === node.id) && !node.data.isGroup
+      );
+
+      if (startingNodes.length === 0) {
+        alert('ไม่พบ starting node สำหรับเริ่มต้น flow');
+        setIsExecuting(false);
+        return;
+      }
+
+      // Build execution graph
+      const executionGraph = buildExecutionGraph();
+      
+      // Execute nodes in order with visual feedback
+      for (const startNode of startingNodes) {
+        await executeNodeChain(startNode, executionGraph, executionResults, executionSteps);
+      }
+
+      // Generate preview HTML
+      const previewHTML = generatePreviewHTML(executionResults, executionSteps);
+      
+      // Open in new tab with safer method
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.open();
+        newWindow.document.write(previewHTML);
+        newWindow.document.close();
+      }
+
+    } catch (error) {
+      console.error('Flow execution error:', error);
+      alert('เกิดข้อผิดพลาดในการรัน flow: ' + error);
+    } finally {
+      setIsExecuting(false);
+      setExecutingNodeId(null);
+    }
+  };
+
+  const buildExecutionGraph = () => {
+    const graph: { [nodeId: string]: string[] } = {};
+    
+    // Build adjacency list
+    nodes.forEach(node => {
+      if (!node.data.isGroup) {
+        graph[node.id] = [];
+      }
+    });
+    
+    edges.forEach(edge => {
+      if (graph[edge.source]) {
+        graph[edge.source].push(edge.target);
+      }
+    });
+    
+    return graph;
+  };
+
+  const executeNodeChain = async (node: Node, graph: { [nodeId: string]: string[] }, results: any[], steps: any[]) => {
+    // Skip group nodes
+    if (node.data.isGroup) return;
+    
+    // Set visual feedback for current executing node
+    setExecutingNodeId(node.id);
+    
+    // Add delay for visual effect
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Execute current node
+    const nodeResult = await executeNode(node);
+    results.push(nodeResult);
+    steps.push({
+      nodeId: node.id,
+      nodeName: node.data.label,
+      result: nodeResult,
+      timestamp: new Date().toISOString()
+    });
+
+    // Execute connected nodes
+    const connectedNodes = graph[node.id] || [];
+    for (const connectedNodeId of connectedNodes) {
+      const connectedNode = nodes.find(n => n.id === connectedNodeId);
+      if (connectedNode && !connectedNode.data.isGroup) {
+        await executeNodeChain(connectedNode, graph, results, steps);
+      }
+    }
+  };
+
+  const executeNode = async (node: Node): Promise<any> => {
+    // Simulate node execution based on type with more realistic scenarios
+    const nodeType = node.data.label;
+    const executionTime = Math.random() * 800 + 200; // Random execution time
+    
+    // Simulate potential failures for realism
+    const shouldSucceed = Math.random() > 0.1; // 90% success rate
+    
+    switch (nodeType) {
+      case 'API Call':
+        await new Promise(resolve => setTimeout(resolve, executionTime));
+        return {
+          type: 'api_call',
+          status: shouldSucceed ? 'success' : 'error',
+          data: shouldSucceed 
+            ? { 
+                url: node.data.url || 'https://api.example.com/data',
+                method: node.data.method || 'GET',
+                response: { id: Math.floor(Math.random() * 1000), name: 'Sample Data', timestamp: new Date().toISOString() },
+                statusCode: 200
+              }
+            : { error: 'Network timeout', statusCode: 504 },
+          executionTime
+        };
+        
+      case 'Database':
+        await new Promise(resolve => setTimeout(resolve, executionTime));
+        return {
+          type: 'database',
+          status: shouldSucceed ? 'success' : 'error',
+          data: shouldSucceed 
+            ? { 
+                query: 'SELECT * FROM users WHERE active = true',
+                rows: Math.floor(Math.random() * 50) + 1,
+                executionTime: `${Math.round(executionTime)}ms`,
+                affected: Math.floor(Math.random() * 10)
+              }
+            : { error: 'Connection refused', sqlState: '08001' },
+          executionTime
+        };
+        
+      case 'UI Component':
+      case 'Button':
+      case 'Form':
+      case 'Chart':
+      case 'Table':
+        await new Promise(resolve => setTimeout(resolve, executionTime));
+        return {
+          type: 'ui_component',
+          status: 'rendered',
+          data: { 
+            component: nodeType,
+            props: { 
+              title: `Generated ${nodeType}`,
+              componentType: node.data.componentType || nodeType,
+              textContent: node.data.textContent || `Default ${nodeType} content`,
+              style: {
+                backgroundColor: node.data.backgroundColor,
+                borderColor: node.data.borderColor
+              }
+            },
+            renderTime: `${Math.round(executionTime)}ms`
+          },
+          executionTime
+        };
+        
+      case 'Logic':
+      case 'Condition':
+      case 'Function':
+        await new Promise(resolve => setTimeout(resolve, executionTime));
+        const conditionResult = Math.random() > 0.5;
+        return {
+          type: 'logic',
+          status: 'executed',
+          data: { 
+            condition: conditionResult ? 'true' : 'false',
+            result: conditionResult ? 'condition passed' : 'condition failed',
+            variables: { x: Math.random() * 100, y: Math.random() * 100 },
+            nextPath: conditionResult ? 'true_branch' : 'false_branch'
+          },
+          executionTime
+        };
+        
+      case 'Transform':
+        await new Promise(resolve => setTimeout(resolve, executionTime));
+        return {
+          type: 'transform',
+          status: 'completed',
+          data: { 
+            input: { raw: 'input data', format: 'json' },
+            output: { transformed: 'processed data', format: 'xml', records: Math.floor(Math.random() * 100) },
+            transformationType: 'json_to_xml',
+            processingRules: ['validation', 'mapping', 'enrichment']
+          },
+          executionTime
+        };
+
+      case 'Loop':
+        await new Promise(resolve => setTimeout(resolve, executionTime));
+        const iterations = Math.floor(Math.random() * 10) + 1;
+        return {
+          type: 'loop',
+          status: 'completed',
+          data: {
+            iterations: iterations,
+            loopType: 'for_each',
+            processedItems: Array.from({length: iterations}, (_, i) => `item_${i + 1}`),
+            totalProcessingTime: `${Math.round(executionTime * iterations)}ms`
+          },
+          executionTime: executionTime * iterations
+        };
+        
+      default:
+        await new Promise(resolve => setTimeout(resolve, executionTime));
+        return {
+          type: 'generic',
+          status: shouldSucceed ? 'executed' : 'error',
+          data: shouldSucceed 
+            ? { 
+                message: `${nodeType} executed successfully`,
+                nodeId: node.id,
+                parameters: node.data,
+                output: `Result from ${nodeType}`
+              }
+            : { error: `Failed to execute ${nodeType}`, code: 'EXEC_ERROR' },
+          executionTime
+        };
+    }
+  };
+
+  const generatePreviewHTML = (results: any[], steps: any[]): string => {
+    const totalExecutionTime = steps.reduce((total, step) => total + step.result.executionTime, 0);
+    const successfulSteps = results.filter(r => r.status === 'success' || r.status === 'executed' || r.status === 'rendered' || r.status === 'completed').length;
+    const errorSteps = results.filter(r => r.status === 'error').length;
+    
+    return `
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Flow Execution Results - TON Low-Code Platform</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .execution-step {
+                animation: fadeInUp 0.5s ease-out forwards;
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            .execution-step:nth-child(1) { animation-delay: 0.1s; }
+            .execution-step:nth-child(2) { animation-delay: 0.2s; }
+            .execution-step:nth-child(3) { animation-delay: 0.3s; }
+            .execution-step:nth-child(4) { animation-delay: 0.4s; }
+            .execution-step:nth-child(5) { animation-delay: 0.5s; }
+            
+            @keyframes fadeInUp {
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .status-success { @apply bg-green-100 text-green-800 border-green-200; }
+            .status-executed { @apply bg-blue-100 text-blue-800 border-blue-200; }
+            .status-rendered { @apply bg-purple-100 text-purple-800 border-purple-200; }
+            .status-completed { @apply bg-indigo-100 text-indigo-800 border-indigo-200; }
+            .status-error { @apply bg-red-100 text-red-800 border-red-200; }
+            
+            .step-success { border-left: 4px solid #10B981; }
+            .step-error { border-left: 4px solid #EF4444; }
+            .step-warning { border-left: 4px solid #F59E0B; }
+        </style>
+    </head>
+    <body class="bg-gray-50 min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <!-- Header -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2">🚀 Flow Execution Results</h1>
+                        <p class="text-gray-600">Flow completed with ${steps.length} steps</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-2xl font-bold ${errorSteps > 0 ? 'text-amber-600' : 'text-green-600'}">
+                            ${errorSteps > 0 ? '⚠️' : '✅'}
+                        </div>
+                        <div class="text-sm text-gray-600">${errorSteps > 0 ? 'With Errors' : 'Success'}</div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-blue-600">${steps.length}</div>
+                        <div class="text-sm text-blue-800">Total Steps</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-green-600">${successfulSteps}</div>
+                        <div class="text-sm text-green-800">Successful</div>
+                    </div>
+                    ${errorSteps > 0 ? `
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-red-600">${errorSteps}</div>
+                        <div class="text-sm text-red-800">Failed</div>
+                    </div>
+                    ` : ''}
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-purple-600">${Math.round(totalExecutionTime)}ms</div>
+                        <div class="text-sm text-purple-800">Total Time</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execution Steps -->
+            <div class="space-y-4">
+                ${steps.map((step, index) => {
+                  const isError = step.result.status === 'error';
+                  const stepClass = isError ? 'step-error' : 'step-success';
+                  const iconColor = isError ? 'bg-red-500' : 'bg-blue-500';
+                  const icon = isError ? '❌' : '✅';
+                  
+                  return `
+                    <div class="execution-step bg-white rounded-lg shadow-lg p-6 ${stepClass}">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 ${iconColor} text-white rounded-full flex items-center justify-center font-bold">
+                                    ${index + 1}
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                        ${step.nodeName}
+                                        <span class="ml-2">${icon}</span>
+                                    </h3>
+                                    <p class="text-sm text-gray-500">Node ID: ${step.nodeId} | Type: ${step.result.type}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-3 py-1 rounded-full text-xs font-medium border status-${step.result.status}">
+                                    ${step.result.status.toUpperCase()}
+                                </span>
+                                <span class="text-xs text-gray-500">${Math.round(step.result.executionTime)}ms</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-medium text-gray-900 mb-2">
+                                ${isError ? '❌ Error Details:' : '📊 Execution Result:'}
+                            </h4>
+                            <pre class="text-sm text-gray-700 whitespace-pre-wrap overflow-x-auto">${JSON.stringify(step.result.data, null, 2)}</pre>
+                        </div>
+                        
+                        <div class="mt-3 flex justify-between items-center text-xs text-gray-500">
+                            <span>Executed at: ${new Date(step.timestamp).toLocaleString('th-TH')}</span>
+                            <span>Duration: ${Math.round(step.result.executionTime)}ms</span>
+                        </div>
+                    </div>
+                  `;
+                }).join('')}
+            </div>
+
+            <!-- Flow Visualization -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mt-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">🔄 Flow Execution Path</h2>
+                <div class="flex flex-wrap items-center gap-2">
+                    ${steps.map((step, index) => {
+                      const isError = step.result.status === 'error';
+                      const bgColor = isError ? 'bg-red-100 text-red-800 border-red-200' : 'bg-blue-100 text-blue-800 border-blue-200';
+                      const icon = isError ? '❌' : '✅';
+                      
+                      return `
+                        <div class="flex items-center">
+                            <div class="px-3 py-2 ${bgColor} border rounded-lg text-sm font-medium flex items-center">
+                                <span class="mr-1">${icon}</span>
+                                ${step.nodeName}
+                            </div>
+                            ${index < steps.length - 1 ? '<div class="text-gray-400 mx-2">→</div>' : ''}
+                        </div>
+                      `;
+                    }).join('')}
+                </div>
+                
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-medium text-gray-900 mb-2">📈 Execution Summary</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <strong>Average Execution Time:</strong> ${Math.round(totalExecutionTime / steps.length)}ms per step
+                        </div>
+                        <div>
+                            <strong>Success Rate:</strong> ${Math.round((successfulSteps / steps.length) * 100)}%
+                        </div>
+                        <div>
+                            <strong>Total Processing Time:</strong> ${Math.round(totalExecutionTime)}ms
+                        </div>
+                        <div>
+                            <strong>Generated at:</strong> ${new Date().toLocaleString('th-TH')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="mt-8 text-center text-gray-500 text-sm">
+                <p>Generated by TON Low-Code Platform Flow Execution Engine</p>
+                <p class="mt-1">🚀 Powered by ReactFlow & Next.js</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+  };
+
+  // Website Generation Engine
+  const generateWebsite = async () => {
+    if (isGeneratingWebsite) return;
+    
+    setIsGeneratingWebsite(true);
+    
+    try {
+      // Find starting node (node without incoming edges)
+      const startingNodes = nodes.filter(node => 
+        !edges.some(edge => edge.target === node.id) && !node.data.isGroup
+      );
+
+      if (startingNodes.length === 0) {
+        alert('ไม่พบ starting node สำหรับสร้างเว็บไซต์');
+        setIsGeneratingWebsite(false);
+        return;
+      }
+
+      // Build website structure
+      const websiteStructure = buildWebsiteStructure();
+      
+      // Generate all pages
+      const websitePages = generateWebsitePages(websiteStructure);
+      
+      // Create main index page
+      const indexPageHTML = generateIndexPage(websitePages, startingNodes[0]);
+      
+      // Open website in new tab
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        // Store website data in the opener window for navigation
+        (window as any).__websitePages = websitePages;
+        (window as any).__websiteStructure = websiteStructure;
+        
+        newWindow.document.open();
+        newWindow.document.write(indexPageHTML);
+        newWindow.document.close();
+        
+        // Also store in the new window
+        (newWindow as any).__websitePages = websitePages;
+        (newWindow as any).__websiteStructure = websiteStructure;
+      }
+
+    } catch (error) {
+      console.error('Website generation error:', error);
+      alert('เกิดข้อผิดพลาดในการสร้างเว็บไซต์: ' + error);
+    } finally {
+      setIsGeneratingWebsite(false);
+    }
+  };
+
+  const buildWebsiteStructure = () => {
+    const structure: { [nodeId: string]: { node: Node; connections: string[] } } = {};
+    
+    // Build page structure
+    nodes.forEach(node => {
+      if (!node.data.isGroup) {
+        structure[node.id] = {
+          node,
+          connections: edges
+            .filter(edge => edge.source === node.id)
+            .map(edge => edge.target)
+        };
+      }
+    });
+    
+    return structure;
+  };
+
+  const generateWebsitePages = (structure: { [nodeId: string]: { node: Node; connections: string[] } }) => {
+    const pages: { [nodeId: string]: string } = {};
+    
+    Object.entries(structure).forEach(([nodeId, { node, connections }]) => {
+      pages[nodeId] = generateNodePage(node, connections, structure);
+    });
+    
+    return pages;
+  };
+
+  const generateNodePage = (node: Node, connections: string[], structure: { [nodeId: string]: { node: Node; connections: string[] } }): string => {
+    const nodeType = node.data.label;
+    const backgroundColor = node.data.backgroundColor || '#ffffff';
+    const textContent = node.data.textContent || `Welcome to ${node.data.label} Page`;
+    
+    // Generate navigation buttons for connected nodes
+    const navigationButtons = connections.map(connectedNodeId => {
+      const connectedNode = structure[connectedNodeId]?.node;
+      if (!connectedNode) return '';
+      
+      return `
+        <button 
+          onclick="navigateToPage('${connectedNodeId}')" 
+          class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors mr-4 mb-4 flex items-center"
+        >
+          <span class="mr-2">🔗</span>
+          ไปยัง ${connectedNode.data.label}
+        </button>
+      `;
+    }).join('');
+
+    // Generate page content based on node type
+    let pageContent = '';
+    
+    switch (nodeType) {
+      case 'UI Component':
+      case 'Button':
+        pageContent = `
+          <div class="text-center">
+            <h2 class="text-3xl font-bold mb-6">${node.data.label}</h2>
+            <p class="text-lg mb-8">${textContent}</p>
+            <div class="space-y-4">
+              ${node.data.componentType === 'Button' ? `
+                <button class="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-lg text-xl">
+                  ${node.data.textContent || 'Click Me'}
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        break;
+        
+      case 'Form':
+        pageContent = `
+          <div class="max-w-md mx-auto">
+            <h2 class="text-3xl font-bold mb-6 text-center">${node.data.label}</h2>
+            <form class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-2">ชื่อ</label>
+                <input type="text" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="กรอกชื่อของคุณ">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-2">อีเมล</label>
+                <input type="email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="กรอกอีเมลของคุณ">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-2">ข้อความ</label>
+                <textarea class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 h-32" placeholder="กรอกข้อความ"></textarea>
+              </div>
+              <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg">ส่งข้อมูล</button>
+            </form>
+          </div>
+        `;
+        break;
+        
+      case 'API Call':
+        pageContent = `
+          <div class="text-center">
+            <h2 class="text-3xl font-bold mb-6">API Integration</h2>
+            <div class="bg-gray-100 p-6 rounded-lg mb-6">
+              <h3 class="text-xl font-semibold mb-4">API Endpoint</h3>
+              <p class="text-lg"><strong>URL:</strong> ${node.data.url || 'https://api.example.com'}</p>
+              <p class="text-lg"><strong>Method:</strong> ${node.data.method || 'GET'}</p>
+            </div>
+            <button onclick="callAPI()" class="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg text-xl">
+              เรียก API
+            </button>
+            <div id="api-result" class="mt-6 p-4 bg-green-100 rounded-lg hidden">
+              <h4 class="font-semibold">ผลลัพธ์ API:</h4>
+              <pre id="api-data" class="text-sm mt-2"></pre>
+            </div>
+          </div>
+        `;
+        break;
+        
+      case 'Database':
+        pageContent = `
+          <div class="text-center">
+            <h2 class="text-3xl font-bold mb-6">Database Connection</h2>
+            <div class="bg-gray-100 p-6 rounded-lg mb-6">
+              <h3 class="text-xl font-semibold mb-4">ข้อมูลจากฐานข้อมูล</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded">
+                  <h4 class="font-semibold">ผู้ใช้งาน</h4>
+                  <p class="text-2xl font-bold text-blue-600">1,234</p>
+                </div>
+                <div class="bg-white p-4 rounded">
+                  <h4 class="font-semibold">คำสั่งซื้อ</h4>
+                  <p class="text-2xl font-bold text-green-600">567</p>
+                </div>
+                <div class="bg-white p-4 rounded">
+                  <h4 class="font-semibold">รายได้</h4>
+                  <p class="text-2xl font-bold text-purple-600">฿89,000</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+        
+      case 'Chart':
+        pageContent = `
+          <div class="text-center">
+            <h2 class="text-3xl font-bold mb-6">Analytics Dashboard</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-semibold mb-4">📊 Sales Chart</h3>
+                <div class="h-40 bg-gradient-to-r from-blue-400 to-purple-600 rounded-lg flex items-end justify-around p-4">
+                  <div class="bg-white/20 w-8 h-16 rounded"></div>
+                  <div class="bg-white/30 w-8 h-24 rounded"></div>
+                  <div class="bg-white/40 w-8 h-20 rounded"></div>
+                  <div class="bg-white/50 w-8 h-32 rounded"></div>
+                  <div class="bg-white/60 w-8 h-28 rounded"></div>
+                </div>
+              </div>
+              <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-semibold mb-4">📈 Growth Metrics</h3>
+                <div class="space-y-3">
+                  <div class="flex justify-between">
+                    <span>Revenue</span>
+                    <span class="font-bold text-green-600">+15%</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Users</span>
+                    <span class="font-bold text-blue-600">+8%</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Orders</span>
+                    <span class="font-bold text-purple-600">+12%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+        
+      case 'Table':
+        pageContent = `
+          <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold mb-6">Data Table</h2>
+            <div class="overflow-x-auto">
+              <table class="min-w-full bg-white rounded-lg shadow-lg">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                  <tr><td class="px-6 py-4">001</td><td class="px-6 py-4">สมชาย ใจดี</td><td class="px-6 py-4">somchai@example.com</td><td class="px-6 py-4"><span class="text-green-600">Active</span></td></tr>
+                  <tr><td class="px-6 py-4">002</td><td class="px-6 py-4">สมหญิง รักดี</td><td class="px-6 py-4">somying@example.com</td><td class="px-6 py-4"><span class="text-green-600">Active</span></td></tr>
+                  <tr><td class="px-6 py-4">003</td><td class="px-6 py-4">วิชัย สุขใส</td><td class="px-6 py-4">wichai@example.com</td><td class="px-6 py-4"><span class="text-yellow-600">Pending</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+        break;
+        
+      case 'Page':
+        pageContent = `
+          <div class="text-center">
+            <h2 class="text-3xl font-bold mb-6">📄 ${node.data.label}</h2>
+            <p class="text-lg mb-8">${textContent}</p>
+            <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-semibold mb-4">🎯 Features</h3>
+                <ul class="text-left space-y-2">
+                  <li>✅ Responsive Design</li>
+                  <li>✅ Modern UI Components</li>
+                  <li>✅ Fast Loading</li>
+                  <li>✅ SEO Optimized</li>
+                </ul>
+              </div>
+              <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h3 class="text-xl font-semibold mb-4">📊 Stats</h3>
+                <div class="text-left space-y-2">
+                  <div>Page Views: <strong>2,543</strong></div>
+                  <div>Unique Visitors: <strong>1,876</strong></div>
+                  <div>Bounce Rate: <strong>32%</strong></div>
+                  <div>Load Time: <strong>1.2s</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+        
+      case 'Service':
+        pageContent = `
+          <div class="text-center">
+            <h2 class="text-3xl font-bold mb-6">🔧 ${node.data.label}</h2>
+            <p class="text-lg mb-8">${textContent}</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="text-4xl mb-4">⚡</div>
+                <h3 class="text-xl font-semibold mb-2">Fast Processing</h3>
+                <p class="text-gray-600">High-performance service with lightning-fast response times</p>
+              </div>
+              <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="text-4xl mb-4">🔒</div>
+                <h3 class="text-xl font-semibold mb-2">Secure</h3>
+                <p class="text-gray-600">Enterprise-grade security and data protection</p>
+              </div>
+              <div class="bg-white p-6 rounded-lg shadow-lg">
+                <div class="text-4xl mb-4">📈</div>
+                <h3 class="text-xl font-semibold mb-2">Scalable</h3>
+                <p class="text-gray-600">Auto-scaling to handle any workload</p>
+              </div>
+            </div>
+          </div>
+        `;
+        break;
+        
+      default:
+        pageContent = `
+          <div class="text-center">
+            <h2 class="text-3xl font-bold mb-6">${node.data.label}</h2>
+            <p class="text-lg mb-8">${textContent}</p>
+            <div class="bg-gradient-to-r from-blue-100 to-purple-100 p-8 rounded-lg">
+              <div class="text-6xl mb-4">🎨</div>
+              <p class="text-gray-600 text-lg">หน้านี้ถูกสร้างจาก <strong>${nodeType}</strong> node</p>
+              <p class="text-gray-500 mt-2">คุณสามารถปรับแต่งเนื้อหาได้ในโหนดคุณสมบัติ</p>
+            </div>
+          </div>
+        `;
+    }
+
+    return `
+      <!DOCTYPE html>
+      <html lang="th">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${node.data.label} - Generated Website</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+              body { 
+                  background-color: ${backgroundColor}; 
+                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              }
+              .page-container {
+                  animation: fadeIn 0.5s ease-in;
+              }
+              @keyframes fadeIn {
+                  from { opacity: 0; transform: translateY(20px); }
+                  to { opacity: 1; transform: translateY(0); }
+              }
+          </style>
+      </head>
+      <body class="min-h-screen">
+          <div class="page-container">
+              <!-- Header -->
+              <header class="bg-white shadow-lg border-b">
+                  <div class="container mx-auto px-6 py-4">
+                      <div class="flex items-center justify-between">
+                          <div class="flex items-center space-x-4">
+                              <h1 class="text-2xl font-bold text-gray-900">🌐 Generated Website</h1>
+                              <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                                  Current: ${node.data.label}
+                              </span>
+                          </div>
+                          <button onclick="showPageMap()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">
+                              📍 Site Map
+                          </button>
+                      </div>
+                  </div>
+              </header>
+
+              <!-- Main Content -->
+              <main class="container mx-auto px-6 py-12">
+                  ${pageContent}
+                  
+                  <!-- Navigation Section -->
+                  ${navigationButtons ? `
+                      <div class="mt-12 pt-8 border-t">
+                          <h3 class="text-xl font-semibold mb-4">🔗 การนำทาง</h3>
+                          <div class="flex flex-wrap">
+                              ${navigationButtons}
+                          </div>
+                      </div>
+                  ` : ''}
+              </main>
+
+              <!-- Footer -->
+              <footer class="bg-gray-800 text-white py-8 mt-16">
+                  <div class="container mx-auto px-6 text-center">
+                      <p>🚀 Generated by TON Low-Code Platform</p>
+                      <p class="text-sm text-gray-400 mt-2">Node ID: ${node.id} | Type: ${nodeType}</p>
+                  </div>
+              </footer>
+          </div>
+
+          <script>
+              // Store website structure
+              window.__currentNodeId = '${node.id}';
+              
+              // Copy website data to current window for navigation
+              if (window.opener && window.opener.__websitePages) {
+                  window.__websitePages = window.opener.__websitePages;
+                  window.__websiteStructure = window.opener.__websiteStructure;
+              }
+              
+              // Navigation function
+              function navigateToPage(targetNodeId) {
+                  if (window.__websitePages && window.__websitePages[targetNodeId]) {
+                      // Add smooth transition effect
+                      document.body.style.opacity = '0.5';
+                      document.body.style.transition = 'opacity 0.3s ease';
+                      
+                      setTimeout(() => {
+                          const targetPageHTML = window.__websitePages[targetNodeId];
+                          document.open();
+                          document.write(targetPageHTML);
+                          document.close();
+                      }, 150);
+                  } else {
+                      // Fallback: open in new tab
+                      const newTab = window.open('', '_blank');
+                      if (newTab && window.__websitePages && window.__websitePages[targetNodeId]) {
+                          newTab.document.write(window.__websitePages[targetNodeId]);
+                          newTab.document.close();
+                      } else {
+                          alert('กำลังนำทางไปยัง ' + targetNodeId);
+                      }
+                  }
+              }
+              
+              // API call function
+              function callAPI() {
+                  const resultDiv = document.getElementById('api-result');
+                  const dataDiv = document.getElementById('api-data');
+                  if (resultDiv && dataDiv) {
+                      resultDiv.classList.remove('hidden');
+                      dataDiv.textContent = JSON.stringify({
+                          status: 'success',
+                          data: { message: 'API called successfully', timestamp: new Date().toISOString() }
+                      }, null, 2);
+                  }
+              }
+              
+              // Show site map
+              function showPageMap() {
+                  if (window.parent && window.parent.__websiteStructure) {
+                      const structure = window.parent.__websiteStructure;
+                      const pages = Object.values(structure).map(s => s.node.data.label).join(', ');
+                      alert('หน้าทั้งหมดในเว็บไซต์: ' + pages);
+                  } else {
+                      alert('Site Map: ${node.data.label} (หน้าปัจจุบัน)');
+                  }
+              }
+          </script>
+      </body>
+      </html>
+    `;
+  };
+
+  const generateIndexPage = (pages: { [nodeId: string]: string }, startingNode: Node): string => {
+    return pages[startingNode.id] || '';
+  };
+
   // Handle node selection from edge button
   const handleNodeSelection = (nodeType: string) => {
     if (!showNodeSelector || !reactFlowInstance) return;
@@ -834,9 +1722,47 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </button>
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center">
-                <Play className="h-4 w-4 mr-2" />
-                Run Flow
+              <button 
+                onClick={executeFlow}
+                disabled={isExecuting || isGeneratingWebsite}
+                className={`px-4 py-2 text-white rounded-lg flex items-center transition-colors ${
+                  isExecuting 
+                    ? 'bg-amber-500 cursor-not-allowed' 
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {isExecuting ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                    กำลังรัน Flow...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Run Flow
+                  </>
+                )}
+              </button>
+              <button 
+                onClick={generateWebsite}
+                disabled={isExecuting || isGeneratingWebsite}
+                className={`px-4 py-2 text-white rounded-lg flex items-center transition-colors ${
+                  isGeneratingWebsite 
+                    ? 'bg-purple-500 cursor-not-allowed' 
+                    : 'bg-purple-600 hover:bg-purple-700'
+                }`}
+              >
+                {isGeneratingWebsite ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                    สร้างเว็บไซต์...
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-4 w-4 mr-2" />
+                    Run Website
+                  </>
+                )}
               </button>
             </div>
           </div>
