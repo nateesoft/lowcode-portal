@@ -4,7 +4,7 @@ import {
   Code2, Layers, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
   Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon,
-  Globe2, MessageCircle, Database, Images
+  Globe2, MessageCircle, Database, Images, Calendar
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
@@ -16,6 +16,7 @@ import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
 import { useChatbot } from '@/contexts/ChatbotContext';
 import { useDatabase } from '@/contexts/DatabaseContext';
 import { useMedia } from '@/contexts/MediaContext';
+import { useProjectManagement } from '@/contexts/ProjectManagementContext';
 import { 
   DatabaseConnectionCard, 
   DatabaseConnectionModal, 
@@ -28,6 +29,11 @@ import MediaListView from '@/components/media/MediaListView';
 import MediaUploadArea from '@/components/media/MediaUploadArea';
 import FolderModal from '@/components/media/FolderModal';
 import FilePreviewModal from '@/components/media/FilePreviewModal';
+import { 
+  TimelineView, 
+  TaskDetailModal, 
+  TaskSummary 
+} from '@/components/project-management';
 
 interface DashboardProps {
   projects: Project[];
@@ -78,6 +84,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     currentFolder,
     generateDemoFiles
   } = useMedia();
+  const {
+    currentProject,
+    generateDemoData: generateDemoProjects
+  } = useProjectManagement();
   
   const [showSiteMap, setShowSiteMap] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
@@ -95,6 +105,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
   const [editingFile, setEditingFile] = useState<any>(null);
+  
+  // Project Management states
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [projectManagementView, setProjectManagementView] = useState<'timeline' | 'summary'>('timeline');
   const stats = {
     totalProjects: projects.length,
     published: projects.filter(p => p.status === 'Published').length,
@@ -734,6 +750,113 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         );
 
+      case 'project-management':
+        return (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            {/* Header */}
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Project Management</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  Manage tasks and project timeline
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button 
+                  onClick={() => generateDemoProjects()}
+                  className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center justify-center"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Load Demo Project
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedTask(null);
+                    setIsCreatingTask(true);
+                    setShowTaskModal(true);
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Task
+                </button>
+              </div>
+            </div>
+
+            {/* View Toggle */}
+            <div className="px-4 sm:px-6 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+              <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg p-1">
+                <button
+                  onClick={() => setProjectManagementView('timeline')}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    projectManagementView === 'timeline'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Calendar className="h-4 w-4 mr-2 inline" />
+                  Timeline View
+                </button>
+                <button
+                  onClick={() => setProjectManagementView('summary')}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    projectManagementView === 'summary'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <TrendingUp className="h-4 w-4 mr-2 inline" />
+                  Summary
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="h-[70vh]">
+              {!currentProject ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      No Project Selected
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6">
+                      Create or load a demo project to get started with project management
+                    </p>
+                    <button 
+                      onClick={() => generateDemoProjects()}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                    >
+                      Load Demo Project
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {projectManagementView === 'timeline' ? (
+                    <TimelineView
+                      onTaskClick={(task) => {
+                        setSelectedTask(task);
+                        setIsCreatingTask(false);
+                        setShowTaskModal(true);
+                      }}
+                      onCreateTask={() => {
+                        setSelectedTask(null);
+                        setIsCreatingTask(true);
+                        setShowTaskModal(true);
+                      }}
+                    />
+                  ) : (
+                    <div className="p-6 overflow-y-auto h-full">
+                      <TaskSummary />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -841,6 +964,17 @@ const Dashboard: React.FC<DashboardProps> = ({
           >
             <Images className="h-5 w-5" />
             <span>Media</span>
+          </button>
+          <button 
+            onClick={() => setActiveView('project-management')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
+              activeView === 'project-management' 
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
+                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Calendar className="h-5 w-5" />
+            <span>Project Management</span>
           </button>
           <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
           <button 
@@ -1338,6 +1472,18 @@ const Dashboard: React.FC<DashboardProps> = ({
           setShowPreviewModal(false);
           setPreviewFile(null);
         }}
+      />
+
+      {/* Project Management Modals */}
+      <TaskDetailModal
+        isOpen={showTaskModal}
+        onClose={() => {
+          setShowTaskModal(false);
+          setSelectedTask(null);
+          setIsCreatingTask(false);
+        }}
+        task={selectedTask}
+        isCreating={isCreatingTask}
       />
     </div>
   );
