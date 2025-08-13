@@ -254,6 +254,8 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
   const [showCodeEditor, setShowCodeEditor] = useState(false);
   const [selectedNodeForEditor, setSelectedNodeForEditor] = useState<any>(null);
+  const [isActiveFlow, setIsActiveFlow] = useState(false);
+  const [flowName, setFlowName] = useState('Untitled Flow');
 
   const onConnect: OnConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -304,14 +306,81 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     [],
   );
 
-  const handleSaveFlow = () => {
+  const handleSaveFlow = async () => {
     const flowData = {
+      id: Date.now().toString(),
+      name: flowName,
+      isActive: isActiveFlow,
       nodes,
       edges,
       viewport: reactFlowInstance?.getViewport(),
+      createdAt: new Date().toISOString()
     };
+
     console.log('Saving Service Flow:', flowData);
-    onClose();
+    
+    try {
+      // TODO: Replace with actual API endpoint
+      const response = await fetch('/api/flows', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(flowData)
+      });
+
+      if (response.ok) {
+        console.log('Flow saved successfully');
+        // You could show a success toast here
+        onClose();
+      } else {
+        console.error('Failed to save flow');
+        alert('Failed to save flow');
+      }
+    } catch (error) {
+      console.error('Error saving flow:', error);
+      alert('Error saving flow: ' + error);
+    }
+  };
+
+  const handleTestFlow = async () => {
+    if (!isActiveFlow) {
+      alert('Please activate the flow before testing');
+      return;
+    }
+
+    const flowData = {
+      flowId: Date.now().toString(),
+      name: flowName,
+      nodes,
+      edges
+    };
+
+    try {
+      console.log('Testing flow via API:', flowData);
+      
+      // TODO: Replace with actual API endpoint
+      const response = await fetch('/api/flows/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(flowData)
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        console.log('Flow executed successfully:', result);
+        alert('Flow executed successfully! Check console for details.');
+      } else {
+        console.error('Failed to execute flow:', result);
+        alert('Failed to execute flow: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error executing flow:', error);
+      alert('Error executing flow: ' + error);
+    }
   };
 
   const onUpdateNode = useCallback(
@@ -446,17 +515,37 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-7xl h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
               <Workflow className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                Service Flow Designer
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Design and manage your service architecture flow
-              </p>
+              <div className="flex items-center space-x-3 mb-1">
+                <input
+                  type="text"
+                  value={flowName}
+                  onChange={(e) => setFlowName(e.target.value)}
+                  className="text-xl font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none focus:ring-2 focus:ring-green-500 rounded px-1"
+                  placeholder="Flow Name"
+                />
+              </div>
+              <div className="flex items-center space-x-3">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Design and manage your service architecture flow
+                </p>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-slate-500 dark:text-slate-400">Active Flow:</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isActiveFlow}
+                      onChange={(e) => setIsActiveFlow(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -467,7 +556,15 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               <Save className="h-4 w-4" />
               <span>Save Flow</span>
             </button>
-            <button className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center space-x-2">
+            <button 
+              onClick={handleTestFlow}
+              disabled={!isActiveFlow}
+              className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
+                isActiveFlow 
+                  ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20' 
+                  : 'text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50'
+              }`}
+            >
               <Play className="h-4 w-4" />
               <span>Test Flow</span>
             </button>
