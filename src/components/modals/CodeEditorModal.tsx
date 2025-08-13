@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Play, Download, Copy, Save, Settings, Terminal, FileCode, Eye, EyeOff } from 'lucide-react';
+import { X, Play, Download, Copy, Save, Settings, Terminal, FileCode, Eye, EyeOff, Maximize2, Minimize2, Move } from 'lucide-react';
+import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 
 interface CodeEditorModalProps {
   isOpen: boolean;
@@ -18,13 +19,25 @@ const CodeEditorModal: React.FC<CodeEditorModalProps> = ({
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(true);
+  const { 
+    dragRef, 
+    modalRef, 
+    isDragging, 
+    isFullscreen, 
+    modalStyle, 
+    dragHandleStyle, 
+    handleMouseDown, 
+    toggleFullscreen, 
+    resetPosition 
+  } = useModalDragAndResize();
 
   useEffect(() => {
     if (nodeData && isOpen) {
       setLanguage(nodeData.targetLanguage || 'javascript');
       generateCodeFromNode();
+      resetPosition();
     }
-  }, [nodeData, isOpen]);
+  }, [nodeData, isOpen, resetPosition]);
 
   const generateCodeFromNode = () => {
     if (!nodeData) return;
@@ -297,9 +310,18 @@ ${JSON.stringify({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-6xl h-[90vh] flex flex-col"
+        style={modalStyle}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-green-50 to-slate-50 dark:bg-gradient-to-r dark:from-green-900/20 dark:to-slate-900">
+        <div 
+          ref={dragRef}
+          className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-green-50 to-slate-50 dark:bg-gradient-to-r dark:from-green-900/20 dark:to-slate-900"
+          style={dragHandleStyle}
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
               <FileCode className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -322,6 +344,16 @@ ${JSON.stringify({
               <Play className="h-4 w-4" />
               <span>{isRunning ? 'Running...' : 'Run Code'}</span>
             </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+            <div className="flex items-center text-slate-400 px-2">
+              <Move className="h-4 w-4" />
+            </div>
             <button
               onClick={onClose}
               className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { X, Code, Save, Eye, Settings, Plus, Trash2, Copy, FileText, Layout, Type, Hash, Calendar, CheckSquare, ToggleLeft, List, Image, FileUp, Rows, Columns, Square, Layers, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, Code, Save, Eye, Settings, Plus, Trash2, Copy, FileText, Layout, Type, Hash, Calendar, CheckSquare, ToggleLeft, List, Image, FileUp, Rows, Columns, Square, Layers, ChevronDown, ChevronRight, Maximize2, Minimize2, Move } from 'lucide-react';
+import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 
 interface WeUIModalProps {
   isOpen: boolean;
@@ -22,6 +23,17 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     schema: false,
     elements: false
   });
+  const { 
+    dragRef, 
+    modalRef, 
+    isDragging, 
+    isFullscreen, 
+    modalStyle, 
+    dragHandleStyle, 
+    handleMouseDown, 
+    toggleFullscreen, 
+    resetPosition 
+  } = useModalDragAndResize();
 
   const toggleSection = (sectionName: string) => {
     setCollapsedSections(prev => ({
@@ -1121,13 +1133,29 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     );
   };
 
+  // Reset position when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      resetPosition();
+    }
+  }, [isOpen, resetPosition]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-6xl h-[90vh] flex flex-col">
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-6xl h-[90vh] flex flex-col"
+        style={modalStyle}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+        <div 
+          ref={dragRef}
+          className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700"
+          style={dragHandleStyle}
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
               <Code className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -1149,6 +1177,16 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
               <Save className="h-4 w-4" />
               <span>Save Schema</span>
             </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+            <div className="flex items-center text-slate-400 px-2">
+              <Move className="h-4 w-4" />
+            </div>
             <button
               onClick={onClose}
               className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"

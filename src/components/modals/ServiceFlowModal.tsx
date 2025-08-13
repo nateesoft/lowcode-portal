@@ -17,7 +17,8 @@ import ReactFlow, {
   Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap, Circle, Square, Diamond, ArrowRight, Hexagon, Triangle, Octagon } from 'lucide-react';
+import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap, Circle, Square, Diamond, ArrowRight, Hexagon, Triangle, Octagon, Maximize2, Minimize2, Move } from 'lucide-react';
+import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 import ServiceFlowPropertiesPanel from '@/components/panels/ServiceFlowPropertiesPanel';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
 
@@ -256,6 +257,17 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   const [selectedNodeForEditor, setSelectedNodeForEditor] = useState<any>(null);
   const [isActiveFlow, setIsActiveFlow] = useState(false);
   const [flowName, setFlowName] = useState('Untitled Flow');
+  const { 
+    dragRef, 
+    modalRef, 
+    isDragging, 
+    isFullscreen, 
+    modalStyle, 
+    dragHandleStyle, 
+    handleMouseDown, 
+    toggleFullscreen, 
+    resetPosition 
+  } = useModalDragAndResize();
 
   const onConnect: OnConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -508,13 +520,29 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     [reactFlowInstance, nodes, setNodes, serviceTypes, flowchartShapes],
   );
 
+  // Reset position when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      resetPosition();
+    }
+  }, [isOpen, resetPosition]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-7xl h-[90vh] flex flex-col">
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-7xl h-[90vh] flex flex-col"
+        style={modalStyle}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+        <div 
+          ref={dragRef}
+          className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700"
+          style={dragHandleStyle}
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex items-center space-x-4">
             <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
               <Workflow className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -568,6 +596,16 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               <Play className="h-4 w-4" />
               <span>Test Flow</span>
             </button>
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+            <div className="flex items-center text-slate-400 px-2">
+              <Move className="h-4 w-4" />
+            </div>
             <button
               onClick={onClose}
               className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
