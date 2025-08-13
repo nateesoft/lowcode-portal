@@ -96,7 +96,7 @@ export const useModalDragAndResize = () => {
     maxHeight: isFullscreen ? '100vh' : '90vh',
     cursor: isDragging ? 'grabbing' : 'default',
     transition: isDragging ? 'none' : 'all 0.3s ease',
-    zIndex: 9999
+    zIndex: isFullscreen ? 10000 : 9999
   };
 
   const dragHandleStyle: React.CSSProperties = {

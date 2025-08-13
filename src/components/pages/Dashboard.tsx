@@ -11,6 +11,8 @@ import SiteMap from '@/components/ui/SiteMap';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import CurrencySwitcher from '@/components/ui/CurrencySwitcher';
 import { useTranslation } from 'react-i18next';
+import WeUIModal from '@/components/modals/WeUIModal';
+import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
 
 interface DashboardProps {
   projects: Project[];
@@ -47,6 +49,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const { t } = useTranslation();
   const [showSiteMap, setShowSiteMap] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
+  const [showWeUIModal, setShowWeUIModal] = useState(false);
+  const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
   const stats = {
     totalProjects: projects.length,
     published: projects.filter(p => p.status === 'Published').length,
@@ -133,7 +137,10 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('pages')}</h2>
-              <button className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center">
+              <button 
+                onClick={() => setShowWeUIModal(true)}
+                className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 {t('newPage')}
               </button>
@@ -179,7 +186,10 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('services')}</h2>
-              <button className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center">
+              <button 
+                onClick={() => setShowServiceFlowModal(true)}
+                className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 {t('newService')}
               </button>
@@ -234,7 +244,10 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('components')}</h2>
-              <button className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center">
+              <button 
+                onClick={() => setShowWeUIModal(true)}
+                className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 {t('newComponent')}
               </button>
@@ -1021,6 +1034,18 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* WeUI Modal */}
+      <WeUIModal
+        isOpen={showWeUIModal}
+        onClose={() => setShowWeUIModal(false)}
+      />
+
+      {/* Service Flow Modal */}
+      <ServiceFlowModal
+        isOpen={showServiceFlowModal}
+        onClose={() => setShowServiceFlowModal(false)}
+      />
     </div>
   );
 };

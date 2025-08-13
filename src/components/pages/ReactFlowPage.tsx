@@ -2062,7 +2062,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         </div>
       </div>
 
-      {/* Properties Panel - Fixed Sidebar Overlay */}
+      {/* Properties Panel - Right Sidebar */}
       {showPropertiesPanel && (
         <>
           {/* Mobile backdrop */}
@@ -2071,8 +2071,8 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
             onClick={onClosePropertiesPanel}
           />
           
-          {/* Properties Panel */}
-          <div className="fixed right-0 top-0 h-full z-50 transform transition-transform duration-300 ease-in-out">
+          {/* Properties Panel - Fixed overlay */}
+          <div className="fixed right-0 top-0 h-full w-56 z-50 transform transition-transform duration-300 ease-in-out">
             <NodePropertiesPanel
               selectedNode={selectedNode}
               selectedEdge={selectedEdge}

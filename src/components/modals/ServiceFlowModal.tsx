@@ -706,7 +706,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
           </div>
 
           {/* ReactFlow Canvas */}
-          <div className={`flex-1 relative ${showPropertiesPanel ? 'mr-64' : ''}`} ref={reactFlowWrapper}>
+          <div className="flex-1 relative" ref={reactFlowWrapper}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -730,6 +730,18 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
             </ReactFlow>
           </div>
+
+          {/* Properties Panel - Right Sidebar */}
+          {showPropertiesPanel && (
+            <div className="w-64 border-l border-slate-200 dark:border-slate-700">
+              <ServiceFlowPropertiesPanel
+                selectedNode={selectedService}
+                onClose={onClosePropertiesPanel}
+                onUpdateNode={onUpdateNode}
+                onOpenCodeEditor={onOpenCodeEditor}
+              />
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -750,17 +762,6 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         </div>
       </div>
 
-      {/* Properties Panel - Fixed Sidebar */}
-      {showPropertiesPanel && (
-        <div className="fixed right-0 top-0 h-full z-50">
-          <ServiceFlowPropertiesPanel
-            selectedNode={selectedService}
-            onClose={onClosePropertiesPanel}
-            onUpdateNode={onUpdateNode}
-            onOpenCodeEditor={onOpenCodeEditor}
-          />
-        </div>
-      )}
 
       {/* Code Editor Modal */}
       <CodeEditorModal
@@ -768,6 +769,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         onClose={onCloseCodeEditor}
         nodeData={selectedNodeForEditor}
       />
+      
     </div>
   );
 };

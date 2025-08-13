@@ -57,7 +57,7 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
   const isServiceNode = !isFlowchartNode;
 
   return (
-    <div className="w-64 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col h-full shadow-2xl">
+    <div className="w-full bg-white dark:bg-slate-800 flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-green-100 to-slate-50 dark:bg-gradient-to-r dark:from-green-900/20 dark:to-slate-900">
         <div className="flex items-center space-x-2">
@@ -297,7 +297,13 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
               </div>
 
               <button
-                onClick={() => onOpenCodeEditor(selectedNode.data)}
+                onClick={() => {
+                  try {
+                    onOpenCodeEditor(selectedNode.data);
+                  } catch (error) {
+                    console.error('Error opening code editor:', error);
+                  }
+                }}
                 className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
                 <Code2 className="h-4 w-4" />
