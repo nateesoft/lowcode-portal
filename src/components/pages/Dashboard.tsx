@@ -4,7 +4,7 @@ import {
   Code2, Layers, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
   Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon,
-  Globe2, MessageCircle
+  Globe2, MessageCircle, Database, Images
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
@@ -14,6 +14,20 @@ import { useTranslation } from 'react-i18next';
 import WeUIModal from '@/components/modals/WeUIModal';
 import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
 import { useChatbot } from '@/contexts/ChatbotContext';
+import { useDatabase } from '@/contexts/DatabaseContext';
+import { useMedia } from '@/contexts/MediaContext';
+import { 
+  DatabaseConnectionCard, 
+  DatabaseConnectionModal, 
+  DatabaseTablesView 
+} from '@/components/database';
+import MediaBreadcrumbs from '@/components/media/MediaBreadcrumbs';
+import MediaToolbar from '@/components/media/MediaToolbar';
+import MediaGridView from '@/components/media/MediaGridView';
+import MediaListView from '@/components/media/MediaListView';
+import MediaUploadArea from '@/components/media/MediaUploadArea';
+import FolderModal from '@/components/media/FolderModal';
+import FilePreviewModal from '@/components/media/FilePreviewModal';
 
 interface DashboardProps {
   projects: Project[];
@@ -49,10 +63,38 @@ const Dashboard: React.FC<DashboardProps> = ({
   const router = useRouter();
   const { t } = useTranslation();
   const { openChatbot } = useChatbot();
+  const { 
+    connections, 
+    isLoading: dbLoading, 
+    error: dbError,
+    addConnection,
+    updateConnection,
+    deleteConnection,
+    testConnection,
+    generateDemoData
+  } = useDatabase();
+  const {
+    viewMode,
+    currentFolder,
+    generateDemoFiles
+  } = useMedia();
+  
   const [showSiteMap, setShowSiteMap] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
   const [showWeUIModal, setShowWeUIModal] = useState(false);
   const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
+  
+  // Database states
+  const [showConnectionModal, setShowConnectionModal] = useState(false);
+  const [editingConnection, setEditingConnection] = useState<any>(null);
+  const [viewingTablesConnection, setViewingTablesConnection] = useState<any>(null);
+  
+  // Media states
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<any>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewFile, setPreviewFile] = useState<any>(null);
+  const [editingFile, setEditingFile] = useState<any>(null);
   const stats = {
     totalProjects: projects.length,
     published: projects.filter(p => p.status === 'Published').length,
@@ -521,6 +563,177 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         ) : null;
 
+      case 'database':
+        if (viewingTablesConnection) {
+          return (
+            <DatabaseTablesView
+              connection={viewingTablesConnection}
+              onBack={() => setViewingTablesConnection(null)}
+            />
+          );
+        }
+
+        return (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Database Connections</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  Manage your database connections and schemas
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button 
+                  onClick={() => generateDemoData()}
+                  className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center justify-center"
+                >
+                  <Database className="h-4 w-4 mr-2" />
+                  Load Demo Data
+                </button>
+                <button 
+                  onClick={() => setShowConnectionModal(true)}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Connection
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-4 sm:p-6">
+              {dbError && (
+                <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-red-600 dark:text-red-400 text-sm">{dbError}</p>
+                </div>
+              )}
+              
+              {connections.length === 0 ? (
+                <div className="text-center py-12">
+                  <Database className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                    No Database Connections
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-6">
+                    Connect to your databases to manage data and run queries
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button 
+                      onClick={() => generateDemoData()}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
+                    >
+                      Try Demo Connections
+                    </button>
+                    <button 
+                      onClick={() => setShowConnectionModal(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                    >
+                      Add Your First Connection
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                  {connections.map(connection => (
+                    <DatabaseConnectionCard
+                      key={connection.id}
+                      connection={connection}
+                      onEdit={(conn) => {
+                        setEditingConnection(conn);
+                        setShowConnectionModal(true);
+                      }}
+                      onDelete={deleteConnection}
+                      onTest={testConnection}
+                      onConnect={(conn) => {
+                        // Connect logic here
+                        console.log('Connect to', conn);
+                      }}
+                      onViewTables={(conn) => setViewingTablesConnection(conn)}
+                      isLoading={dbLoading}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'media':
+        return (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            {/* Media Breadcrumbs */}
+            <MediaBreadcrumbs />
+            
+            {/* Media Toolbar */}
+            <MediaToolbar 
+              onCreateFolder={() => {
+                setEditingFolder(null);
+                setShowFolderModal(true);
+              }}
+              onUpload={() => {
+                // Upload will be handled by MediaUploadArea
+                const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+                fileInput?.click();
+              }}
+            />
+            
+            {/* Media Content */}
+            <div className="flex-1">
+              {!currentFolder && (
+                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        Quick Upload
+                      </h3>
+                      <button
+                        onClick={() => generateDemoFiles()}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center space-x-2"
+                      >
+                        <Images className="h-4 w-4" />
+                        <span>Load Demo Files</span>
+                      </button>
+                    </div>
+                    <MediaUploadArea className="max-w-2xl" />
+                  </div>
+                </div>
+              )}
+              
+              {/* File/Folder Views */}
+              {viewMode === 'grid' ? (
+                <MediaGridView 
+                  onPreview={(file) => {
+                    setPreviewFile(file);
+                    setShowPreviewModal(true);
+                  }}
+                  onEditFile={(file) => {
+                    setEditingFile(file);
+                    // Add file edit modal here if needed
+                  }}
+                  onEditFolder={(folder) => {
+                    setEditingFolder(folder);
+                    setShowFolderModal(true);
+                  }}
+                />
+              ) : (
+                <MediaListView 
+                  onPreview={(file) => {
+                    setPreviewFile(file);
+                    setShowPreviewModal(true);
+                  }}
+                  onEditFile={(file) => {
+                    setEditingFile(file);
+                    // Add file edit modal here if needed
+                  }}
+                  onEditFolder={(folder) => {
+                    setEditingFolder(folder);
+                    setShowFolderModal(true);
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -606,6 +819,28 @@ const Dashboard: React.FC<DashboardProps> = ({
           >
             <Component className="h-5 w-5" />
             <span>{t('components')}</span>
+          </button>
+          <button 
+            onClick={() => setActiveView('database')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
+              activeView === 'database' 
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
+                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Database className="h-5 w-5" />
+            <span>Database</span>
+          </button>
+          <button 
+            onClick={() => setActiveView('media')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
+              activeView === 'media' 
+                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
+                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Images className="h-5 w-5" />
+            <span>Media</span>
           </button>
           <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
           <button 
@@ -1054,6 +1289,55 @@ const Dashboard: React.FC<DashboardProps> = ({
       <ServiceFlowModal
         isOpen={showServiceFlowModal}
         onClose={() => setShowServiceFlowModal(false)}
+      />
+
+      {/* Database Connection Modal */}
+      <DatabaseConnectionModal
+        isOpen={showConnectionModal}
+        onClose={() => {
+          setShowConnectionModal(false);
+          setEditingConnection(null);
+        }}
+        onSave={async (connectionData) => {
+          if (editingConnection) {
+            await updateConnection(editingConnection.id, connectionData);
+          } else {
+            await addConnection(connectionData);
+          }
+          setShowConnectionModal(false);
+          setEditingConnection(null);
+        }}
+        editingConnection={editingConnection}
+        isLoading={dbLoading}
+      />
+
+      {/* Media Modals */}
+      <FolderModal
+        isOpen={showFolderModal}
+        onClose={() => {
+          setShowFolderModal(false);
+          setEditingFolder(null);
+        }}
+        folder={editingFolder}
+      />
+
+      <FilePreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => {
+          setShowPreviewModal(false);
+          setPreviewFile(null);
+        }}
+        file={previewFile}
+        onEdit={(file) => {
+          setEditingFile(file);
+          setShowPreviewModal(false);
+          // Add file edit modal here if needed
+        }}
+        onDelete={async (file) => {
+          // Handle file deletion
+          setShowPreviewModal(false);
+          setPreviewFile(null);
+        }}
       />
     </div>
   );
