@@ -4,7 +4,7 @@ import {
   Code2, Layers, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
   Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon,
-  Globe2, MessageCircle, Database, Images, Calendar
+  Globe2, MessageCircle, Database, Images, Calendar, Table
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
@@ -30,7 +30,8 @@ import MediaUploadArea from '@/components/media/MediaUploadArea';
 import FolderModal from '@/components/media/FolderModal';
 import FilePreviewModal from '@/components/media/FilePreviewModal';
 import { 
-  TimelineView, 
+  TimelineView,
+  TableView, 
   TaskDetailModal, 
   TaskSummary 
 } from '@/components/project-management';
@@ -110,7 +111,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [projectManagementView, setProjectManagementView] = useState<'timeline' | 'summary'>('timeline');
+  const [projectManagementView, setProjectManagementView] = useState<'timeline' | 'table' | 'summary'>('timeline');
   const stats = {
     totalProjects: projects.length,
     published: projects.filter(p => p.status === 'Published').length,
@@ -795,7 +796,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                   }`}
                 >
                   <Calendar className="h-4 w-4 mr-2 inline" />
-                  Timeline View
+                  Timeline
+                </button>
+                <button
+                  onClick={() => setProjectManagementView('table')}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    projectManagementView === 'table'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Table className="h-4 w-4 mr-2 inline" />
+                  Table
                 </button>
                 <button
                   onClick={() => setProjectManagementView('summary')}
@@ -833,7 +845,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               ) : (
                 <>
-                  {projectManagementView === 'timeline' ? (
+                  {projectManagementView === 'timeline' && (
                     <TimelineView
                       onTaskClick={(task) => {
                         setSelectedTask(task);
@@ -846,7 +858,22 @@ const Dashboard: React.FC<DashboardProps> = ({
                         setShowTaskModal(true);
                       }}
                     />
-                  ) : (
+                  )}
+                  {projectManagementView === 'table' && (
+                    <TableView
+                      onTaskClick={(task) => {
+                        setSelectedTask(task);
+                        setIsCreatingTask(false);
+                        setShowTaskModal(true);
+                      }}
+                      onCreateTask={() => {
+                        setSelectedTask(null);
+                        setIsCreatingTask(true);
+                        setShowTaskModal(true);
+                      }}
+                    />
+                  )}
+                  {projectManagementView === 'summary' && (
                     <div className="p-6 overflow-y-auto h-full">
                       <TaskSummary />
                     </div>
