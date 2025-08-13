@@ -1,4 +1,4 @@
-import { Database, Cpu, Box, Zap, Layers, Square } from 'lucide-react';
+import { Database, Cpu, Box, Zap, Layers, Square, Globe, User, Settings } from 'lucide-react';
 import { NodeCategory } from '../types';
 
 export const getNodeDescription = (type: string): string => {
@@ -12,7 +12,10 @@ export const getNodeDescription = (type: string): string => {
     'Transform': 'Data Transform',
     'Group': 'Flow Grouping',
     'Frame': 'Visual Frame',
-    'Section': 'Flow Section'
+    'Section': 'Flow Section',
+    'Service': 'Background Service',
+    'Page': 'Web Page',
+    'User': 'User Input'
   };
   return descriptions[type] || 'Custom Node';
 };
@@ -28,7 +31,10 @@ export const getNodeIcon = (type: string) => {
     'Transform': Cpu,
     'Group': Layers,
     'Frame': Square,
-    'Section': Square
+    'Section': Square,
+    'Service': Settings,
+    'Page': Globe,
+    'User': User
   };
   return icons[type] || Box;
 };

@@ -41,7 +41,9 @@ import { websiteTemplates } from './templates';
 import { 
   buildWebsiteStructure, 
   generateWebsitePages, 
-  generateIndexPage 
+  generateIndexPage,
+  processServiceNodes,
+  isPageNode
 } from './utils/websiteGenerator';
 import { 
   buildExecutionGraph, 
@@ -385,10 +387,10 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
 
   // Open template selector
   const openTemplateSelector = () => {
-    // Check if there are nodes first
-    const nonGroupNodes = nodes.filter(node => !node.data.isGroup);
-    if (nonGroupNodes.length === 0) {
-      alert('กรุณาเพิ่มโหนดในแคนวาสก่อนสร้างเว็บไซต์');
+    // Check if there are Page nodes first
+    const pageNodes = nodes.filter(node => !node.data.isGroup && isPageNode(node));
+    if (pageNodes.length === 0) {
+      alert('กรุณาเพิ่มโหนดประเภท Page (เช่น Page, UI Component, Button, Form) ในแคนวาสก่อนสร้างเว็บไซต์');
       return;
     }
     
@@ -408,17 +410,6 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         console.warn('Invalid template ID, using default:', templateId);
       }
 
-      // Find starting node (node without incoming edges)
-      const startingNodes = nodes.filter(node => 
-        !edges.some(edge => edge.target === node.id) && !node.data.isGroup
-      );
-
-      if (startingNodes.length === 0) {
-        alert('ไม่พบ starting node สำหรับสร้างเว็บไซต์');
-        setIsGeneratingWebsite(false);
-        return;
-      }
-
       // Get selected template with fallback
       const template = websiteTemplates[templateId as keyof typeof websiteTemplates] || websiteTemplates.modern;
 
@@ -426,14 +417,48 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         throw new Error('ไม่สามารถโหลด template ได้');
       }
 
-      // Build website structure
+      console.log('🔄 Starting website generation...');
+      
+      // Process Service nodes in background (non-blocking)
+      console.log('🔄 Processing Service nodes in background...');
+      processServiceNodes(nodes, edges).then(serviceResults => {
+        console.log('✅ All Service nodes processed:', serviceResults);
+        // Store service results for potential use in pages
+        (window as any).__serviceResults = serviceResults;
+      }).catch(error => {
+        console.warn('⚠️ Some Service nodes failed:', error);
+      });
+
+      // Find starting Page node (Page node without incoming edges from other Page nodes)
+      const pageNodes = nodes.filter(node => !node.data.isGroup && isPageNode(node));
+      const startingPageNodes = pageNodes.filter(node => 
+        !edges.some(edge => {
+          const sourceNode = nodes.find(n => n.id === edge.source);
+          return edge.target === node.id && sourceNode && isPageNode(sourceNode);
+        })
+      );
+
+      if (startingPageNodes.length === 0) {
+        // If no clear starting page, use the first page node
+        if (pageNodes.length > 0) {
+          startingPageNodes.push(pageNodes[0]);
+        } else {
+          alert('ไม่พบโหนดประเภท Page สำหรับสร้างเว็บไซต์');
+          setIsGeneratingWebsite(false);
+          return;
+        }
+      }
+
+      console.log(`📄 Found ${pageNodes.length} Page nodes, starting from:`, startingPageNodes[0].data.label);
+
+      // Build website structure (only Page nodes)
       const websiteStructure = buildWebsiteStructure(nodes, edges);
       
       // Generate all pages with template
       const websitePages = generateWebsitePages(websiteStructure, template);
       
       // Create main index page
-      const indexPageHTML = generateIndexPage(websitePages, startingNodes[0]);
+      const indexPageHTML = generateIndexPage(websitePages, startingPageNodes[0]);
       
       // Open website in new tab
       const newWindow = window.open('', '_blank');
@@ -449,6 +474,8 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         // Also store in the new window
         (newWindow as any).__websitePages = websitePages;
         (newWindow as any).__websiteStructure = websiteStructure;
+        
+        console.log('🌐 Website generated successfully!');
       }
 
     } catch (error) {

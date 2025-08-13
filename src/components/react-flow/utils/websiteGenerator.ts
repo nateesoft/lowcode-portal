@@ -2,22 +2,131 @@ import { Node, Edge } from 'reactflow';
 import { WebsiteStructure, WebsiteTemplate } from '../types';
 import { websiteTemplates } from '../templates';
 
+// Helper function to check if node is a Page type
+export const isPageNode = (node: Node): boolean => {
+  return node.data.label === 'Page' || 
+         node.data.label === 'UI Component' || 
+         node.data.label === 'Button' || 
+         node.data.label === 'Form' ||
+         node.data.label === 'Display' ||
+         node.data.label === 'Chart' ||
+         node.data.label === 'Table';
+};
+
+// Helper function to check if node is a Service type
+export const isServiceNode = (node: Node): boolean => {
+  return node.data.label === 'Service' || 
+         node.data.label === 'API Call' || 
+         node.data.label === 'Database' ||
+         node.data.label === 'Logic' ||
+         node.data.label === 'Transform' ||
+         node.data.label === 'Function';
+};
+
 export const buildWebsiteStructure = (nodes: Node[], edges: Edge[]): WebsiteStructure => {
   const structure: WebsiteStructure = {};
   
-  // Build page structure
+  // Build page structure - include only Page nodes for website generation
   nodes.forEach(node => {
-    if (!node.data.isGroup) {
+    if (!node.data.isGroup && isPageNode(node)) {
+      // Find connections that lead to other Page nodes
+      const pageConnections = edges
+        .filter(edge => edge.source === node.id)
+        .map(edge => edge.target)
+        .filter(targetId => {
+          const targetNode = nodes.find(n => n.id === targetId);
+          return targetNode && isPageNode(targetNode);
+        });
+      
       structure[node.id] = {
         node,
-        connections: edges
-          .filter(edge => edge.source === node.id)
-          .map(edge => edge.target)
+        connections: pageConnections
       };
     }
   });
   
   return structure;
+};
+
+// Background processing for Service nodes
+export const processServiceNodes = async (nodes: Node[], edges: Edge[]): Promise<{ [nodeId: string]: any }> => {
+  const serviceResults: { [nodeId: string]: any } = {};
+  
+  // Find all Service nodes
+  const serviceNodes = nodes.filter(node => !node.data.isGroup && isServiceNode(node));
+  
+  // Process each Service node in background
+  for (const serviceNode of serviceNodes) {
+    console.log(`🔄 Processing Service: ${serviceNode.data.label} (${serviceNode.id})`);
+    
+    try {
+      // Simulate background processing with realistic timing
+      const result = await simulateServiceExecution(serviceNode);
+      serviceResults[serviceNode.id] = result;
+      
+      console.log(`✅ Service completed: ${serviceNode.data.label}`, result);
+    } catch (error) {
+      console.error(`❌ Service failed: ${serviceNode.data.label}`, error);
+      serviceResults[serviceNode.id] = { error: error, status: 'failed' };
+    }
+  }
+  
+  return serviceResults;
+};
+
+// Simulate service execution
+const simulateServiceExecution = async (serviceNode: Node): Promise<any> => {
+  const serviceType = serviceNode.data.label;
+  
+  // Random delay between 500ms to 2000ms to simulate real processing
+  const delay = Math.random() * 1500 + 500;
+  await new Promise(resolve => setTimeout(resolve, delay));
+  
+  switch (serviceType) {
+    case 'Service':
+      return {
+        status: 'running',
+        message: 'Background service is running',
+        timestamp: new Date().toISOString(),
+        data: { processId: Math.random().toString(36).substr(2, 9) }
+      };
+    
+    case 'API Call':
+      return {
+        status: 'success',
+        response: { 
+          data: { message: 'API call successful', id: Math.floor(Math.random() * 1000) },
+          statusCode: 200 
+        },
+        url: serviceNode.data.url || 'https://api.example.com',
+        method: serviceNode.data.method || 'GET'
+      };
+    
+    case 'Database':
+      return {
+        status: 'connected',
+        query: serviceNode.data.query || 'SELECT * FROM users',
+        rowsAffected: Math.floor(Math.random() * 100),
+        executionTime: `${delay.toFixed(0)}ms`
+      };
+    
+    case 'Logic':
+    case 'Transform':
+    case 'Function':
+      return {
+        status: 'executed',
+        input: serviceNode.data.input || 'Sample input',
+        output: `Processed: ${serviceNode.data.label} result`,
+        executionTime: `${delay.toFixed(0)}ms`
+      };
+    
+    default:
+      return {
+        status: 'completed',
+        message: `${serviceType} executed successfully`,
+        timestamp: new Date().toISOString()
+      };
+  }
 };
 
 export const generateWebsitePages = (structure: WebsiteStructure, template: WebsiteTemplate) => {
