@@ -16,6 +16,7 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
   const [showTemplates, setShowTemplates] = useState(false);
   const [dragDropElements, setDragDropElements] = useState<any[]>([]);
   const [dragDropSchema, setDragDropSchema] = useState('{}');
+  const [showPreview, setShowPreview] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     layout: false,
     schema: false,
@@ -190,8 +191,7 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     { id: 'schema', name: 'JSON Schema', icon: Code },
     { id: 'ui', name: 'UI Schema', icon: Settings },
     { id: 'data', name: 'Form Data', icon: Copy },
-    { id: 'designer', name: 'Visual Designer', icon: Layout },
-    { id: 'preview', name: 'Preview', icon: Eye }
+    { id: 'designer', name: 'Visual Designer', icon: Layout }
   ];
 
   const layoutElements = [
@@ -340,7 +340,7 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     }
 
     // Switch to UI Schema tab after generation
-    setActiveTab('ui');
+    // setActiveTab('ui');
 
     return { schema, uiSchema };
   };
@@ -1179,11 +1179,64 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
           })}
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 p-6 overflow-hidden flex flex-col">
-          {activeTab === 'preview' ? renderPreview() : 
-           activeTab === 'designer' ? renderDesigner() : 
-           renderEditor()}
+        {/* Content Area - Split Pane */}
+        <div className="flex-1 overflow-hidden flex">
+          {/* Left Panel - Main Content */}
+          <div className="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-700">
+            <div className="p-6 flex-1 overflow-hidden flex flex-col">
+              {activeTab === 'designer' ? renderDesigner() : renderEditor()}
+            </div>
+          </div>
+
+          {/* Right Panel - Preview */}
+          <div className="w-96 bg-slate-50 dark:bg-slate-700 flex flex-col">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Eye className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Preview</h3>
+                </div>
+                <button
+                  onClick={() => setShowPreview(!showPreview)}
+                  className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    showPreview 
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50' 
+                      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                  }`}
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>{showPreview ? 'Hide' : 'Show'}</span>
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-hidden">
+              {showPreview ? (
+                <div className="h-full overflow-y-auto p-4">
+                  {renderPreview()}
+                </div>
+              ) : (
+                <div className="h-full flex items-center justify-center p-4">
+                  <div className="text-center">
+                    <Eye className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      Preview Ready
+                    </h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                      Click "Show" to preview your form
+                    </p>
+                    <button
+                      onClick={() => setShowPreview(true)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Show Preview</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
