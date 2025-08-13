@@ -26,6 +26,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
     getTasksForDateRange,
     getWeekDates,
     getMonthDates,
+    getYearDates,
     formatDate,
     moveTask
   } = useProjectManagement();
@@ -43,6 +44,8 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
         return getWeekDates(selectedDate);
       case 'month':
         return getMonthDates(selectedDate);
+      case 'year':
+        return getYearDates(selectedDate);
       default:
         return getWeekDates(selectedDate);
     }
@@ -70,6 +73,9 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
       case 'month':
         newDate.setMonth(newDate.getMonth() - 1);
         break;
+      case 'year':
+        newDate.setFullYear(newDate.getFullYear() - 1);
+        break;
     }
     setSelectedDate(newDate);
   };
@@ -86,6 +92,9 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
       case 'month':
         newDate.setMonth(newDate.getMonth() + 1);
         break;
+      case 'year':
+        newDate.setFullYear(newDate.getFullYear() + 1);
+        break;
     }
     setSelectedDate(newDate);
   };
@@ -101,6 +110,8 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
         return `${formatDate(weekStart, 'medium')} - ${formatDate(weekEnd, 'medium')}`;
       case 'month':
         return selectedDate.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+      case 'year':
+        return selectedDate.toLocaleDateString('th-TH', { year: 'numeric' });
       default:
         return '';
     }
@@ -108,21 +119,43 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
 
   // Get tasks for specific date
   const getTasksForDate = (date: Date): Task[] => {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    return tasks.filter(task => {
-      const taskStart = new Date(task.startDate);
-      const taskEnd = new Date(task.endDate);
+    if (viewMode === 'year') {
+      // For year view, get tasks for the entire month
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const startOfMonth = new Date(year, month, 1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      const endOfMonth = new Date(year, month + 1, 0);
+      endOfMonth.setHours(23, 59, 59, 999);
       
-      return (
-        (taskStart >= startOfDay && taskStart <= endOfDay) ||
-        (taskEnd >= startOfDay && taskEnd <= endOfDay) ||
-        (taskStart <= startOfDay && taskEnd >= endOfDay)
-      );
-    });
+      return tasks.filter(task => {
+        const taskStart = new Date(task.startDate);
+        const taskEnd = new Date(task.endDate);
+        
+        return (
+          (taskStart >= startOfMonth && taskStart <= endOfMonth) ||
+          (taskEnd >= startOfMonth && taskEnd <= endOfMonth) ||
+          (taskStart <= startOfMonth && taskEnd >= endOfMonth)
+        );
+      });
+    } else {
+      // For other views, get tasks for the specific day
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      return tasks.filter(task => {
+        const taskStart = new Date(task.startDate);
+        const taskEnd = new Date(task.endDate);
+        
+        return (
+          (taskStart >= startOfDay && taskStart <= endOfDay) ||
+          (taskEnd >= startOfDay && taskEnd <= endOfDay) ||
+          (taskStart <= startOfDay && taskEnd >= endOfDay)
+        );
+      });
+    }
   };
 
   // Calculate task position and width for timeline
@@ -275,7 +308,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
 
         {/* View mode selector */}
         <div className="flex items-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg">
-          {(['day', 'week', 'month'] as ViewMode[]).map((mode) => (
+          {(['day', 'week', 'month', 'year'] as ViewMode[]).map((mode, index) => (
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
@@ -284,7 +317,7 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               } ${
-                mode === 'day' ? 'rounded-l-lg' : mode === 'month' ? 'rounded-r-lg' : ''
+                index === 0 ? 'rounded-l-lg' : index === 3 ? 'rounded-r-lg' : ''
               }`}
             >
               {mode}
@@ -298,22 +331,42 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
         <div className="min-w-full">
           {/* Date Headers */}
           <div className="sticky top-0 z-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="grid grid-cols-7 gap-0">
+            <div className={`grid gap-0 ${
+              viewMode === 'year' ? 'grid-cols-4' : 'grid-cols-7'
+            }`}>
               {dates.map((date, index) => (
                 <div
                   key={index}
                   className="p-3 text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0"
                 >
-                  <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                    {date.toLocaleDateString('th-TH', { weekday: 'short' })}
-                  </div>
-                  <div className={`text-lg font-semibold mt-1 ${
-                    date.toDateString() === new Date().toDateString()
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : 'text-gray-900 dark:text-white'
-                  }`}>
-                    {date.getDate()}
-                  </div>
+                  {viewMode === 'year' ? (
+                    <>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                        {date.toLocaleDateString('th-TH', { month: 'short' })}
+                      </div>
+                      <div className={`text-lg font-semibold mt-1 ${
+                        date.getMonth() === new Date().getMonth() && 
+                        date.getFullYear() === new Date().getFullYear()
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-gray-900 dark:text-white'
+                      }`}>
+                        {date.toLocaleDateString('th-TH', { month: 'long' })}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                        {date.toLocaleDateString('th-TH', { weekday: 'short' })}
+                      </div>
+                      <div className={`text-lg font-semibold mt-1 ${
+                        date.toDateString() === new Date().toDateString()
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-gray-900 dark:text-white'
+                      }`}>
+                        {date.getDate()}
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -321,7 +374,9 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
 
           {/* Timeline Grid */}
           <div className="relative min-h-96">
-            <div className="grid grid-cols-7 gap-0 h-full">
+            <div className={`grid gap-0 h-full ${
+              viewMode === 'year' ? 'grid-cols-4' : 'grid-cols-7'
+            }`}>
               {dates.map((date, index) => (
                 <div
                   key={index}
@@ -329,12 +384,21 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(date, e)}
                 >
-                  {/* Background for today */}
-                  {date.toDateString() === new Date().toDateString() && (
-                    <div className="absolute inset-0 bg-blue-50 dark:bg-blue-900/10" />
+                  {/* Background for current period */}
+                  {viewMode === 'year' ? (
+                    // Highlight current month in year view
+                    date.getMonth() === new Date().getMonth() && 
+                    date.getFullYear() === new Date().getFullYear() && (
+                      <div className="absolute inset-0 bg-blue-50 dark:bg-blue-900/10" />
+                    )
+                  ) : (
+                    // Highlight current day in other views
+                    date.toDateString() === new Date().toDateString() && (
+                      <div className="absolute inset-0 bg-blue-50 dark:bg-blue-900/10" />
+                    )
                   )}
                   
-                  {/* Tasks for this date */}
+                  {/* Tasks for this date/month */}
                   <div className="relative p-2 space-y-2">
                     {getTasksForDate(date).map((task, taskIndex) => (
                       <div
@@ -349,6 +413,13 @@ const TimelineView: React.FC<TimelineViewProps> = ({ onTaskClick, onCreateTask }
                         />
                       </div>
                     ))}
+                    
+                    {/* Show task count for year view */}
+                    {viewMode === 'year' && getTasksForDate(date).length > 3 && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                        +{getTasksForDate(date).length - 3} more tasks
+                      </div>
+                    )}
                     
                     {/* Drop zone indicator */}
                     {draggedTask && (

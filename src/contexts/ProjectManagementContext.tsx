@@ -40,7 +40,7 @@ export interface ProjectTimeline {
   tasks: Task[];
 }
 
-export type ViewMode = 'day' | 'week' | 'month';
+export type ViewMode = 'day' | 'week' | 'month' | 'year';
 
 interface ProjectManagementContextType {
   // State
@@ -83,6 +83,7 @@ interface ProjectManagementContextType {
   formatDate: (date: Date, format?: string) => string;
   getWeekDates: (date: Date) => Date[];
   getMonthDates: (date: Date) => Date[];
+  getYearDates: (date: Date) => Date[];
 }
 
 const ProjectManagementContext = createContext<ProjectManagementContextType | null>(null);
@@ -291,6 +292,17 @@ export const ProjectManagementProvider: React.FC<{ children: React.ReactNode }> 
     return dates;
   }, []);
 
+  const getYearDates = useCallback((date: Date): Date[] => {
+    const year = date.getFullYear();
+    const months = [];
+    
+    for (let month = 0; month < 12; month++) {
+      months.push(new Date(year, month, 1));
+    }
+    
+    return months;
+  }, []);
+
   const generateDemoData = useCallback(() => {
     const demoProject: ProjectTimeline = {
       id: 'demo-project-1',
@@ -485,6 +497,7 @@ export const ProjectManagementProvider: React.FC<{ children: React.ReactNode }> 
     formatDate,
     getWeekDates,
     getMonthDates,
+    getYearDates,
   };
 
   return (
