@@ -393,58 +393,134 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
   }, [jsonSchema]);
 
   const renderPreview = () => {
-    return (
-      <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Form Preview</h3>
-        <div className="space-y-4 bg-white dark:bg-slate-800 p-4 rounded-lg border">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              First Name *
-            </label>
-            <input
-              type="text"
-              placeholder="Enter your first name"
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-            />
+    const renderFormElement = (schema: any, uiElement: any, formDataObj: any) => {
+      if (!uiElement || !schema) return null;
+
+      // Handle layout elements
+      if (uiElement.type === 'HorizontalLayout' || uiElement.type === 'VerticalLayout') {
+        return (
+          <div 
+            key={`layout-${Math.random()}`}
+            className={`${uiElement.type === 'HorizontalLayout' ? 'flex space-x-4' : 'space-y-4'}`}
+          >
+            {uiElement.elements?.map((element: any, index: number) => 
+              renderFormElement(schema, element, formDataObj)
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Last Name *
+        );
+      }
+
+      // Handle control elements
+      if (uiElement.type === 'Control') {
+        const scope = uiElement.scope;
+        const fieldName = scope?.replace('#/properties/', '');
+        const property = schema.properties?.[fieldName];
+        
+        if (!property) return null;
+
+        const label = uiElement.label || property.title || fieldName;
+        const placeholder = uiElement.options?.placeholder || `Enter ${label.toLowerCase()}`;
+        const help = uiElement.options?.help;
+        const isRequired = schema.required?.includes(fieldName);
+        const value = formDataObj[fieldName] || property.default || '';
+
+        const inputClassName = "w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white";
+
+        return (
+          <div key={fieldName} className="space-y-1">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              {label} {isRequired && '*'}
             </label>
-            <input
-              type="text"
-              placeholder="Enter your last name"
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-            />
+            
+            {property.type === 'string' && property.format === 'email' ? (
+              <input
+                type="email"
+                placeholder={placeholder}
+                defaultValue={value}
+                className={inputClassName}
+              />
+            ) : property.type === 'string' && property.format === 'date' ? (
+              <input
+                type="date"
+                defaultValue={value}
+                className={inputClassName}
+              />
+            ) : property.type === 'string' ? (
+              <input
+                type="text"
+                placeholder={placeholder}
+                defaultValue={value}
+                className={inputClassName}
+              />
+            ) : property.type === 'number' || property.type === 'integer' ? (
+              <input
+                type="number"
+                placeholder={placeholder}
+                defaultValue={value}
+                min={property.minimum}
+                max={property.maximum}
+                className={inputClassName}
+              />
+            ) : property.type === 'boolean' ? (
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  defaultChecked={value}
+                  className="rounded border-slate-300 dark:border-slate-600"
+                />
+                <span className="text-sm text-slate-700 dark:text-slate-300">{label}</span>
+              </div>
+            ) : (
+              <input
+                type="text"
+                placeholder={placeholder}
+                defaultValue={value}
+                className={inputClassName}
+              />
+            )}
+            
+            {help && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">{help}</p>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Email *
-            </label>
-            <input
-              type="email"
-              placeholder="user@example.com"
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
-            />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              We'll never share your email with anyone else.
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Age: 25
-            </label>
-            <input
-              type="range"
-              min="18"
-              max="100"
-              defaultValue="25"
-              className="w-full"
-            />
+        );
+      }
+
+      return null;
+    };
+
+    try {
+      const schema = JSON.parse(jsonSchema);
+      const uiSchemaObj = JSON.parse(uiSchema);
+      const formDataObj = JSON.parse(formData);
+
+      return (
+        <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+            Form Preview - {schema.title || 'Generated Form'}
+          </h3>
+          <div className="space-y-4 bg-white dark:bg-slate-800 p-4 rounded-lg border">
+            {renderFormElement(schema, uiSchemaObj, formDataObj)}
           </div>
         </div>
-      </div>
-    );
+      );
+    } catch (error) {
+      return (
+        <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Form Preview</h3>
+          <div className="space-y-4 bg-white dark:bg-slate-800 p-4 rounded-lg border">
+            <div className="text-center py-8">
+              <div className="text-slate-500 dark:text-slate-400">
+                <Eye className="h-12 w-12 mx-auto mb-4" />
+                <p className="text-lg font-medium mb-2">Preview Not Available</p>
+                <p className="text-sm">Invalid JSON Schema or UI Schema format</p>
+                <p className="text-xs mt-2">Please check your JSON syntax and try generating again</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
   };
 
   const applyTemplate = (template: string) => {
