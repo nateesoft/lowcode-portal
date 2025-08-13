@@ -467,7 +467,7 @@ const TableView: React.FC<TableViewProps> = ({ onTaskClick, onCreateTask }) => {
       <div ref={tableRef} className="flex-1 overflow-auto">
         <table className="w-full">
           {/* Header */}
-          <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
+          <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10 border-b-2 border-gray-300 dark:border-gray-600">
             <tr>
               <th className="w-12 p-3 text-left">
                 <input
@@ -480,7 +480,7 @@ const TableView: React.FC<TableViewProps> = ({ onTaskClick, onCreateTask }) => {
               {columns.map((column) => (
                 <th
                   key={column.key as string}
-                  className="relative p-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-r border-gray-200 dark:border-gray-600 last:border-r-0"
+                  className="relative p-3 text-left text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider border-r border-gray-300 dark:border-gray-600 last:border-r-0"
                   style={{ width: getColumnWidth(column) }}
                 >
                   <div className="flex items-center justify-between">
@@ -516,13 +516,17 @@ const TableView: React.FC<TableViewProps> = ({ onTaskClick, onCreateTask }) => {
           </thead>
 
           {/* Body */}
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-300 dark:divide-gray-600">
             {filteredAndSortedTasks.map((task, index) => (
               <tr
                 key={task.id}
-                className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                  selectedTasks.includes(task.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                } ${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-750'}`}
+                className={`hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors border-l-2 ${
+                  selectedTasks.includes(task.id) 
+                    ? 'bg-blue-50 dark:bg-blue-900/30 border-l-blue-500' 
+                    : index % 2 === 0 
+                      ? 'bg-white dark:bg-gray-800 border-l-transparent' 
+                      : 'bg-gray-100 dark:bg-gray-700 border-l-transparent'
+                }`}
               >
                 <td className="w-12 p-3">
                   <input
@@ -535,7 +539,7 @@ const TableView: React.FC<TableViewProps> = ({ onTaskClick, onCreateTask }) => {
                 {columns.map((column) => (
                   <td
                     key={column.key as string}
-                    className="p-3 text-sm text-gray-900 dark:text-white border-r border-gray-200 dark:border-gray-600 last:border-r-0"
+                    className="p-3 text-sm text-gray-900 dark:text-white border-r border-gray-300 dark:border-gray-600 last:border-r-0"
                     style={{ width: getColumnWidth(column) }}
                     onDoubleClick={() => {
                       if (column.editable && column.key !== 'actions') {
