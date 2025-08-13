@@ -29,6 +29,11 @@ import {
   Menu, ChevronDown, ChevronRight, Plus, Square, Layers, X
 } from 'lucide-react';
 import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
+import { 
+  CollaborativeUsersPanel, 
+  CollaborativeCursors, 
+  CollaborativeNodeIndicator 
+} from '@/components/collaboration';
 
 // Custom Node Components
 interface NodeData {
@@ -190,6 +195,9 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
             />
           </>
         )}
+        
+        {/* Collaborative Node Indicator for Group */}
+        {id && <CollaborativeNodeIndicator nodeId={id} />}
       </div>
     );
   }
@@ -251,6 +259,9 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
         className="w-4 h-4 !bg-green-500 !border-2 !border-white shadow-lg hover:w-5 hover:h-5 transition-all"
         style={{ right: -8 }}
       />
+      
+      {/* Collaborative Node Indicator */}
+      {id && <CollaborativeNodeIndicator nodeId={id} />}
     </div>
   );
 };
@@ -2244,6 +2255,10 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           </div>
         </>
       )}
+
+      {/* Collaborative Features */}
+      <CollaborativeUsersPanel />
+      <CollaborativeCursors />
     </div>
   );
 };

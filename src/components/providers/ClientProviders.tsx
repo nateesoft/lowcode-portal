@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { ChatbotProvider } from "@/contexts/ChatbotContext";
+import { CollaborationProvider } from "@/contexts/CollaborationContext";
 import ChatbotOverlay from "@/components/ui/ChatbotOverlay";
 import { useChatbot } from "@/contexts/ChatbotContext";
 import "@/lib/i18n";
@@ -29,11 +30,13 @@ export function ClientProviders({ children }: ClientProvidersProps) {
     <ThemeProvider>
       <LanguageProvider>
         <CurrencyProvider>
-          <ChatbotProvider>
-            <ChatbotWrapper>
-              {children}
-            </ChatbotWrapper>
-          </ChatbotProvider>
+          <CollaborationProvider>
+            <ChatbotProvider>
+              <ChatbotWrapper>
+                {children}
+              </ChatbotWrapper>
+            </ChatbotProvider>
+          </CollaborationProvider>
         </CurrencyProvider>
       </LanguageProvider>
     </ThemeProvider>
