@@ -28,11 +28,24 @@ interface ServiceFlowModalProps {
 }
 
 // Flowchart Shape Components
-const FlowchartNode = ({ data, selected }: { data: any; selected?: boolean }) => {
+const FlowchartNode = ({ data, selected, id }: { data: any; selected?: boolean; id?: string }) => {
   const baseStyle = {
     backgroundColor: data.backgroundColor || '#ffffff',
     borderColor: selected ? '#3b82f6' : (data.borderColor || '#6b7280'),
   };
+
+  // Handle delete node
+  const handleDeleteNode = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (id) {
+      // Dispatch event to parent component to delete this node
+      window.dispatchEvent(new CustomEvent('deleteServiceNode', { 
+        detail: { nodeId: id } 
+      }));
+    }
+  }, [id]);
 
   const shapeClasses = {
     rectangle: 'rounded-md',
@@ -47,6 +60,18 @@ const FlowchartNode = ({ data, selected }: { data: any; selected?: boolean }) =>
   
   return (
     <div className="relative">
+      {/* Delete Button */}
+      {selected && (
+        <button
+          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 nodrag transition-colors shadow-lg"
+          style={{ pointerEvents: 'auto' }}
+          onClick={handleDeleteNode}
+          title="Delete Node"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+
       {/* Input Handle */}
       <Handle
         type="target"
@@ -86,11 +111,24 @@ const FlowchartNode = ({ data, selected }: { data: any; selected?: boolean }) =>
 };
 
 // Custom Service Node Component
-const ServiceNode = ({ data, selected }: { data: any; selected?: boolean }) => {
+const ServiceNode = ({ data, selected, id }: { data: any; selected?: boolean; id?: string }) => {
   const nodeStyle = {
     backgroundColor: data.backgroundColor || '#ffffff',
     borderColor: selected ? '#3b82f6' : (data.borderColor || '#a1a1aa'),
   };
+
+  // Handle delete node
+  const handleDeleteNode = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (id) {
+      // Dispatch event to parent component to delete this node
+      window.dispatchEvent(new CustomEvent('deleteServiceNode', { 
+        detail: { nodeId: id } 
+      }));
+    }
+  }, [id]);
   
   return (
     <div 
@@ -108,6 +146,18 @@ const ServiceNode = ({ data, selected }: { data: any; selected?: boolean }) => {
         style={{ left: -6 }}
       />
       
+      {/* Delete Button */}
+      {selected && (
+        <button
+          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 nodrag transition-colors shadow-lg"
+          style={{ pointerEvents: 'auto' }}
+          onClick={handleDeleteNode}
+          title="Delete Node"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+
       {/* Service Node Content */}
       <div className="flex items-center">
         {data.icon && <data.icon className="h-3 w-3 mr-2 text-purple-600" />}
@@ -210,7 +260,36 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     [setEdges],
   );
 
-  const onInit = (rfi: ReactFlowInstance) => setReactFlowInstance(rfi);
+  const onInit = (rfi: ReactFlowInstance) => {
+    setReactFlowInstance(rfi);
+  };
+
+  // Handle node deletion with useEffect
+  React.useEffect(() => {
+    const handleDeleteServiceNode = (event: any) => {
+      const { nodeId } = event.detail;
+      
+      // Remove the node
+      setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+      
+      // Remove all edges connected to this node
+      setEdges((eds) => eds.filter((edge) => 
+        edge.source !== nodeId && edge.target !== nodeId
+      ));
+
+      // Clear selection if this node was selected
+      if (selectedService?.id === nodeId) {
+        setSelectedService(null);
+        setShowPropertiesPanel(false);
+      }
+    };
+    
+    window.addEventListener('deleteServiceNode', handleDeleteServiceNode);
+    
+    return () => {
+      window.removeEventListener('deleteServiceNode', handleDeleteServiceNode);
+    };
+  }, [selectedService?.id, setNodes, setEdges]);
 
   const onSelectionChange = useCallback(
     ({ nodes: selectedNodes }: { nodes: Node[]; edges: Edge[] }) => {
@@ -505,6 +584,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               onSelectionChange={onSelectionChange}
               nodeTypes={serviceNodeTypes}
               fitView
+              deleteKeyCode={null}
               className="bg-slate-100 dark:bg-slate-900"
             >
               <Controls />

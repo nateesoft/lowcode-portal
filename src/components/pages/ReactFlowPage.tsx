@@ -26,7 +26,7 @@ import 'reactflow/dist/style.css';
 import {
   ArrowLeft, Save, Play, Download, Upload, 
   Database, Cpu, Box, Zap, Globe,
-  Menu, ChevronDown, ChevronRight, Plus, Square, Layers
+  Menu, ChevronDown, ChevronRight, Plus, Square, Layers, X
 } from 'lucide-react';
 import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
 
@@ -51,6 +51,19 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
 
   // Get execution state from window object (global state)
   const isExecuting = (window as any).__reactFlowExecutingNodeId === id;
+
+  // Handle delete node
+  const handleDeleteNode = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (id) {
+      // Dispatch event to parent component to delete this node
+      window.dispatchEvent(new CustomEvent('deleteNode', { 
+        detail: { nodeId: id } 
+      }));
+    }
+  }, [id]);
 
   const nodeStyle = {
     backgroundColor: isExecuting ? '#fef3c7' : (data.backgroundColor || '#ffffff'),
@@ -144,9 +157,19 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
           </div>
         </div>
 
-        {/* Resize Handles */}
+        {/* Resize Handles and Delete Button */}
         {selected && (
           <>
+            {/* Delete Button */}
+            <button
+              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 nodrag transition-colors shadow-lg"
+              style={{ pointerEvents: 'auto' }}
+              onClick={handleDeleteNode}
+              title="Delete Node"
+            >
+              <X className="h-3 w-3" />
+            </button>
+            
             {/* Bottom-right corner resize handle */}
             <div
               className="absolute bottom-0 right-0 w-3 h-3 bg-blue-500 cursor-se-resize z-10 nodrag"
@@ -180,6 +203,18 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
       }`}
       style={nodeStyle}
     >
+      {/* Delete Button - for regular nodes */}
+      {selected && !isExecuting && (
+        <button
+          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 nodrag transition-colors shadow-lg"
+          style={{ pointerEvents: 'auto' }}
+          onClick={handleDeleteNode}
+          title="Delete Node"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+
       {/* Execution indicator */}
       {isExecuting && (
         <div className="absolute -top-2 -right-2 w-4 h-4 bg-amber-500 rounded-full animate-ping">
@@ -394,13 +429,34 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         )
       );
     };
+
+    // Listen for node deletion
+    const handleDeleteNode = (event: any) => {
+      const { nodeId } = event.detail;
+      
+      // Remove the node
+      setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+      
+      // Remove all edges connected to this node
+      setEdges((eds) => eds.filter((edge) => 
+        edge.source !== nodeId && edge.target !== nodeId
+      ));
+
+      // Clear selection if this node was selected
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode(null);
+        setShowPropertiesPanel(false);
+      }
+    };
     
     window.addEventListener('edgeButtonClick', handleEdgeButtonClick);
     window.addEventListener('updateNodeSize', handleUpdateNodeSize);
+    window.addEventListener('deleteNode', handleDeleteNode);
     
     return () => {
       window.removeEventListener('edgeButtonClick', handleEdgeButtonClick);
       window.removeEventListener('updateNodeSize', handleUpdateNodeSize);
+      window.removeEventListener('deleteNode', handleDeleteNode);
     };
   };
 

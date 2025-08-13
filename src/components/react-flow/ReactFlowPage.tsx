@@ -174,13 +174,34 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         )
       );
     };
+
+    // Listen for node deletion
+    const handleDeleteNode = (event: any) => {
+      const { nodeId } = event.detail;
+      
+      // Remove the node
+      setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+      
+      // Remove all edges connected to this node
+      setEdges((eds) => eds.filter((edge) => 
+        edge.source !== nodeId && edge.target !== nodeId
+      ));
+
+      // Clear selection if this node was selected
+      if (selectedNode?.id === nodeId) {
+        setSelectedNode(null);
+        setShowPropertiesPanel(false);
+      }
+    };
     
     window.addEventListener('edgeButtonClick', handleEdgeButtonClick);
     window.addEventListener('updateNodeSize', handleUpdateNodeSize);
+    window.addEventListener('deleteNode', handleDeleteNode);
     
     return () => {
       window.removeEventListener('edgeButtonClick', handleEdgeButtonClick);
       window.removeEventListener('updateNodeSize', handleUpdateNodeSize);
+      window.removeEventListener('deleteNode', handleDeleteNode);
     };
   };
 

@@ -1,6 +1,31 @@
 import { Database, Cpu, Box, Zap, Layers, Square, Globe, User, Settings } from 'lucide-react';
 import { NodeCategory } from '../types';
 
+// Shape types for different node categories
+export type NodeShapeType = 'rectangle' | 'user' | 'process' | 'decision' | 'data' | 'terminal' | 'document' | 'service' | 'api' | 'page';
+
+// Node shape configuration
+export const getNodeShape = (type: string): NodeShapeType => {
+  const shapes: { [key: string]: NodeShapeType } = {
+    'User': 'user',
+    'Page': 'page',
+    'Service': 'service',
+    'API Call': 'api',
+    'Database': 'data',
+    'Logic': 'decision',
+    'Condition': 'decision',
+    'Transform': 'process',
+    'Function': 'process',
+    'Display': 'document',
+    'Export': 'document',
+    'Button': 'rectangle',
+    'Form': 'rectangle',
+    'Chart': 'rectangle',
+    'Table': 'rectangle'
+  };
+  return shapes[type] || 'rectangle';
+};
+
 export const getNodeDescription = (type: string): string => {
   const descriptions: { [key: string]: string } = {
     'API Call': 'HTTP Request',
