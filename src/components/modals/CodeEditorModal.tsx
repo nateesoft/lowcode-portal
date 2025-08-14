@@ -35,12 +35,14 @@ const CodeEditorModal: React.FC<CodeEditorModalProps> = ({
 
   useEffect(() => {
     if (nodeData && isOpen) {
-      setLanguage(nodeData.targetLanguage || 'javascript');
+      setLanguage(nodeData.language || nodeData.targetLanguage || 'javascript');
       // Use existing code or generate new code
       if (nodeData.code) {
         setCode(nodeData.code);
+        setOutput(`Code loaded from node: ${nodeData.label || nodeData.id}\nLanguage: ${nodeData.language || 'javascript'}\nLength: ${nodeData.code.length} characters\n`);
       } else {
         generateCodeFromNode();
+        setOutput('Generated new code for this node. Click Save to store it.\n');
       }
       resetPosition();
     }
@@ -345,7 +347,7 @@ ${JSON.stringify({
                 Code Editor
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                {nodeData?.label || 'Node'} - {language.toUpperCase()} Code Generation
+                {nodeData?.label || 'Node'} - {language.toUpperCase()} Code {nodeData?.code ? 'Editor' : 'Generation'}
               </p>
             </div>
           </div>

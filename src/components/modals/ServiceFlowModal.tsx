@@ -95,9 +95,12 @@ const FlowchartNode = ({ data, selected, id }: { data: any; selected?: boolean; 
             {data.label}
           </span>
         ) : (
-          <span className="text-center leading-tight px-1">
-            {data.label}
-          </span>
+          <div className="text-center leading-tight px-1 relative">
+            <span>{data.label}</span>
+            {data.code && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" title="Has custom code"></div>
+            )}
+          </div>
         )}
       </div>
       
@@ -164,8 +167,13 @@ const ServiceNode = ({ data, selected, id }: { data: any; selected?: boolean; id
       {/* Service Node Content */}
       <div className="flex items-center">
         {data.icon && <data.icon className="h-3 w-3 mr-2 text-purple-600" />}
-        <div>
-          <div className="text-sm font-medium text-slate-900">{data.label}</div>
+        <div className="flex-1">
+          <div className="flex items-center space-x-2">
+            <div className="text-sm font-medium text-slate-900">{data.label}</div>
+            {data.code && (
+              <div className="w-2 h-2 bg-green-500 rounded-full" title="Has custom code"></div>
+            )}
+          </div>
           <div className="text-xs text-gray-500">{data.type}</div>
         </div>
       </div>
@@ -261,6 +269,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   const [isActiveFlow, setIsActiveFlow] = useState(false);
   const [flowName, setFlowName] = useState('Untitled Flow');
   const [flowId, setFlowId] = useState<string | null>(null);
+  const [version, setVersion] = useState('1.0.0');
   const { 
     dragRef, 
     modalRef, 
@@ -325,7 +334,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   const handleSaveFlow = async () => {
     const flowData: FlowData = {
       name: flowName,
-      description: `Service flow with ${nodes.length} nodes`,
+      description: `Service flow v${version} with ${nodes.length} nodes`,
       isActive: isActiveFlow,
       nodes: nodes.map(node => ({
         id: node.id,
@@ -348,7 +357,8 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         animated: edge.animated,
         style: edge.style
       })),
-      viewport: reactFlowInstance?.getViewport()
+      viewport: reactFlowInstance?.getViewport(),
+      version: version
     };
 
     console.log('Saving Service Flow:', flowData);
@@ -589,6 +599,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
       setFlowName(editingFlow.name || 'Untitled Flow');
       setIsActiveFlow(editingFlow.status === 'active');
       setFlowId(editingFlow.id);
+      setVersion(editingFlow.configuration?.version || '1.0.0');
       
       // Load nodes and edges from the flow configuration
       if (editingFlow.configuration) {
@@ -632,6 +643,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
       setFlowName('Untitled Flow');
       setIsActiveFlow(false);
       setFlowId(null);
+      setVersion('1.0.0');
       setNodes(initialServiceNodes);
       setEdges(initialServiceEdges);
     }
@@ -666,13 +678,25 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-3 mb-1">
-                <input
-                  type="text"
-                  value={flowName}
-                  onChange={(e) => setFlowName(e.target.value)}
-                  className="text-xl font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none focus:ring-2 focus:ring-green-500 rounded px-1"
-                  placeholder="Flow Name"
-                />
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="text"
+                    value={flowName}
+                    onChange={(e) => setFlowName(e.target.value)}
+                    className="text-xl font-bold text-slate-900 dark:text-white bg-transparent border-none outline-none focus:ring-2 focus:ring-green-500 rounded px-1"
+                    placeholder="Flow Name"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-slate-500 dark:text-slate-400">v</span>
+                    <input
+                      type="text"
+                      value={version}
+                      onChange={(e) => setVersion(e.target.value)}
+                      className="text-sm text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 w-20 text-center focus:ring-2 focus:ring-green-500"
+                      placeholder="1.0.0"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="flex items-center space-x-3">
                 <p className="text-sm text-slate-500 dark:text-slate-400">

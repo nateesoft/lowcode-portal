@@ -326,7 +326,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <ServerIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                           </div>
                           <div>
-                            <div className="font-medium text-slate-900 dark:text-white">{flow.name}</div>
+                            <div className="flex items-center space-x-2">
+                              <div className="font-medium text-slate-900 dark:text-white">{flow.name}</div>
+                              {flow.configuration?.version && (
+                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs">
+                                  v{flow.configuration.version}
+                                </span>
+                              )}
+                            </div>
                             <div className="text-sm text-slate-600 dark:text-slate-400">
                               {flow.configuration?.nodes?.length || 0} nodes
                             </div>
@@ -361,6 +368,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 ? 'hover:bg-slate-100 dark:hover:bg-slate-700 text-green-600 dark:text-green-400'
                                 : 'opacity-50 cursor-not-allowed text-slate-400'
                             }`}
+                            title="Execute Flow"
                           >
                             <Play className="h-4 w-4" />
                           </button>
@@ -373,6 +381,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                             title="Edit Service"
                           >
                             <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              if (confirm(`Are you sure you want to delete "${flow.name}"? This action cannot be undone.`)) {
+                                try {
+                                  await flowAPI.delete(flow.id);
+                                  alert('Flow deleted successfully!');
+                                  loadFlows(); // Refresh the list
+                                } catch (error) {
+                                  console.error('Delete error:', error);
+                                  alert('Failed to delete flow');
+                                }
+                              }
+                            }}
+                            className="p-1 hover:bg-red-100 dark:hover:bg-red-900/20 rounded"
+                            title="Delete Service"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                           </button>
                           <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                             <Eye className="h-4 w-4 text-slate-600 dark:text-slate-400" />

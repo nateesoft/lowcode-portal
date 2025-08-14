@@ -72,6 +72,7 @@ export interface FlowData {
   nodes: FlowNode[];
   edges: FlowEdge[];
   viewport?: any;
+  version?: string;
   createdAt?: string;
   updatedAt?: string;
 }

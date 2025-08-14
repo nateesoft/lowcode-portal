@@ -296,19 +296,60 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
                 </select>
               </div>
 
+              {/* Content Status */}
+              {selectedNode.data.code && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center space-x-2 text-green-700 dark:text-green-300">
+                    <Code2 className="h-4 w-4" />
+                    <span className="text-sm font-medium">Content Saved</span>
+                  </div>
+                  <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    {selectedNode.data.language ? `Language: ${selectedNode.data.language}` : ''}
+                    {selectedNode.data.code && (
+                      <div className="mt-1">
+                        Length: {selectedNode.data.code.length} characters
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => {
                   try {
-                    onOpenCodeEditor(selectedNode.data);
+                    // Pass the node data with id to the code editor
+                    onOpenCodeEditor({
+                      ...selectedNode.data,
+                      id: selectedNode.id
+                    });
                   } catch (error) {
                     console.error('Error opening code editor:', error);
                   }
                 }}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors ${
+                  selectedNode.data.code 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
               >
                 <Code2 className="h-4 w-4" />
-                <span>Open Code Editor</span>
+                <span>{selectedNode.data.code ? 'Edit Code' : 'Open Code Editor'}</span>
               </button>
+
+              {/* Show code preview if exists */}
+              {selectedNode.data.code && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Code Preview
+                  </label>
+                  <div className="bg-slate-900 text-green-400 p-3 rounded-lg text-xs font-mono max-h-32 overflow-y-auto">
+                    <pre className="whitespace-pre-wrap">
+                      {selectedNode.data.code.slice(0, 200)}
+                      {selectedNode.data.code.length > 200 && '...'}
+                    </pre>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
