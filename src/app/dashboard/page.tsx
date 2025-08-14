@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Dashboard from '@/components/pages/Dashboard';
 import CreateSmartFlowModal from '@/components/modals/CreateSmartFlowModal';
+import { DocumentationProvider } from '@/contexts/DocumentationContext';
+import { SecretManagementProvider } from '@/contexts/SecretManagementContext';
 import { SAMPLE_PROJECTS } from '@/lib/constants';
 import { Project, UserRole, UserTier } from '@/lib/types';
 
@@ -31,33 +33,37 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className={darkMode ? 'dark' : ''}>
-      <Dashboard 
-        projects={projects}
-        userRole={userRole}
-        userTier={userTier}
-        darkMode={darkMode}
-        mobileSidebarOpen={mobileSidebarOpen}
-        showCreateModal={showCreateModal}
-        selectedProject={selectedProject}
-        setMobileSidebarOpen={setMobileSidebarOpen}
-        setDarkMode={setDarkMode}
-        setShowCreateModal={setShowCreateModal}
-        setSelectedProject={setSelectedProject}
-        setIsAuthenticated={handleLogout}
-        onShowCreateSmartFlowModal={() => setShowCreateSmartFlowModal(true)}
-      />
-      
-      <CreateSmartFlowModal 
-        isOpen={showCreateSmartFlowModal}
-        onClose={() => setShowCreateSmartFlowModal(false)}
-        onCreateProject={(projectData) => {
-          setProjects([...projects, projectData]);
-          setSelectedProject(projectData);
-          setShowCreateSmartFlowModal(false);
-          router.push('/reactflow');
-        }}
-      />
-    </div>
+    <DocumentationProvider>
+      <SecretManagementProvider>
+        <div className={darkMode ? 'dark' : ''}>
+          <Dashboard 
+            projects={projects}
+            userRole={userRole}
+            userTier={userTier}
+            darkMode={darkMode}
+            mobileSidebarOpen={mobileSidebarOpen}
+            showCreateModal={showCreateModal}
+            selectedProject={selectedProject}
+            setMobileSidebarOpen={setMobileSidebarOpen}
+            setDarkMode={setDarkMode}
+            setShowCreateModal={setShowCreateModal}
+            setSelectedProject={setSelectedProject}
+            setIsAuthenticated={handleLogout}
+            onShowCreateSmartFlowModal={() => setShowCreateSmartFlowModal(true)}
+          />
+          
+          <CreateSmartFlowModal 
+            isOpen={showCreateSmartFlowModal}
+            onClose={() => setShowCreateSmartFlowModal(false)}
+            onCreateProject={(projectData) => {
+              setProjects([...projects, projectData]);
+              setSelectedProject(projectData);
+              setShowCreateSmartFlowModal(false);
+              router.push('/reactflow');
+            }}
+          />
+        </div>
+      </SecretManagementProvider>
+    </DocumentationProvider>
   );
 }

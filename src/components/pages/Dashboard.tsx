@@ -4,7 +4,8 @@ import {
   Code2, Layers, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
   Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon,
-  Globe2, MessageCircle, Database, Images, Calendar, Table
+  Globe2, MessageCircle, Database, Images, Calendar, Table, FileText, Key, Clock,
+  Wrench, FolderOpen, Cog
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
@@ -31,10 +32,20 @@ import FolderModal from '@/components/media/FolderModal';
 import FilePreviewModal from '@/components/media/FilePreviewModal';
 import { 
   TimelineView,
-  TableView, 
+  TableView,
+  KanbanView, 
   TaskDetailModal, 
   TaskSummary 
 } from '@/components/project-management';
+import { 
+  DocumentationView 
+} from '@/components/documentation';
+import {
+  SecretKeyCard,
+  SecretKeyModal
+} from '@/components/secret-management';
+import { useSecretManagement } from '@/contexts/SecretManagementContext';
+import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
 
 interface DashboardProps {
   projects: Project[];
@@ -82,13 +93,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   } = useDatabase();
   const {
     viewMode,
-    currentFolder,
-    generateDemoFiles
+    currentFolder
   } = useMedia();
   const {
     currentProject,
     generateDemoData: generateDemoProjects
   } = useProjectManagement();
+  const {
+    secrets,
+    addSecret,
+    updateSecret,
+    deleteSecret,
+    generateDemoSecrets,
+    getExpiredSecrets,
+    getExpiringSoonSecrets
+  } = useSecretManagement();
   
   const [showSiteMap, setShowSiteMap] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
@@ -105,13 +124,19 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [editingFolder, setEditingFolder] = useState<any>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
-  const [editingFile, setEditingFile] = useState<any>(null);
+  // const [editingFile, setEditingFile] = useState<any>(null);
   
   // Project Management states
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [projectManagementView, setProjectManagementView] = useState<'timeline' | 'table' | 'summary'>('timeline');
+  const [projectManagementView, setProjectManagementView] = useState<'timeline' | 'table' | 'kanban' | 'summary'>('timeline');
+  
+  // Secret Management states
+  const [showSecretModal, setShowSecretModal] = useState(false);
+  const [editingSecret, setEditingSecret] = useState<any>(null);
+  const [secretSearchQuery, setSecretSearchQuery] = useState('');
+  const [secretTypeFilter, setSecretTypeFilter] = useState<string>('all');
   const stats = {
     totalProjects: projects.length,
     published: projects.filter(p => p.status === 'Published').length,
@@ -703,7 +728,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         Quick Upload
                       </h3>
                       <button
-                        onClick={() => generateDemoFiles()}
+                        onClick={() => console.log('Generate demo files not available')}
                         className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center space-x-2"
                       >
                         <Images className="h-4 w-4" />
@@ -723,7 +748,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     setShowPreviewModal(true);
                   }}
                   onEditFile={(file) => {
-                    setEditingFile(file);
+                    console.log('Edit file:', file);
                     // Add file edit modal here if needed
                   }}
                   onEditFolder={(folder) => {
@@ -738,7 +763,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     setShowPreviewModal(true);
                   }}
                   onEditFile={(file) => {
-                    setEditingFile(file);
+                    console.log('Edit file:', file);
                     // Add file edit modal here if needed
                   }}
                   onEditFolder={(folder) => {
@@ -751,15 +776,26 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         );
 
+      case 'documentation':
+        return (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden h-[80vh]">
+            <DocumentationView
+              onCreateDocument={() => {
+                // Handle document creation
+              }}
+            />
+          </div>
+        );
+
       case 'project-management':
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {/* Header */}
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Project Management</h2>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Task Management</h2>
                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  Manage tasks and project timeline
+                  Manage tasks with Kanban board, timeline and table views
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -797,6 +833,17 @@ const Dashboard: React.FC<DashboardProps> = ({
                 >
                   <Calendar className="h-4 w-4 mr-2 inline" />
                   Timeline
+                </button>
+                <button
+                  onClick={() => setProjectManagementView('kanban')}
+                  className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    projectManagementView === 'kanban'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <Layers className="h-4 w-4 mr-2 inline" />
+                  Kanban
                 </button>
                 <button
                   onClick={() => setProjectManagementView('table')}
@@ -859,6 +906,20 @@ const Dashboard: React.FC<DashboardProps> = ({
                       }}
                     />
                   )}
+                  {projectManagementView === 'kanban' && (
+                    <KanbanView
+                      onTaskClick={(task) => {
+                        setSelectedTask(task);
+                        setIsCreatingTask(false);
+                        setShowTaskModal(true);
+                      }}
+                      onCreateTask={() => {
+                        setSelectedTask(null);
+                        setIsCreatingTask(true);
+                        setShowTaskModal(true);
+                      }}
+                    />
+                  )}
                   {projectManagementView === 'table' && (
                     <TableView
                       onTaskClick={(task) => {
@@ -879,6 +940,195 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                   )}
                 </>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'secret-management':
+        const expiredSecrets = getExpiredSecrets();
+        const expiringSoonSecrets = getExpiringSoonSecrets();
+        
+        const filteredSecrets = secrets.filter(secret => {
+          const matchesSearch = secret.name.toLowerCase().includes(secretSearchQuery.toLowerCase()) ||
+            secret.description.toLowerCase().includes(secretSearchQuery.toLowerCase()) ||
+            secret.tags.some(tag => tag.toLowerCase().includes(secretSearchQuery.toLowerCase()));
+          
+          const matchesType = secretTypeFilter === 'all' || secret.type === secretTypeFilter;
+          
+          return matchesSearch && matchesType;
+        });
+
+        const copyToClipboard = (text: string) => {
+          navigator.clipboard.writeText(text).then(() => {
+            // You could add a toast notification here
+            console.log('Copied to clipboard');
+          });
+        };
+
+        return (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Secret Key Management</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  Securely manage API keys, passwords, certificates, and tokens
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button 
+                  onClick={() => generateDemoSecrets()}
+                  className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center justify-center"
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Load Demo Secrets
+                </button>
+                <button 
+                  onClick={() => {
+                    setEditingSecret(null);
+                    setShowSecretModal(true);
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Secret
+                </button>
+              </div>
+            </div>
+
+            {/* Stats Cards */}
+            {secrets.length > 0 && (
+              <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{secrets.length}</div>
+                        <div className="text-sm text-blue-600 dark:text-blue-400">Total Secrets</div>
+                      </div>
+                      <Key className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {secrets.filter(s => s.type === 'api_key').length}
+                        </div>
+                        <div className="text-sm text-green-600 dark:text-green-400">API Keys</div>
+                      </div>
+                      <Key className="h-8 w-8 text-green-600 dark:text-green-400" />
+                    </div>
+                  </div>
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                          {expiringSoonSecrets.length}
+                        </div>
+                        <div className="text-sm text-yellow-600 dark:text-yellow-400">Expiring Soon</div>
+                      </div>
+                      <Clock className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+                    </div>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                          {expiredSecrets.length}
+                        </div>
+                        <div className="text-sm text-red-600 dark:text-red-400">Expired</div>
+                      </div>
+                      <Shield className="h-8 w-8 text-red-600 dark:text-red-400" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Search and Filter */}
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Search secrets by name, description, or tags..."
+                    value={secretSearchQuery}
+                    onChange={(e) => setSecretSearchQuery(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <select
+                    value={secretTypeFilter}
+                    onChange={(e) => setSecretTypeFilter(e.target.value)}
+                    className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="api_key">API Keys</option>
+                    <option value="password">Passwords</option>
+                    <option value="certificate">Certificates</option>
+                    <option value="token">Tokens</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 sm:p-6">
+              {secrets.length === 0 ? (
+                <div className="text-center py-12">
+                  <Key className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                    No Secrets Found
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-6">
+                    Store and manage your API keys, passwords, and other sensitive data securely
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button 
+                      onClick={() => generateDemoSecrets()}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
+                    >
+                      Try Demo Secrets
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setEditingSecret(null);
+                        setShowSecretModal(true);
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                    >
+                      Add Your First Secret
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {filteredSecrets.map(secret => (
+                    <SecretKeyCard
+                      key={secret.id}
+                      secret={secret}
+                      onEdit={(secret) => {
+                        setEditingSecret(secret);
+                        setShowSecretModal(true);
+                      }}
+                      onDelete={(id) => {
+                        if (confirm('Are you sure you want to delete this secret?')) {
+                          deleteSecret(id);
+                        }
+                      }}
+                      onCopy={copyToClipboard}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {filteredSecrets.length === 0 && secrets.length > 0 && (
+                <div className="text-center py-8">
+                  <p className="text-slate-600 dark:text-slate-400">
+                    No secrets match your current filters.
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -910,147 +1160,150 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <nav className="p-4 space-y-2">
-          <button 
-            onClick={() => setActiveView('dashboard')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition ${
-              activeView === 'dashboard' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-            }`}
-          >
-            <Home className="h-5 w-5" />
-            <span className="font-medium">{t('dashboard')}</span>
-          </button>
+        <nav className="p-4 space-y-3 overflow-y-auto max-h-[calc(100vh-300px)]">
+          {/* Main Navigation */}
+          <CollapsibleMenuGroup
+            title="Main"
+            icon={Home}
+            defaultExpanded={true}
+            items={[
+              {
+                key: 'dashboard',
+                label: t('dashboard'),
+                icon: Home,
+                isActive: activeView === 'dashboard',
+                onClick: () => setActiveView('dashboard')
+              }
+            ]}
+          />
+          {/* Development */}
+          <CollapsibleMenuGroup
+            title="Development"
+            icon={Code2}
+            defaultExpanded={true}
+            items={[
+              {
+                key: 'projects',
+                label: t('myProjects'),
+                icon: Layers,
+                isActive: activeView === 'projects',
+                onClick: () => setActiveView('projects'),
+                badge: projects.length > 0 ? projects.length : undefined
+              },
+              {
+                key: 'pages',
+                label: t('pages'),
+                icon: Globe2,
+                isActive: activeView === 'pages',
+                onClick: () => setActiveView('pages')
+              },
+              {
+                key: 'services',
+                label: t('services'),
+                icon: ServerIcon,
+                isActive: activeView === 'services',
+                onClick: () => setActiveView('services')
+              },
+              {
+                key: 'components',
+                label: t('components'),
+                icon: Component,
+                isActive: activeView === 'components',
+                onClick: () => setActiveView('components')
+              }
+            ]}
+          />
           <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-          <button 
-            onClick={() => setActiveView('projects')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-              activeView === 'projects' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            <Layers className="h-5 w-5" />
-            <span>{t('myProjects')}</span>
-          </button>
-          
-          <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-          
-          <button 
-            onClick={() => setActiveView('pages')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-              activeView === 'pages' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            <Globe2 className="h-5 w-5" />
-            <span>{t('pages')}</span>
-          </button>
-          <button 
-            onClick={() => setActiveView('services')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-              activeView === 'services' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            <ServerIcon className="h-5 w-5" />
-            <span>{t('services')}</span>
-          </button>
-          <button 
-            onClick={() => setActiveView('components')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-              activeView === 'components' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            <Component className="h-5 w-5" />
-            <span>{t('components')}</span>
-          </button>
-          <button 
-            onClick={() => setActiveView('database')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-              activeView === 'database' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            <Database className="h-5 w-5" />
-            <span>Database</span>
-          </button>
-          <button 
-            onClick={() => setActiveView('media')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-              activeView === 'media' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            <Images className="h-5 w-5" />
-            <span>Media</span>
-          </button>
-          <button 
-            onClick={() => setActiveView('project-management')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-              activeView === 'project-management' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            <Calendar className="h-5 w-5" />
-            <span>Project Management</span>
-          </button>
-          <div className="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-          <button 
-            onClick={() => setActiveView('settings')}
-            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-              activeView === 'settings' 
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-            }`}
-          >
-            <Settings className="h-5 w-5" />
-            <span>{t('settings')}</span>
-          </button>
-          {userRole === 'admin' && (
-            <>
-              <div className="pt-4 mt-4 border-t border-slate-200 dark:border-slate-700">
-                <span className="px-4 text-xs font-semibold text-slate-400 uppercase">Admin</span>
-              </div>
-              <button 
-                onClick={() => router.push('/admin')}
-                className="w-full flex items-center space-x-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-300"
-              >
-                <Shield className="h-5 w-5" />
-                <span>{t('adminPanel')}</span>
-              </button>
-              <button 
-                onClick={() => setActiveView('users')}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-                  activeView === 'users' 
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                    : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-                }`}
-              >
-                <Users className="h-5 w-5" />
-                <span>{t('users')}</span>
-              </button>
-              <button 
-                onClick={() => setActiveView('analytics')}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-slate-700 dark:text-slate-300 transition ${
-                  activeView === 'analytics' 
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                    : 'hover:bg-slate-50 dark:hover:bg-slate-700'
-                }`}
-              >
-                <Activity className="h-5 w-5" />
-                <span>{t('analytics')}</span>
-              </button>
-            </>
-          )}
+          {/* Data Management */}
+          <CollapsibleMenuGroup
+            title="Data Management"
+            icon={FolderOpen}
+            defaultExpanded={true}
+            items={[
+              {
+                key: 'database',
+                label: 'Database',
+                icon: Database,
+                isActive: activeView === 'database',
+                onClick: () => setActiveView('database')
+              },
+              {
+                key: 'media',
+                label: 'Media',
+                icon: Images,
+                isActive: activeView === 'media',
+                onClick: () => setActiveView('media')
+              },
+              {
+                key: 'documentation',
+                label: 'Documentation',
+                icon: FileText,
+                isActive: activeView === 'documentation',
+                onClick: () => setActiveView('documentation')
+              }
+            ]}
+          />
+          {/* Project Tools */}
+          <CollapsibleMenuGroup
+            title="Project Tools"
+            icon={Wrench}
+            defaultExpanded={true}
+            items={[
+              {
+                key: 'project-management',
+                label: 'Task Management',
+                icon: Calendar,
+                isActive: activeView === 'project-management',
+                onClick: () => setActiveView('project-management')
+              },
+              {
+                key: 'secret-management',
+                label: 'Secret Keys',
+                icon: Key,
+                isActive: activeView === 'secret-management',
+                onClick: () => setActiveView('secret-management'),
+                badge: secrets.length > 0 ? secrets.length : undefined
+              }
+            ]}
+          />
+          {/* Settings & Admin */}
+          <CollapsibleMenuGroup
+            title="Settings & Admin"
+            icon={Cog}
+            defaultExpanded={false}
+            items={[
+              {
+                key: 'settings',
+                label: t('settings'),
+                icon: Settings,
+                isActive: activeView === 'settings',
+                onClick: () => setActiveView('settings')
+              },
+              ...(userRole === 'admin' ? [
+                {
+                  key: 'admin-panel',
+                  label: t('adminPanel'),
+                  icon: Shield,
+                  isActive: false,
+                  onClick: () => router.push('/admin')
+                },
+                {
+                  key: 'users',
+                  label: t('users'),
+                  icon: Users,
+                  isActive: activeView === 'users',
+                  onClick: () => setActiveView('users')
+                },
+                {
+                  key: 'analytics',
+                  label: t('analytics'),
+                  icon: Activity,
+                  isActive: activeView === 'analytics',
+                  onClick: () => setActiveView('analytics')
+                }
+              ] : [])
+            ]}
+          />
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-200 dark:border-slate-700">
@@ -1490,11 +1743,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         }}
         file={previewFile}
         onEdit={(file) => {
-          setEditingFile(file);
+          console.log('Edit file:', file);
           setShowPreviewModal(false);
           // Add file edit modal here if needed
         }}
-        onDelete={async (file) => {
+        onDelete={async () => {
           // Handle file deletion
           setShowPreviewModal(false);
           setPreviewFile(null);
@@ -1511,6 +1764,23 @@ const Dashboard: React.FC<DashboardProps> = ({
         }}
         task={selectedTask}
         isCreating={isCreatingTask}
+      />
+
+      {/* Secret Management Modal */}
+      <SecretKeyModal
+        isOpen={showSecretModal}
+        onClose={() => {
+          setShowSecretModal(false);
+          setEditingSecret(null);
+        }}
+        onSave={(secretData) => {
+          if (editingSecret) {
+            updateSecret(editingSecret.id, secretData);
+          } else {
+            addSecret(secretData);
+          }
+        }}
+        editingSecret={editingSecret}
       />
     </div>
   );
