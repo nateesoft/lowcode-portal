@@ -6,12 +6,14 @@ interface CodeEditorModalProps {
   isOpen: boolean;
   onClose: () => void;
   nodeData?: any;
+  onSaveCode?: (nodeId: string, code: string, language: string) => void;
 }
 
 const CodeEditorModal: React.FC<CodeEditorModalProps> = ({
   isOpen,
   onClose,
   nodeData,
+  onSaveCode,
 }) => {
   const [activeTab, setActiveTab] = useState('editor');
   const [code, setCode] = useState('');
@@ -34,7 +36,12 @@ const CodeEditorModal: React.FC<CodeEditorModalProps> = ({
   useEffect(() => {
     if (nodeData && isOpen) {
       setLanguage(nodeData.targetLanguage || 'javascript');
-      generateCodeFromNode();
+      // Use existing code or generate new code
+      if (nodeData.code) {
+        setCode(nodeData.code);
+      } else {
+        generateCodeFromNode();
+      }
       resetPosition();
     }
   }, [nodeData, isOpen, resetPosition]);
@@ -276,6 +283,13 @@ ${JSON.stringify({
   };
 
   const handleSaveCode = () => {
+    // Save code to node data if callback is provided
+    if (onSaveCode && nodeData?.id) {
+      onSaveCode(nodeData.id, code, language);
+      setOutput(prev => prev + '\n💾 Code saved to node successfully!');
+    }
+
+    // Also save as file
     const blob = new Blob([code], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -285,7 +299,7 @@ ${JSON.stringify({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setOutput(prev => prev + '\n💾 Code saved successfully!');
+    setOutput(prev => prev + '\n💾 Code file downloaded successfully!');
   };
 
   const getFileExtension = () => {

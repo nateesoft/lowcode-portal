@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { 
   Code2, Layers, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
-  Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon,
+  Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon, Play,
   Globe2, MessageCircle, Database, Images, Calendar, Table, FileText, Key, Clock,
   Wrench, FolderOpen, Cog
 } from 'lucide-react';
@@ -46,6 +46,7 @@ import {
 } from '@/components/secret-management';
 import { useSecretManagement } from '@/contexts/SecretManagementContext';
 import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
+import { flowAPI } from '@/lib/api';
 
 interface DashboardProps {
   projects: Project[];
@@ -113,6 +114,24 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [activeView, setActiveView] = useState('dashboard');
   const [showWeUIModal, setShowWeUIModal] = useState(false);
   const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
+  const [flows, setFlows] = useState<any[]>([]);
+  const [editingFlow, setEditingFlow] = useState<any>(null);
+  
+  // Load flows when services view is active
+  React.useEffect(() => {
+    if (activeView === 'services') {
+      loadFlows();
+    }
+  }, [activeView]);
+
+  const loadFlows = async () => {
+    try {
+      const flowsData = await flowAPI.getAll();
+      setFlows(flowsData);
+    } catch (error) {
+      console.error('Error loading flows:', error);
+    }
+  };
   
   // Database states
   const [showConnectionModal, setShowConnectionModal] = useState(false);
@@ -281,46 +300,89 @@ const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
             <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { name: 'User Authentication', type: 'API Service', status: 'Running', endpoints: 5 },
-                  { name: 'Payment Gateway', type: 'External API', status: 'Running', endpoints: 8 },
-                  { name: 'Email Service', type: 'Microservice', status: 'Stopped', endpoints: 3 },
-                  { name: 'File Storage', type: 'Cloud Service', status: 'Running', endpoints: 12 }
-                ].map((service, index) => (
-                  <div key={index} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded">
-                          <ServerIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              {flows.length === 0 ? (
+                <div className="text-center py-12">
+                  <ServerIcon className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                    No Service Flows
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-6">
+                    Create your first service flow to manage your application logic
+                  </p>
+                  <button 
+                    onClick={() => setShowServiceFlowModal(true)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                  >
+                    Create Your First Flow
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {flows.map((flow, index) => (
+                    <div key={flow.id || index} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded">
+                            <ServerIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-900 dark:text-white">{flow.name}</div>
+                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                              {flow.configuration?.nodes?.length || 0} nodes
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium text-slate-900 dark:text-white">{service.name}</div>
-                          <div className="text-sm text-slate-600 dark:text-slate-400">{service.type}</div>
+                        <span className={`px-2 py-1 rounded text-sm ${
+                          flow.status === 'active' 
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
+                            : 'bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400'
+                        }`}>
+                          {flow.status}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          Created {new Date(flow.createdAt).toLocaleDateString()}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={async () => {
+                              try {
+                                const result = await flowAPI.execute(flow.id);
+                                alert(`Flow executed successfully! Processed ${result.output?.nodesProcessed || 0} nodes.`);
+                              } catch (error) {
+                                console.error('Flow execution error:', error);
+                                alert('Failed to execute flow');
+                              }
+                            }}
+                            disabled={flow.status !== 'active'}
+                            className={`p-1 rounded ${
+                              flow.status === 'active'
+                                ? 'hover:bg-slate-100 dark:hover:bg-slate-700 text-green-600 dark:text-green-400'
+                                : 'opacity-50 cursor-not-allowed text-slate-400'
+                            }`}
+                          >
+                            <Play className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setEditingFlow(flow);
+                              setShowServiceFlowModal(true);
+                            }}
+                            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                            title="Edit Service"
+                          >
+                            <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                          </button>
+                          <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                            <Eye className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                          </button>
                         </div>
                       </div>
-                      <span className={`px-2 py-1 rounded text-sm ${
-                        service.status === 'Running' 
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
-                          : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                      }`}>
-                        {service.status}
-                      </span>
                     </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">{service.endpoints} endpoints</span>
-                      <div className="flex items-center space-x-2">
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                          <Settings className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                        </button>
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                          <Eye className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -1702,7 +1764,14 @@ const Dashboard: React.FC<DashboardProps> = ({
       {/* Service Flow Modal */}
       <ServiceFlowModal
         isOpen={showServiceFlowModal}
-        onClose={() => setShowServiceFlowModal(false)}
+        onClose={() => {
+          setShowServiceFlowModal(false);
+          setEditingFlow(null);
+          if (activeView === 'services') {
+            loadFlows(); // Refresh flows after modal closes
+          }
+        }}
+        editingFlow={editingFlow}
       />
 
       {/* Database Connection Modal */}

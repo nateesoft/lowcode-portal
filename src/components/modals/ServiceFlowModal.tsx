@@ -21,11 +21,13 @@ import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap, Cir
 import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 import ServiceFlowPropertiesPanel from '@/components/panels/ServiceFlowPropertiesPanel';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
+import { flowAPI, FlowData } from '@/lib/api';
 
 interface ServiceFlowModalProps {
   isOpen: boolean;
   onClose: () => void;
   nodeData?: any;
+  editingFlow?: any;
 }
 
 // Flowchart Shape Components
@@ -246,6 +248,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   isOpen,
   onClose,
   nodeData,
+  editingFlow,
 }) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialServiceNodes);
@@ -257,6 +260,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   const [selectedNodeForEditor, setSelectedNodeForEditor] = useState<any>(null);
   const [isActiveFlow, setIsActiveFlow] = useState(false);
   const [flowName, setFlowName] = useState('Untitled Flow');
+  const [flowId, setFlowId] = useState<string | null>(null);
   const { 
     dragRef, 
     modalRef, 
@@ -319,39 +323,55 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   );
 
   const handleSaveFlow = async () => {
-    const flowData = {
-      id: Date.now().toString(),
+    const flowData: FlowData = {
       name: flowName,
+      description: `Service flow with ${nodes.length} nodes`,
       isActive: isActiveFlow,
-      nodes,
-      edges,
-      viewport: reactFlowInstance?.getViewport(),
-      createdAt: new Date().toISOString()
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: node.type || 'default',
+        position: node.position,
+        data: {
+          ...node.data,
+          // Preserve any existing content/code
+          content: node.data.content || '',
+          code: node.data.code || ''
+        }
+      })),
+      edges: edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle || undefined,
+        targetHandle: edge.targetHandle || undefined,
+        type: edge.type,
+        animated: edge.animated,
+        style: edge.style
+      })),
+      viewport: reactFlowInstance?.getViewport()
     };
 
     console.log('Saving Service Flow:', flowData);
     
     try {
-      // TODO: Replace with actual API endpoint
-      const response = await fetch('/api/flows', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(flowData)
-      });
-
-      if (response.ok) {
-        console.log('Flow saved successfully');
-        // You could show a success toast here
-        onClose();
+      let result;
+      if (flowId) {
+        // Update existing flow
+        result = await flowAPI.update(flowId, flowData);
+        console.log('Flow updated successfully:', result);
+        alert(`Flow "${result.name}" updated successfully!`);
       } else {
-        console.error('Failed to save flow');
-        alert('Failed to save flow');
+        // Create new flow
+        result = await flowAPI.create(flowData);
+        console.log('Flow created successfully:', result);
+        alert(`Flow "${result.name}" created successfully!`);
+        setFlowId(result.id); // Set the ID for future updates
       }
-    } catch (error) {
+      onClose();
+    } catch (error: any) {
       console.error('Error saving flow:', error);
-      alert('Error saving flow: ' + error);
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+      alert('Error saving flow: ' + errorMsg);
     }
   };
 
@@ -361,37 +381,49 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
       return;
     }
 
-    const flowData = {
-      flowId: Date.now().toString(),
-      name: flowName,
-      nodes,
-      edges
-    };
-
+    // First save the current flow
     try {
+      const flowData: FlowData = {
+        name: flowName,
+        description: `Service flow with ${nodes.length} nodes`,
+        isActive: isActiveFlow,
+        nodes: nodes.map(node => ({
+          id: node.id,
+          type: node.type || 'default',
+          position: node.position,
+          data: {
+            ...node.data,
+            content: node.data.content || '',
+            code: node.data.code || ''
+          }
+        })),
+        edges: edges.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle || undefined,
+          targetHandle: edge.targetHandle || undefined,
+          type: edge.type,
+          animated: edge.animated,
+          style: edge.style
+        })),
+        viewport: reactFlowInstance?.getViewport()
+      };
+
       console.log('Testing flow via API:', flowData);
       
-      // TODO: Replace with actual API endpoint
-      const response = await fetch('/api/flows/execute', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(flowData)
-      });
-
-      const result = await response.json();
+      // Save flow first
+      const savedFlow = await flowAPI.create(flowData);
       
-      if (response.ok) {
-        console.log('Flow executed successfully:', result);
-        alert('Flow executed successfully! Check console for details.');
-      } else {
-        console.error('Failed to execute flow:', result);
-        alert('Failed to execute flow: ' + (result.error || 'Unknown error'));
-      }
-    } catch (error) {
+      // Then execute it
+      const result = await flowAPI.execute(savedFlow.id);
+      
+      console.log('Flow executed successfully:', result);
+      alert(`Flow "${savedFlow.name}" executed successfully! Check console for details.`);
+    } catch (error: any) {
       console.error('Error executing flow:', error);
-      alert('Error executing flow: ' + error);
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+      alert('Error executing flow: ' + errorMsg);
     }
   };
 
@@ -429,6 +461,37 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     setShowCodeEditor(false);
     setSelectedNodeForEditor(null);
   }, []);
+
+  const onSaveNodeCode = useCallback((nodeId: string, code: string, language: string) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { 
+              ...node, 
+              data: { 
+                ...node.data, 
+                code: code,
+                content: code,
+                language: language 
+              } 
+            }
+          : node
+      )
+    );
+    
+    // Also update selected service if it's the same node
+    if (selectedService && selectedService.id === nodeId) {
+      setSelectedService(prev => prev ? {
+        ...prev,
+        data: {
+          ...prev.data,
+          code: code,
+          content: code,
+          language: language
+        }
+      } : null);
+    }
+  }, [setNodes, selectedService]);
 
   const serviceTypes = [
     { type: 'REST API', icon: Database, color: 'bg-blue-100 text-blue-800' },
@@ -520,6 +583,60 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     [reactFlowInstance, nodes, setNodes, serviceTypes, flowchartShapes],
   );
 
+  // Load existing flow data when editing
+  React.useEffect(() => {
+    if (isOpen && editingFlow) {
+      setFlowName(editingFlow.name || 'Untitled Flow');
+      setIsActiveFlow(editingFlow.status === 'active');
+      setFlowId(editingFlow.id);
+      
+      // Load nodes and edges from the flow configuration
+      if (editingFlow.configuration) {
+        const config = editingFlow.configuration;
+        
+        if (config.nodes && config.nodes.length > 0) {
+          const loadedNodes = config.nodes.map((node: any) => ({
+            id: node.id,
+            type: node.type || 'service',
+            position: node.position || { x: 100, y: 100 },
+            data: {
+              ...node.data,
+              // Ensure icon is properly set for service nodes
+              icon: node.data.type === 'REST API' ? Database :
+                    node.data.type === 'GraphQL' ? Zap :
+                    node.data.type === 'Microservice' ? Box :
+                    node.data.type === 'Function' ? Cpu :
+                    Box // default
+            }
+          }));
+          setNodes(loadedNodes);
+        } else {
+          setNodes(initialServiceNodes);
+        }
+        
+        if (config.edges && config.edges.length > 0) {
+          setEdges(config.edges);
+        } else {
+          setEdges(initialServiceEdges);
+        }
+        
+        // Set viewport if available
+        if (config.viewport && reactFlowInstance) {
+          setTimeout(() => {
+            reactFlowInstance.setViewport(config.viewport);
+          }, 100);
+        }
+      }
+    } else if (isOpen && !editingFlow) {
+      // Reset to default when creating new flow
+      setFlowName('Untitled Flow');
+      setIsActiveFlow(false);
+      setFlowId(null);
+      setNodes(initialServiceNodes);
+      setEdges(initialServiceEdges);
+    }
+  }, [isOpen, editingFlow, setNodes, setEdges, reactFlowInstance]);
+
   // Reset position when modal opens
   React.useEffect(() => {
     if (isOpen) {
@@ -559,7 +676,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               </div>
               <div className="flex items-center space-x-3">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Design and manage your service architecture flow
+                  {editingFlow ? 'Edit your service architecture flow' : 'Design and manage your service architecture flow'}
                 </p>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-slate-500 dark:text-slate-400">Active Flow:</span>
@@ -582,7 +699,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
             >
               <Save className="h-4 w-4" />
-              <span>Save Flow</span>
+              <span>{editingFlow ? 'Update Flow' : 'Save Flow'}</span>
             </button>
             <button 
               onClick={handleTestFlow}
@@ -768,6 +885,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         isOpen={showCodeEditor}
         onClose={onCloseCodeEditor}
         nodeData={selectedNodeForEditor}
+        onSaveCode={onSaveNodeCode}
       />
       
     </div>
