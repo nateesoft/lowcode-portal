@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Node } from 'reactflow';
-import { X, Settings, Database, Globe, Smartphone, Cpu, Box, Zap, Code2, Square, Diamond, Circle, Hexagon, Triangle, Octagon } from 'lucide-react';
+import { X, Settings, Database, Globe, Smartphone, Cpu, Box, Zap, Code2, Square, Diamond, Circle, Hexagon, Triangle, Octagon, History, Clock } from 'lucide-react';
+import { nodeContentAPI, NodeContentHistoryData } from '@/lib/api';
 
 interface ServiceFlowPropertiesPanelProps {
   selectedNode: Node | null;
   onClose: () => void;
   onUpdateNode: (nodeId: string, updates: Partial<Node['data']>) => void;
   onOpenCodeEditor: (nodeData: any) => void;
+  flowId?: string;
 }
 
 const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
@@ -14,7 +16,12 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
   onClose,
   onUpdateNode,
   onOpenCodeEditor,
+  flowId,
 }) => {
+  const [showHistory, setShowHistory] = useState(false);
+  const [history, setHistory] = useState<NodeContentHistoryData[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   if (!selectedNode) return null;
 
   const handleInputChange = (field: string, value: string) => {
@@ -22,6 +29,40 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
       ...selectedNode.data,
       [field]: value
     });
+  };
+
+  const loadHistory = async () => {
+    if (!flowId || !selectedNode) return;
+    
+    setLoadingHistory(true);
+    try {
+      const historyData = await nodeContentAPI.getNodeHistory(flowId, selectedNode.id);
+      setHistory(historyData);
+      setShowHistory(true);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const loadVersionContent = async (version: string) => {
+    if (!flowId || !selectedNode) return;
+    
+    try {
+      const versionData = await nodeContentAPI.getVersionContent(flowId, selectedNode.id, version);
+      // Update code editor with historical content
+      onOpenCodeEditor({
+        ...selectedNode.data,
+        id: selectedNode.id,
+        code: versionData.content,
+        language: versionData.language,
+        isHistorical: true,
+        version: version
+      });
+    } catch (error) {
+      console.error('Failed to load version content:', error);
+    }
   };
 
   const getNodeIcon = (nodeData: Record<string, unknown>) => {
@@ -348,6 +389,65 @@ const ServiceFlowPropertiesPanel: React.FC<ServiceFlowPropertiesPanelProps> = ({
                       {selectedNode.data.code.length > 200 && '...'}
                     </pre>
                   </div>
+                </div>
+              )}
+
+              {/* Version History */}
+              {selectedNode.data.code && flowId && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Version History
+                    </label>
+                    <button
+                      onClick={loadHistory}
+                      disabled={loadingHistory}
+                      className="flex items-center space-x-1 px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded"
+                    >
+                      <History className="h-3 w-3" />
+                      <span>{loadingHistory ? 'Loading...' : 'View History'}</span>
+                    </button>
+                  </div>
+
+                  {showHistory && (
+                    <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg max-h-48 overflow-y-auto">
+                      {history.length === 0 ? (
+                        <p className="p-3 text-xs text-slate-500 dark:text-slate-400 text-center">
+                          No version history available
+                        </p>
+                      ) : (
+                        <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                          {history.map((entry) => (
+                            <div key={entry.id} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-medium text-slate-900 dark:text-white">
+                                  v{entry.version}
+                                </span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                  {new Date(entry.createdAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+                                {entry.changeDescription || 'No description'}
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
+                                  <Clock className="h-3 w-3" />
+                                  <span>{new Date(entry.createdAt).toLocaleTimeString()}</span>
+                                </div>
+                                <button
+                                  onClick={() => loadVersionContent(entry.version)}
+                                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                  View Code
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

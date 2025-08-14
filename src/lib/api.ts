@@ -140,3 +140,87 @@ export const flowAPI = {
     return response.data;
   }
 };
+
+export interface NodeContentData {
+  id?: number;
+  nodeId: string;
+  label: string;
+  description?: string;
+  content: string;
+  language: string;
+  version: string;
+  nodeType: string;
+  metadata?: any;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface NodeContentHistoryData {
+  id: number;
+  content: string;
+  language: string;
+  version: string;
+  changeDescription?: string;
+  metadata?: any;
+  createdAt: string;
+  createdBy?: User;
+}
+
+export interface CreateNodeContentRequest {
+  label: string;
+  description?: string;
+  content: string;
+  language: string;
+  nodeType: string;
+  metadata?: any;
+  changeDescription?: string;
+}
+
+export const nodeContentAPI = {
+  // Get all node contents for a flow
+  getFlowNodeContents: async (flowId: string): Promise<NodeContentData[]> => {
+    const response = await api.get(`/flows/${flowId}/nodes`);
+    return response.data;
+  },
+
+  // Get specific node content
+  getNodeContent: async (flowId: string, nodeId: string): Promise<NodeContentData | null> => {
+    try {
+      const response = await api.get(`/flows/${flowId}/nodes/${nodeId}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  // Create or update node content
+  saveNodeContent: async (flowId: string, nodeId: string, data: CreateNodeContentRequest): Promise<NodeContentData> => {
+    const response = await api.put(`/flows/${flowId}/nodes/${nodeId}`, data);
+    return response.data;
+  },
+
+  // Delete node content
+  deleteNodeContent: async (flowId: string, nodeId: string): Promise<void> => {
+    await api.delete(`/flows/${flowId}/nodes/${nodeId}`);
+  },
+
+  // Get node content history
+  getNodeHistory: async (flowId: string, nodeId: string): Promise<NodeContentHistoryData[]> => {
+    const response = await api.get(`/flows/${flowId}/nodes/${nodeId}/history`);
+    return response.data;
+  },
+
+  // Get specific version content
+  getVersionContent: async (flowId: string, nodeId: string, version: string): Promise<NodeContentHistoryData> => {
+    const response = await api.get(`/flows/${flowId}/nodes/${nodeId}/history/${version}`);
+    return response.data;
+  },
+
+  // Delete history entry
+  deleteHistoryEntry: async (historyId: string): Promise<void> => {
+    await api.delete(`/flows/history/${historyId}`);
+  }
+};

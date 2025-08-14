@@ -21,7 +21,7 @@ import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap, Cir
 import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 import ServiceFlowPropertiesPanel from '@/components/panels/ServiceFlowPropertiesPanel';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
-import { flowAPI, FlowData } from '@/lib/api';
+import { flowAPI, FlowData, nodeContentAPI, CreateNodeContentRequest } from '@/lib/api';
 
 interface ServiceFlowModalProps {
   isOpen: boolean;
@@ -472,7 +472,8 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     setSelectedNodeForEditor(null);
   }, []);
 
-  const onSaveNodeCode = useCallback((nodeId: string, code: string, language: string) => {
+  const onSaveNodeCode = useCallback(async (nodeId: string, code: string, language: string) => {
+    // Update local state first
     setNodes((nds) =>
       nds.map((node) =>
         node.id === nodeId
@@ -501,7 +502,37 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         }
       } : null);
     }
-  }, [setNodes, selectedService]);
+
+    // Save to backend if we have a flow ID
+    if (flowId) {
+      try {
+        const node = nodes.find(n => n.id === nodeId);
+        if (node) {
+          const nodeContentData: CreateNodeContentRequest = {
+            label: node.data.label || 'Untitled Node',
+            description: node.data.description || '',
+            content: code,
+            language: language,
+            nodeType: node.type || 'service',
+            metadata: {
+              type: node.data.type,
+              shape: node.data.shape,
+              backgroundColor: node.data.backgroundColor,
+              borderColor: node.data.borderColor,
+              position: node.position
+            },
+            changeDescription: 'Code updated via editor'
+          };
+          
+          await nodeContentAPI.saveNodeContent(flowId, nodeId, nodeContentData);
+          console.log('Node content saved to database');
+        }
+      } catch (error) {
+        console.error('Failed to save node content:', error);
+        // Don't show error to user as local state is already updated
+      }
+    }
+  }, [setNodes, selectedService, flowId, nodes]);
 
   const serviceTypes = [
     { type: 'REST API', icon: Database, color: 'bg-blue-100 text-blue-800' },
@@ -595,58 +626,86 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
 
   // Load existing flow data when editing
   React.useEffect(() => {
-    if (isOpen && editingFlow) {
-      setFlowName(editingFlow.name || 'Untitled Flow');
-      setIsActiveFlow(editingFlow.status === 'active');
-      setFlowId(editingFlow.id);
-      setVersion(editingFlow.configuration?.version || '1.0.0');
-      
-      // Load nodes and edges from the flow configuration
-      if (editingFlow.configuration) {
-        const config = editingFlow.configuration;
+    const loadFlowData = async () => {
+      if (isOpen && editingFlow) {
+        setFlowName(editingFlow.name || 'Untitled Flow');
+        setIsActiveFlow(editingFlow.status === 'active');
+        setFlowId(editingFlow.id);
+        setVersion(editingFlow.configuration?.version || '1.0.0');
         
-        if (config.nodes && config.nodes.length > 0) {
-          const loadedNodes = config.nodes.map((node: any) => ({
-            id: node.id,
-            type: node.type || 'service',
-            position: node.position || { x: 100, y: 100 },
-            data: {
-              ...node.data,
-              // Ensure icon is properly set for service nodes
-              icon: node.data.type === 'REST API' ? Database :
-                    node.data.type === 'GraphQL' ? Zap :
-                    node.data.type === 'Microservice' ? Box :
-                    node.data.type === 'Function' ? Cpu :
-                    Box // default
+        // Load nodes and edges from the flow configuration
+        if (editingFlow.configuration) {
+          const config = editingFlow.configuration;
+          
+          if (config.nodes && config.nodes.length > 0) {
+            const loadedNodes = config.nodes.map((node: any) => ({
+              id: node.id,
+              type: node.type || 'service',
+              position: node.position || { x: 100, y: 100 },
+              data: {
+                ...node.data,
+                // Ensure icon is properly set for service nodes
+                icon: node.data.type === 'REST API' ? Database :
+                      node.data.type === 'GraphQL' ? Zap :
+                      node.data.type === 'Microservice' ? Box :
+                      node.data.type === 'Function' ? Cpu :
+                      Box // default
+              }
+            }));
+
+            // Load node contents from database and merge with flow data
+            try {
+              const nodeContents = await nodeContentAPI.getFlowNodeContents(editingFlow.id);
+              const nodesWithContent = loadedNodes.map(node => {
+                const nodeContent = nodeContents.find(nc => nc.nodeId === node.id);
+                if (nodeContent) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      code: nodeContent.content,
+                      content: nodeContent.content,
+                      language: nodeContent.language,
+                      version: nodeContent.version
+                    }
+                  };
+                }
+                return node;
+              });
+              setNodes(nodesWithContent);
+            } catch (error) {
+              console.error('Failed to load node contents:', error);
+              setNodes(loadedNodes);
             }
-          }));
-          setNodes(loadedNodes);
-        } else {
-          setNodes(initialServiceNodes);
+          } else {
+            setNodes(initialServiceNodes);
+          }
+          
+          if (config.edges && config.edges.length > 0) {
+            setEdges(config.edges);
+          } else {
+            setEdges(initialServiceEdges);
+          }
+          
+          // Set viewport if available
+          if (config.viewport && reactFlowInstance) {
+            setTimeout(() => {
+              reactFlowInstance.setViewport(config.viewport);
+            }, 100);
+          }
         }
-        
-        if (config.edges && config.edges.length > 0) {
-          setEdges(config.edges);
-        } else {
-          setEdges(initialServiceEdges);
-        }
-        
-        // Set viewport if available
-        if (config.viewport && reactFlowInstance) {
-          setTimeout(() => {
-            reactFlowInstance.setViewport(config.viewport);
-          }, 100);
-        }
+      } else if (isOpen && !editingFlow) {
+        // Reset to default when creating new flow
+        setFlowName('Untitled Flow');
+        setIsActiveFlow(false);
+        setFlowId(null);
+        setVersion('1.0.0');
+        setNodes(initialServiceNodes);
+        setEdges(initialServiceEdges);
       }
-    } else if (isOpen && !editingFlow) {
-      // Reset to default when creating new flow
-      setFlowName('Untitled Flow');
-      setIsActiveFlow(false);
-      setFlowId(null);
-      setVersion('1.0.0');
-      setNodes(initialServiceNodes);
-      setEdges(initialServiceEdges);
-    }
+    };
+
+    loadFlowData();
   }, [isOpen, editingFlow, setNodes, setEdges, reactFlowInstance]);
 
   // Reset position when modal opens
@@ -880,6 +939,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
                 onClose={onClosePropertiesPanel}
                 onUpdateNode={onUpdateNode}
                 onOpenCodeEditor={onOpenCodeEditor}
+                flowId={flowId || undefined}
               />
             </div>
           )}
