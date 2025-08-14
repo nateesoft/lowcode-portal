@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Code2 } from 'lucide-react';
 import { UserRole } from '@/lib/types';
+import { authAPI, LoginRequest, RegisterRequest } from '@/lib/api';
 
 interface LoginPageProps {
   setIsAuthenticated: (authenticated: boolean) => void;
@@ -12,6 +13,72 @@ const LoginPage: React.FC<LoginPageProps> = ({
   setUserRole,
 }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setError('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      if (isLogin) {
+        const loginData: LoginRequest = {
+          email: formData.email,
+          password: formData.password
+        };
+        const response = await authAPI.login(loginData);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setIsAuthenticated(true);
+        setUserRole('user');
+      } else {
+        if (!formData.firstName || !formData.lastName) {
+          setError('Please fill in all fields');
+          return;
+        }
+        const registerData: RegisterRequest = {
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName
+        };
+        const response = await authAPI.register(registerData);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setIsAuthenticated(true);
+        setUserRole('user');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleModeChange = (loginMode: boolean) => {
+    setIsLogin(loginMode);
+    setFormData({
+      email: '',
+      password: '',
+      firstName: '',
+      lastName: ''
+    });
+    setError('');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
@@ -23,44 +90,85 @@ const LoginPage: React.FC<LoginPageProps> = ({
         
         <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1 mb-8">
           <button
-            onClick={() => setIsLogin(true)}
+            onClick={() => handleModeChange(true)}
             className={`flex-1 py-2 rounded-md transition ${isLogin ? 'bg-white dark:bg-slate-600 shadow' : ''}`}
           >
             Login
           </button>
           <button
-            onClick={() => setIsLogin(false)}
+            onClick={() => handleModeChange(false)}
             className={`flex-1 py-2 rounded-md transition ${!isLogin ? 'bg-white dark:bg-slate-600 shadow' : ''}`}
           >
             Sign Up
           </button>
         </div>
 
-        <div>
-          {!isLogin && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Full Name</label>
-              <input type="text" className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white" />
+        <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg text-sm">
+              {error}
             </div>
+          )}
+
+          {!isLogin && (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">First Name</label>
+                <input 
+                  type="text" 
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                  required={!isLogin}
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Last Name</label>
+                <input 
+                  type="text" 
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                  required={!isLogin}
+                />
+              </div>
+            </>
           )}
           
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Email</label>
-            <input type="email" className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white" />
+            <input 
+              type="email" 
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+              required
+            />
           </div>
           
           <div className="mb-6">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Password</label>
-            <input type="password" className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white" />
+            <input 
+              type="password" 
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+              required
+            />
           </div>
 
           <button 
-            onClick={() => setIsAuthenticated(true)}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition transform hover:scale-105"
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            {isLogin ? 'Login' : 'Create Account'}
+            {loading ? 'Processing...' : (isLogin ? 'Login' : 'Create Account')}
           </button>
-        </div>
+        </form>
 
         <div className="mt-6 text-center">
           <span className="text-slate-500 dark:text-slate-400">or continue with</span>
