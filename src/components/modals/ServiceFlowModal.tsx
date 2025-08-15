@@ -22,6 +22,7 @@ import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 import ServiceFlowPropertiesPanel from '@/components/panels/ServiceFlowPropertiesPanel';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
 import { flowAPI, FlowData, nodeContentAPI, CreateNodeContentRequest } from '@/lib/api';
+import { useAlertActions } from '@/hooks/useAlert';
 
 interface ServiceFlowModalProps {
   isOpen: boolean;
@@ -284,6 +285,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     toggleFullscreen, 
     resetPosition 
   } = useModalDragAndResize();
+  const { alert } = useAlertActions();
 
   const onConnect: OnConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -372,25 +374,25 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         // Update existing flow
         result = await flowAPI.update(flowId, flowData);
         console.log('Flow updated successfully:', result);
-        alert(`Flow "${result.name}" updated successfully!`);
+        alert.apiSuccess('update', `Flow "${result.name}" อัปเดตสำเร็จ`);
       } else {
         // Create new flow
         result = await flowAPI.create(flowData);
         console.log('Flow created successfully:', result);
-        alert(`Flow "${result.name}" created successfully!`);
+        alert.apiSuccess('create', `Flow "${result.name}" สร้างสำเร็จ`);
         setFlowId(result.id); // Set the ID for future updates
       }
       onClose();
     } catch (error: any) {
       console.error('Error saving flow:', error);
       const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
-      alert('Error saving flow: ' + errorMsg);
+      alert.apiError('save', errorMsg);
     }
   };
 
   const handleTestFlow = async () => {
     if (!isActiveFlow) {
-      alert('Please activate the flow before testing');
+      alert.warning('คำเตือน', 'กรุณาเปิดใช้งาน Flow ก่อนทดสอบ');
       return;
     }
 
@@ -432,11 +434,11 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
       const result = await flowAPI.execute(savedFlow.id);
       
       console.log('Flow executed successfully:', result);
-      alert(`Flow "${savedFlow.name}" executed successfully! Check console for details.`);
+      alert.apiSuccess('execute', `Flow "${savedFlow.name}" ดำเนินการสำเร็จ`);
     } catch (error: any) {
       console.error('Error executing flow:', error);
       const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
-      alert('Error executing flow: ' + errorMsg);
+      alert.apiError('execute', errorMsg);
     }
   };
 

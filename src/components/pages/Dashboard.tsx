@@ -47,6 +47,8 @@ import {
 import { useSecretManagement } from '@/contexts/SecretManagementContext';
 import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
 import { flowAPI } from '@/lib/api';
+import { useAlertActions } from '@/hooks/useAlert';
+import AlertDemo from '@/components/ui/AlertDemo';
 
 interface DashboardProps {
   projects: Project[];
@@ -82,6 +84,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const router = useRouter();
   const { t } = useTranslation();
   const { openChatbot } = useChatbot();
+  const { alert } = useAlertActions();
   const { 
     connections, 
     isLoading: dbLoading, 
@@ -356,10 +359,10 @@ const Dashboard: React.FC<DashboardProps> = ({
                             onClick={async () => {
                               try {
                                 const result = await flowAPI.execute(flow.id);
-                                alert(`Flow executed successfully! Processed ${result.output?.nodesProcessed || 0} nodes.`);
-                              } catch (error) {
+                                alert.apiSuccess('execute', `ประมวลผล ${result.output?.nodesProcessed || 0} nodes สำเร็จ`);
+                              } catch (error: any) {
                                 console.error('Flow execution error:', error);
-                                alert('Failed to execute flow');
+                                alert.apiError('execute', error.response?.data?.message || error.message);
                               }
                             }}
                             disabled={flow.status !== 'active'}
@@ -387,11 +390,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                               if (confirm(`Are you sure you want to delete "${flow.name}"? This action cannot be undone.`)) {
                                 try {
                                   await flowAPI.delete(flow.id);
-                                  alert('Flow deleted successfully!');
+                                  alert.apiSuccess('delete');
                                   loadFlows(); // Refresh the list
-                                } catch (error) {
+                                } catch (error: any) {
                                   console.error('Delete error:', error);
-                                  alert('Failed to delete flow');
+                                  alert.apiError('delete', error.response?.data?.message || error.message);
                                 }
                               }
                             }}
@@ -690,6 +693,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                 </div>
               </div>
             </div>
+            
+            {/* Alert System Demo */}
+            <AlertDemo />
           </div>
         ) : null;
 

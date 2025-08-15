@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
@@ -9,12 +9,24 @@ import { CollaborationProvider } from "@/contexts/CollaborationContext";
 import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { MediaProvider } from "@/contexts/MediaContext";
 import { ProjectManagementProvider } from "@/contexts/ProjectManagementContext";
+import { AlertProvider, setGlobalAlertContext, useAlert } from "@/contexts/AlertContext";
 import ChatbotOverlay from "@/components/ui/ChatbotOverlay";
 import { useChatbot } from "@/contexts/ChatbotContext";
 import "@/lib/i18n";
 
 interface ClientProvidersProps {
   children: React.ReactNode;
+}
+
+function AlertWrapper({ children }: { children: React.ReactNode }) {
+  const alertContext = useAlert();
+  
+  useEffect(() => {
+    // Set global alert context for use outside React components
+    setGlobalAlertContext(alertContext);
+  }, [alertContext]);
+  
+  return <>{children}</>;
 }
 
 function ChatbotWrapper({ children }: { children: React.ReactNode }) {
@@ -38,9 +50,13 @@ export function ClientProviders({ children }: ClientProvidersProps) {
               <ProjectManagementProvider>
                 <CollaborationProvider>
                   <ChatbotProvider>
-                    <ChatbotWrapper>
-                      {children}
-                    </ChatbotWrapper>
+                    <AlertProvider position="top-right" maxAlerts={5}>
+                      <AlertWrapper>
+                        <ChatbotWrapper>
+                          {children}
+                        </ChatbotWrapper>
+                      </AlertWrapper>
+                    </AlertProvider>
                   </ChatbotProvider>
                 </CollaborationProvider>
               </ProjectManagementProvider>
