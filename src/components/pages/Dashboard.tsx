@@ -46,11 +46,13 @@ import {
 } from '@/components/secret-management';
 import { useSecretManagement } from '@/contexts/SecretManagementContext';
 import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
-import { flowAPI, componentAPI, ComponentData, ComponentStats, CreateComponentRequest } from '@/lib/api';
+import { flowAPI, componentAPI, ComponentData, ComponentStats, CreateComponentRequest, pageAPI, PageData, PageStats, CreatePageRequest } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
 import AlertDemo from '@/components/ui/AlertDemo';
 import ComponentModal from '@/components/modals/ComponentModal';
 import ComponentHistoryPanel from '@/components/panels/ComponentHistoryPanel';
+import PageModal from '@/components/modals/PageModal';
+import PageHistoryPanel from '@/components/panels/PageHistoryPanel';
 
 interface DashboardProps {
   projects: Project[];
@@ -220,6 +222,89 @@ const Dashboard: React.FC<DashboardProps> = ({
       loadComponents();
     }
   }, [activeView]);
+
+  // Page Management functions
+  const loadPages = async () => {
+    setPagesLoading(true);
+    try {
+      const [pagesData, statsData] = await Promise.all([
+        pageAPI.getAll(),
+        pageAPI.getStats()
+      ]);
+      setPages(pagesData);
+      setPageStats(statsData);
+    } catch (error) {
+      console.error('Error loading pages:', error);
+      alert('Failed to load pages');
+    } finally {
+      setPagesLoading(false);
+    }
+  };
+
+  const handleCreatePage = () => {
+    setEditingPage(null);
+    setShowPageModal(true);
+  };
+
+  const handleEditPage = (page: PageData) => {
+    setEditingPage(page);
+    setShowPageModal(true);
+  };
+
+  const handleSavePage = async (pageData: CreatePageRequest) => {
+    try {
+      if (editingPage) {
+        await pageAPI.update(editingPage.id!, { ...pageData, userId: 1 });
+        alert('Page updated successfully!');
+      } else {
+        await pageAPI.create({ ...pageData, userId: 1 });
+        alert('Page created successfully!');
+      }
+      await loadPages();
+    } catch (error) {
+      console.error('Error saving page:', error);
+      throw error;
+    }
+  };
+
+  const handleDeletePage = async (pageId: number) => {
+    if (!window.confirm('Are you sure you want to delete this page?')) {
+      return;
+    }
+
+    try {
+      await pageAPI.delete(pageId);
+      alert('Page deleted successfully!');
+      await loadPages();
+    } catch (error) {
+      console.error('Error deleting page:', error);
+      alert('Failed to delete page');
+    }
+  };
+
+  const handleShowPageHistory = (page: PageData) => {
+    setSelectedPageForHistory(page);
+    setShowPageHistory(true);
+  };
+
+  const getFilteredPages = () => {
+    return pages.filter(page => {
+      const matchesSearch = page.title.toLowerCase().includes(pageSearchTerm.toLowerCase()) ||
+                           page.description?.toLowerCase().includes(pageSearchTerm.toLowerCase()) ||
+                           page.tags?.some(tag => tag.toLowerCase().includes(pageSearchTerm.toLowerCase()));
+      
+      const matchesStatus = pageStatusFilter === 'all' || page.status === pageStatusFilter;
+      const matchesType = pageTypeFilter === 'all' || page.pageType === pageTypeFilter;
+      
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  };
+
+  useEffect(() => {
+    if (activeView === 'pages') {
+      loadPages();
+    }
+  }, [activeView]);
   
   // Database states
   const [showConnectionModal, setShowConnectionModal] = useState(false);
@@ -244,6 +329,18 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [componentCategoryFilter, setComponentCategoryFilter] = useState<string>('all');
   const [componentTypeFilter, setComponentTypeFilter] = useState<string>('all');
   const [componentsLoading, setComponentsLoading] = useState(false);
+  
+  // Page Management states
+  const [pages, setPages] = useState<PageData[]>([]);
+  const [pageStats, setPageStats] = useState<PageStats | null>(null);
+  const [showPageModal, setShowPageModal] = useState(false);
+  const [editingPage, setEditingPage] = useState<PageData | null>(null);
+  const [showPageHistory, setShowPageHistory] = useState(false);
+  const [selectedPageForHistory, setSelectedPageForHistory] = useState<PageData | null>(null);
+  const [pageSearchTerm, setPageSearchTerm] = useState('');
+  const [pageStatusFilter, setPageStatusFilter] = useState<string>('all');
+  const [pageTypeFilter, setPageTypeFilter] = useState<string>('all');
+  const [pagesLoading, setPagesLoading] = useState(false);
   
   // Project Management states
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -338,50 +435,209 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
 
       case 'pages':
+        const filteredPages = getFilteredPages();
+        const uniqueStatuses = [...new Set(pages.map(p => p.status))];
+        const uniquePageTypes = [...new Set(pages.map(p => p.pageType))];
+
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            {/* Header */}
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('pages')}</h2>
-              <button 
-                onClick={() => setShowWeUIModal(true)}
-                className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Page Management</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  สร้างและจัดการหน้าเว็บสำหรับ lowcode platform
+                </p>
+              </div>
+              <button
+                onClick={handleCreatePage}
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center justify-center"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {t('newPage')}
+                Create Page
               </button>
             </div>
-            <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {['Home Page', 'About Us', 'Contact', 'Blog', 'Services', 'Portfolio'].map((page, index) => (
-                  <div key={index} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded">
-                          <Globe2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-900 dark:text-white">{page}</div>
-                          <div className="text-sm text-slate-600 dark:text-slate-400">/{page.toLowerCase().replace(' ', '-')}</div>
-                        </div>
-                      </div>
-                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded text-sm">
-                        Published
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm text-slate-500 dark:text-slate-400">
-                      <span>Last modified: 2 days ago</span>
-                      <div className="flex items-center space-x-2">
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                          <Eye className="h-4 w-4" />
-                        </button>
+
+            {/* Stats Cards */}
+            {pageStats && (
+              <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Pages</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{pageStats.total}</p>
                       </div>
                     </div>
                   </div>
-                ))}
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Published</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{pageStats.published}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <Edit className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Drafts</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{pageStats.draft}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <Globe className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Public</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{pageStats.publicPages}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+            )}
+
+            {/* Filters */}
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="Search pages..."
+                      value={pageSearchTerm}
+                      onChange={(e) => setPageSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={pageStatusFilter}
+                    onChange={(e) => setPageStatusFilter(e.target.value)}
+                    className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  >
+                    <option value="all">All Statuses</option>
+                    {uniqueStatuses.map(status => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={pageTypeFilter}
+                    onChange={(e) => setPageTypeFilter(e.target.value)}
+                    className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  >
+                    <option value="all">All Types</option>
+                    {uniquePageTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Pages List */}
+            <div className="p-4 sm:p-6">
+              {pagesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-slate-600 dark:text-slate-400">Loading pages...</span>
+                </div>
+              ) : filteredPages.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                    {pageSearchTerm || pageStatusFilter !== 'all' || pageTypeFilter !== 'all'
+                      ? 'No Pages Found'
+                      : 'No Pages Yet'
+                    }
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-6">
+                    {pageSearchTerm || pageStatusFilter !== 'all' || pageTypeFilter !== 'all'
+                      ? 'Try adjusting your search criteria or filters.'
+                      : 'Get started by creating your first page for the lowcode platform.'
+                    }
+                  </p>
+                  {(!pageSearchTerm && pageStatusFilter === 'all' && pageTypeFilter === 'all') && (
+                    <button
+                      onClick={handleCreatePage}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                    >
+                      Create First Page
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredPages.map(page => (
+                    <div key={page.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-slate-900 dark:text-white mb-1">{page.title}</h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">/{page.slug}</p>
+                          {page.description && (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 line-clamp-2">{page.description}</p>
+                          )}
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ml-2 ${
+                          page.status === 'published' 
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                            : page.status === 'draft'
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                        }`}>
+                          {page.status}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center space-x-2 mb-3 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">{page.pageType}</span>
+                        {page.isPublic && (
+                          <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">Public</span>
+                        )}
+                        {page.tags && page.tags.length > 0 && (
+                          <span className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
+                            +{page.tags.length} tags
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+                        <span>v{page.version || '1.0.0'}</span>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => handleEditPage(page)}
+                            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-blue-600 dark:text-blue-400"
+                            title="Edit page"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleShowPageHistory(page)}
+                            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-purple-600 dark:text-purple-400"
+                            title="View history"
+                          >
+                            <History className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePage(page.id!)}
+                            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-red-600 dark:text-red-400"
+                            title="Delete page"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -1670,6 +1926,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                 icon: Component,
                 isActive: activeView === 'components',
                 onClick: () => setActiveView('components')
+              },
+              {
+                key: 'pages',
+                label: 'Pages',
+                icon: FileText,
+                isActive: activeView === 'pages',
+                onClick: () => setActiveView('pages')
               }
             ]}
           />
@@ -2242,6 +2505,32 @@ const Dashboard: React.FC<DashboardProps> = ({
         componentName={selectedComponentForHistory?.name || ''}
         onRestore={() => {
           loadComponents();
+        }}
+        userId={1}
+      />
+
+      {/* Page Management Modals */}
+      <PageModal
+        isOpen={showPageModal}
+        onClose={() => {
+          setShowPageModal(false);
+          setEditingPage(null);
+        }}
+        onSave={handleSavePage}
+        editingPage={editingPage}
+        userId={1}
+      />
+
+      <PageHistoryPanel
+        isOpen={showPageHistory}
+        onClose={() => {
+          setShowPageHistory(false);
+          setSelectedPageForHistory(null);
+        }}
+        pageId={selectedPageForHistory?.id || 0}
+        pageTitle={selectedPageForHistory?.title || ''}
+        onRestore={() => {
+          loadPages();
         }}
         userId={1}
       />

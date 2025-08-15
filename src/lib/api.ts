@@ -361,3 +361,179 @@ export const componentAPI = {
     await api.delete(`/components/history/${historyId}`);
   }
 };
+
+export interface PageData {
+  id?: number;
+  title: string;
+  slug: string;
+  description?: string;
+  content?: any;
+  layout?: any;
+  components?: any;
+  styles?: any;
+  customCSS?: string;
+  customJS?: string;
+  status?: string;
+  version?: string;
+  isPublic?: boolean;
+  tags?: string[];
+  thumbnailUrl?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  pageType?: string;
+  routePath?: string;
+  metadata?: any;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: User;
+}
+
+export interface PageHistoryData {
+  id: number;
+  pageId: string;
+  version: string;
+  title: string;
+  slug: string;
+  description?: string;
+  content?: any;
+  layout?: any;
+  components?: any;
+  styles?: any;
+  customCSS?: string;
+  customJS?: string;
+  status: string;
+  isPublic: boolean;
+  tags?: string[];
+  thumbnailUrl?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  pageType: string;
+  routePath?: string;
+  changeDescription?: string;
+  changeType: 'manual' | 'auto' | 'import' | 'restore';
+  metadata?: {
+    contentSize?: number;
+    componentCount?: number;
+    styleRulesCount?: number;
+    customCSSLines?: number;
+    customJSLines?: number;
+    seoScore?: number;
+    rollbackFrom?: string;
+  };
+  createdAt: string;
+  user?: User;
+}
+
+export interface CreatePageRequest {
+  title: string;
+  slug: string;
+  description?: string;
+  content?: any;
+  layout?: any;
+  components?: any;
+  styles?: any;
+  customCSS?: string;
+  customJS?: string;
+  status?: string;
+  isPublic?: boolean;
+  tags?: string[];
+  thumbnailUrl?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  pageType?: string;
+  routePath?: string;
+  metadata?: any;
+  userId?: number;
+  changeDescription?: string;
+}
+
+export interface PageStats {
+  total: number;
+  published: number;
+  draft: number;
+  publicPages: number;
+  pageTypes: Array<{
+    pageType: string;
+    count: number;
+  }>;
+  statuses: Array<{
+    status: string;
+    count: number;
+  }>;
+}
+
+export const pageAPI = {
+  // Get all pages
+  getAll: async (status?: string, pageType?: string, isPublic?: boolean): Promise<PageData[]> => {
+    let url = '/pages';
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (pageType) params.append('pageType', pageType);
+    if (isPublic !== undefined) params.append('public', isPublic.toString());
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  // Get page by ID
+  getById: async (id: number): Promise<PageData> => {
+    const response = await api.get(`/pages/${id}`);
+    return response.data;
+  },
+
+  // Get page by slug
+  getBySlug: async (slug: string): Promise<PageData> => {
+    const response = await api.get(`/pages/slug/${slug}`);
+    return response.data;
+  },
+
+  // Create page
+  create: async (data: CreatePageRequest): Promise<PageData> => {
+    const response = await api.post('/pages', data);
+    return response.data;
+  },
+
+  // Update page
+  update: async (id: number, data: Partial<CreatePageRequest>): Promise<PageData> => {
+    const response = await api.patch(`/pages/${id}`, data);
+    return response.data;
+  },
+
+  // Delete page
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/pages/${id}`);
+  },
+
+  // Get page stats
+  getStats: async (): Promise<PageStats> => {
+    const response = await api.get('/pages/stats');
+    return response.data;
+  },
+
+  // Get page history
+  getHistory: async (pageId: number): Promise<PageHistoryData[]> => {
+    const response = await api.get(`/pages/${pageId}/history`);
+    return response.data;
+  },
+
+  // Get specific version
+  getHistoryVersion: async (pageId: number, version: string): Promise<PageHistoryData> => {
+    const response = await api.get(`/pages/${pageId}/history/${version}`);
+    return response.data;
+  },
+
+  // Restore from history
+  restoreFromHistory: async (pageId: number, version: string, userId: number): Promise<PageData> => {
+    const response = await api.post(`/pages/${pageId}/restore/${version}`, { userId });
+    return response.data;
+  },
+
+  // Delete history entry
+  deleteHistoryEntry: async (historyId: number): Promise<void> => {
+    await api.delete(`/pages/history/${historyId}`);
+  }
+};
