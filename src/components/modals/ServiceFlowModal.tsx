@@ -17,9 +17,10 @@ import ReactFlow, {
   Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap, Circle, Square, Diamond, ArrowRight, Hexagon, Triangle, Octagon, Maximize2, Minimize2, Move } from 'lucide-react';
+import { X, Workflow, Save, Play, Download, Upload, Database, Cpu, Box, Zap, Circle, Square, Diamond, ArrowRight, Hexagon, Triangle, Octagon, Maximize2, Minimize2, Move, History } from 'lucide-react';
 import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 import ServiceFlowPropertiesPanel from '@/components/panels/ServiceFlowPropertiesPanel';
+import FlowHistoryPanel from '@/components/panels/FlowHistoryPanel';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
 import { flowAPI, FlowData, nodeContentAPI, CreateNodeContentRequest } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
@@ -271,6 +272,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   const [flowName, setFlowName] = useState('Untitled Flow');
   const [flowId, setFlowId] = useState<string | null>(null);
   const [version, setVersion] = useState('1.0.0');
+  const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const { 
     dragRef, 
     modalRef, 
@@ -336,7 +338,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     [],
   );
 
-  const handleSaveFlow = async () => {
+  const handleSaveFlow = async (changeDescription?: string) => {
     const flowData: FlowData = {
       name: flowName,
       description: `Service flow v${version} with ${nodes.length} nodes`,
@@ -363,7 +365,10 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         style: edge.style
       })),
       viewport: reactFlowInstance?.getViewport(),
-      version: version
+      version: version,
+      // Add user ID and change description for history tracking
+      userId: 1, // TODO: Get from auth context
+      changeDescription: changeDescription || `Updated flow with ${nodes.length} nodes`
     };
 
     console.log('Saving Service Flow:', flowData);
@@ -538,6 +543,59 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
       }
     }
   }, [setNodes, selectedService, flowId, nodes]);
+
+  const handleRestoreVersion = useCallback(async (version: string, historyData: any) => {
+    try {
+      // Update the flow with history data
+      if (historyData.configuration) {
+        setFlowName(historyData.name);
+        setIsActiveFlow(historyData.status === 'active');
+        setVersion(historyData.version);
+        
+        if (historyData.configuration.nodes) {
+          const restoredNodes = historyData.configuration.nodes.map((node: any) => ({
+            id: node.id,
+            type: node.type || 'service',
+            position: node.position || { x: 100, y: 100 },
+            data: {
+              ...node.data,
+              icon: node.data.type === 'REST API' ? Database :
+                    node.data.type === 'GraphQL' ? Zap :
+                    node.data.type === 'Microservice' ? Box :
+                    node.data.type === 'Function' ? Cpu :
+                    Box
+            }
+          }));
+          setNodes(restoredNodes);
+        }
+        
+        if (historyData.configuration.edges) {
+          setEdges(historyData.configuration.edges);
+        }
+        
+        // Set viewport if available
+        if (historyData.configuration.viewport && reactFlowInstance) {
+          setTimeout(() => {
+            reactFlowInstance.setViewport(historyData.configuration.viewport);
+          }, 100);
+        }
+      }
+      
+      alert.success('คืนค่าสำเร็จ', `คืนค่า Flow ไปเวอร์ชัน ${version} สำเร็จ`);
+      setShowHistoryPanel(false);
+    } catch (error: any) {
+      console.error('Error restoring version:', error);
+      alert.error('เกิดข้อผิดพลาด', 'ไม่สามารถคืนค่าเวอร์ชันได้');
+    }
+  }, [setNodes, setEdges, reactFlowInstance, alert]);
+
+  const handleToggleHistoryPanel = useCallback(() => {
+    if (!flowId) {
+      alert.warning('คำเตือน', 'กรุณาบันทึก Flow ก่อนดูประวัติ');
+      return;
+    }
+    setShowHistoryPanel(!showHistoryPanel);
+  }, [flowId, showHistoryPanel, alert]);
 
   const serviceTypes = [
     { type: 'REST API', icon: Database, color: 'bg-blue-100 text-blue-800' },
@@ -811,6 +869,19 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               <span>Test Flow</span>
             </button>
             <button
+              onClick={handleToggleHistoryPanel}
+              disabled={!flowId}
+              className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
+                flowId 
+                  ? 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20' 
+                  : 'text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50'
+              }`}
+              title={flowId ? 'ดูประวัติ Flow' : 'บันทึก Flow ก่อนเพื่อดูประวัติ'}
+            >
+              <History className="h-4 w-4" />
+              <span>History</span>
+            </button>
+            <button
               onClick={toggleFullscreen}
               className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
               title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
@@ -956,6 +1027,16 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
                 flowId={flowId || undefined}
               />
             </div>
+          )}
+
+          {/* Flow History Panel - Right Sidebar */}
+          {showHistoryPanel && flowId && (
+            <FlowHistoryPanel
+              flowId={flowId}
+              currentVersion={version}
+              onRestoreVersion={handleRestoreVersion}
+              onClose={() => setShowHistoryPanel(false)}
+            />
           )}
         </div>
 
