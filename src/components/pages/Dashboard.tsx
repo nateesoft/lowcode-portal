@@ -2566,6 +2566,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         onProjectCreated={(project) => {
           console.log('Project created:', project);
           setMyProjects(prev => [...prev, project]);
+          // Route to reactflow page with the new project
+          router.push(`/reactflow?projectId=${project.id}`);
         }}
       />
     </div>

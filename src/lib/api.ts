@@ -670,6 +670,7 @@ export interface MyProjectData {
   version: string;
   metadata?: any;
   configuration?: any;
+  designSettings?: DesignSettings;
   assets?: any;
   tags?: string[];
   thumbnailUrl?: string;
@@ -684,6 +685,16 @@ export interface MyProjectData {
   updatedAt: string;
 }
 
+export interface DesignSettings {
+  primaryFont: string;
+  customFont?: string;
+  colorTheme: string;
+  multiLanguage: boolean;
+  authProvider: string;
+  alertTemplate: string;
+  datePickerStyle: string;
+}
+
 export interface CreateMyProjectRequest {
   name: string;
   slug: string;
@@ -694,6 +705,7 @@ export interface CreateMyProjectRequest {
   isPublic?: boolean;
   metadata?: any;
   configuration?: any;
+  designSettings?: DesignSettings;
   assets?: any;
   tags?: string[];
   thumbnailUrl?: string;

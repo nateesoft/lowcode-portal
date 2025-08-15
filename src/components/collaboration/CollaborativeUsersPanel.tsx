@@ -1,5 +1,5 @@
-import React from 'react';
-import { Users, Circle, Eye, MousePointer2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Users, Circle, Eye, MousePointer2, Move } from 'lucide-react';
 import { useCollaboration } from '@/contexts/CollaborationContext';
 
 const CollaborativeUsersPanel: React.FC = () => {
@@ -11,16 +11,88 @@ const CollaborativeUsersPanel: React.FC = () => {
     generateDemoUsers 
   } = useCollaboration();
 
+  // Dragging state - Initialize position from right side  
+  const [position, setPosition] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return { x: window.innerWidth - 300, y: 16 }; // 300px from right, 16px from top
+    }
+    return { x: 1000, y: 16 }; // Fallback position
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Handle mouse down for dragging
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+  };
+
+  // Handle mouse move
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+      
+      // Constrain to viewport
+      const maxX = window.innerWidth - (panelRef.current?.offsetWidth || 280);
+      const maxY = window.innerHeight - (panelRef.current?.offsetHeight || 200);
+      
+      setPosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'grabbing';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+    };
+  }, [isDragging, dragStart]);
+
+  const panelStyle = {
+    position: 'fixed' as const,
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+    zIndex: 9999,
+    cursor: isDragging ? 'grabbing' : 'grab'
+  };
+
   if (!isCollaborativeMode) {
     return (
-      <div className="fixed top-4 right-20 z-[9999] bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-xl border-2 border-blue-300 p-3 transition-all duration-200">
-        <button
-          onClick={() => generateDemoUsers()}
-          className="flex items-center space-x-2 text-sm text-white font-medium"
-        >
-          <Users className="h-4 w-4" />
-          <span>Enable Collaboration</span>
-        </button>
+      <div 
+        ref={panelRef}
+        style={panelStyle}
+        className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-xl border-2 border-blue-300 p-3 transition-all duration-200 select-none"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="flex items-center space-x-2">
+          <Move className="h-3 w-3 opacity-60" />
+          <button
+            onClick={() => generateDemoUsers()}
+            className="flex items-center space-x-2 text-sm text-white font-medium"
+          >
+            <Users className="h-4 w-4" />
+            <span>Enable Collaboration</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -29,9 +101,17 @@ const CollaborativeUsersPanel: React.FC = () => {
   const offlineUsers = users.filter(user => !user.isOnline);
 
   return (
-    <div className="fixed top-4 right-20 z-[9999] bg-white dark:bg-slate-800 rounded-lg shadow-xl border-2 border-blue-200 dark:border-blue-700 p-4 min-w-[280px]">
-      <div className="flex items-center justify-between mb-3">
+    <div 
+      ref={panelRef}
+      style={panelStyle}
+      className="bg-white dark:bg-slate-800 rounded-lg shadow-xl border-2 border-blue-200 dark:border-blue-700 p-4 min-w-[280px] select-none"
+    >
+      <div 
+        className="flex items-center justify-between mb-3 cursor-grab active:cursor-grabbing"
+        onMouseDown={handleMouseDown}
+      >
         <div className="flex items-center space-x-2">
+          <Move className="h-3 w-3 text-slate-400 opacity-60" />
           <Users className="h-4 w-4 text-slate-600 dark:text-slate-400" />
           <span className="text-sm font-medium text-slate-900 dark:text-white">
             Collaborators ({onlineUsers.length} online)

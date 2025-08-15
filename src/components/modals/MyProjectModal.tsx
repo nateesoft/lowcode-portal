@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Folder, Globe, Smartphone, Database, MonitorSpeaker, ShoppingCart, FileText, User, Package, Type, Palette, Languages, Shield, Bell, Calendar, Settings } from 'lucide-react';
-import { myProjectAPI, CreateMyProjectRequest } from '@/lib/api';
+import { myProjectAPI, CreateMyProjectRequest, DesignSettings } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
 
 interface MyProjectModalProps {
@@ -147,7 +147,7 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
     createdById: 1 // Default user ID
   });
   
-  const [designSettings, setDesignSettings] = useState({
+  const [designSettings, setDesignSettings] = useState<DesignSettings>({
     primaryFont: 'inter',
     customFont: '',
     colorTheme: 'blue',
@@ -204,7 +204,13 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
 
     setIsLoading(true);
     try {
-      const project = await myProjectAPI.create(formData);
+      // Combine formData with designSettings
+      const projectData: CreateMyProjectRequest = {
+        ...formData,
+        designSettings: designSettings
+      };
+      
+      const project = await myProjectAPI.create(projectData);
       showAlert('Project created successfully!', 'success');
       onProjectCreated?.(project);
       onClose();
