@@ -309,6 +309,37 @@ const Dashboard: React.FC<DashboardProps> = ({
       loadPages();
     }
   }, [activeView]);
+
+  // Load My Projects
+  const loadMyProjects = async () => {
+    try {
+      const projectsData = await myProjectAPI.getAll();
+      setMyProjects(projectsData);
+    } catch (error: any) {
+      console.error('Error loading projects:', error);
+      alert.error('Failed to load projects');
+    }
+  };
+
+  useEffect(() => {
+    if (activeView === 'projects') {
+      loadMyProjects();
+    }
+  }, [activeView]);
+
+  // Delete project function
+  const handleDeleteProject = async (projectId: number) => {
+    if (window.confirm('Are you sure you want to delete this project?')) {
+      try {
+        await myProjectAPI.delete(projectId);
+        setMyProjects(prev => prev.filter(p => p.id !== projectId));
+        alert.success('Project deleted successfully');
+      } catch (error: any) {
+        console.error('Error deleting project:', error);
+        alert.error('Failed to delete project');
+      }
+    }
+  };
   
   // Database states
   const [showConnectionModal, setShowConnectionModal] = useState(false);
@@ -386,58 +417,104 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
             <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects.map(project => (
-                  <div key={project.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="font-medium text-slate-900 dark:text-white">{project.name}</div>
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-sm mt-1 inline-block">
-                          {project.type}
-                        </span>
+              {myProjects.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-slate-400 mb-4">
+                    <Layers className="h-12 w-12 mx-auto mb-4" />
+                    <p>No projects found. Create your first project to get started!</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {myProjects.map(project => (
+                    <div key={project.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition cursor-pointer"
+                         onClick={() => router.push(`/reactflow?projectId=${project.id}`)}>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="font-medium text-slate-900 dark:text-white">{project.name}</div>
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-sm mt-1 inline-block">
+                            {project.projectType}
+                          </span>
                       </div>
                       <span className={`px-2 py-1 rounded text-sm ${
-                        project.status === 'Published' 
+                        project.status === 'production' 
                           ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
-                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+                          : project.status === 'development'
+                            ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                            : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
                       }`}>
                         {project.status}
                       </span>
                     </div>
-                    <div className="mb-3">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="text-sm text-slate-600 dark:text-slate-400">Progress:</span>
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                          {project.completed}/{project.tasks}
-                        </span>
+                    
+                    {/* Project Description */}
+                    {project.description && (
+                      <div className="mb-3">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                          {project.description}
+                        </p>
                       </div>
-                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full"
-                          style={{ width: `${(project.completed / project.tasks) * 100}%` }}
-                        />
+                    )}
+
+                    {/* Tags */}
+                    {project.tags && project.tags.length > 0 && (
+                      <div className="mb-3">
+                        <div className="flex flex-wrap gap-1">
+                          {project.tags.slice(0, 3).map((tag, index) => (
+                            <span key={index} className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded text-xs">
+                              {tag}
+                            </span>
+                          ))}
+                          {project.tags.length > 3 && (
+                            <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded text-xs">
+                              +{project.tags.length - 3}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
+
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">{project.lastModified}</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                        {new Date(project.createdAt).toLocaleDateString()}
+                      </span>
                       <div className="flex items-center space-x-2">
                         <button 
-                          onClick={() => { setSelectedProject(project); router.push('/builder'); }}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            router.push(`/reactflow?projectId=${project.id}`); 
+                          }}
                           className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                          title="Open WorkFlow"
                         >
                           <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                         </button>
-                        <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            window.open(`/project/${project.slug}`, '_blank'); 
+                          }}
+                          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                          title="Preview Project"
+                        >
                           <Eye className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                         </button>
-                        <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            handleDeleteProject(project.id); 
+                          }}
+                          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                          title="Delete Project"
+                        >
                           <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         );

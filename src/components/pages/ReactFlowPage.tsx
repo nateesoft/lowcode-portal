@@ -1903,7 +1903,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Box className="h-6 w-6 text-blue-600" />
-              <span className="font-bold text-slate-900 dark:text-white">Flow Builder</span>
+              <span className="font-bold text-slate-900 dark:text-white">Project Overview</span>
             </div>
             <button 
               onClick={() => router.push('/dashboard')}

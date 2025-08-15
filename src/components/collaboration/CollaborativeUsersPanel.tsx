@@ -80,7 +80,7 @@ const CollaborativeUsersPanel: React.FC = () => {
       <div 
         ref={panelRef}
         style={panelStyle}
-        className="bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-xl border-2 border-blue-300 p-3 transition-all duration-200 select-none"
+        className="bg-green-500 hover:bg-blue-600 text-white rounded-lg shadow-xl border-1 border-white-100 p-3 transition-all duration-200 select-none"
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center space-x-2">
@@ -90,7 +90,6 @@ const CollaborativeUsersPanel: React.FC = () => {
             className="flex items-center space-x-2 text-sm text-white font-medium"
           >
             <Users className="h-4 w-4" />
-            <span>Enable Collaboration</span>
           </button>
         </div>
       </div>
