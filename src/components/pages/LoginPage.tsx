@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Code2 } from 'lucide-react';
 import { UserRole } from '@/lib/types';
-import { authAPI, LoginRequest, RegisterRequest } from '@/lib/api';
+import { authAPI } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { getDefaultRedirectForRole } from '@/lib/routes';
 
 interface LoginPageProps {
   setIsAuthenticated: (authenticated: boolean) => void;
@@ -12,6 +15,8 @@ const LoginPage: React.FC<LoginPageProps> = ({
   setIsAuthenticated,
   setUserRole,
 }) => {
+  const { login, register, user } = useAuth();
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -37,31 +42,33 @@ const LoginPage: React.FC<LoginPageProps> = ({
     setError('');
 
     try {
+      let userData;
       if (isLogin) {
-        const loginData: LoginRequest = {
-          email: formData.email,
-          password: formData.password
-        };
-        const response = await authAPI.login(loginData);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setIsAuthenticated(true);
-        setUserRole('user');
+        const response = await authAPI.login({ email: formData.email, password: formData.password });
+        userData = response.user;
+        await login(formData.email, formData.password);
       } else {
         if (!formData.firstName || !formData.lastName) {
           setError('Please fill in all fields');
           return;
         }
-        const registerData: RegisterRequest = {
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName
-        };
-        const response = await authAPI.register(registerData);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        setIsAuthenticated(true);
-        setUserRole('user');
+        const response = await authAPI.register({ 
+          email: formData.email, 
+          password: formData.password, 
+          firstName: formData.firstName, 
+          lastName: formData.lastName 
+        });
+        userData = response.user;
+        await register(formData.email, formData.password, formData.firstName, formData.lastName);
       }
+      
+      // Set legacy state for any components that still depend on it
+      setIsAuthenticated(true);
+      setUserRole(userData.role as UserRole);
+      
+      // Redirect based on role
+      const redirectPath = getDefaultRedirectForRole(userData.role);
+      router.push(redirectPath);
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred');
     } finally {

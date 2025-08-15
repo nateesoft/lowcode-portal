@@ -55,6 +55,7 @@ import ComponentHistoryPanel from '@/components/panels/ComponentHistoryPanel';
 import PageModal from '@/components/modals/PageModal';
 import PageHistoryPanel from '@/components/panels/PageHistoryPanel';
 import MyProjectModal from '@/components/modals/MyProjectModal';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardProps {
   projects: Project[];
@@ -91,6 +92,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const { t } = useTranslation();
   const { openChatbot } = useChatbot();
   const { alert } = useAlertActions();
+  const { logout } = useAuth();
   const { 
     connections, 
     isLoading: dbLoading, 
@@ -2020,8 +2022,13 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
             <button 
-              onClick={() => { setIsAuthenticated(false); router.push('/landing'); }}
+              onClick={() => { 
+                logout(); 
+                setIsAuthenticated(false); // Keep legacy support
+                router.push('/landing'); 
+              }}
               className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              title="Logout"
             >
               <LogOut className="h-5 w-5" />
             </button>

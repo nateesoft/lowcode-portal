@@ -11,6 +11,57 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (refreshToken) {
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+            refresh_token: refreshToken
+          });
+          
+          const newAccessToken = response.data.access_token;
+          localStorage.setItem('access_token', newAccessToken);
+          
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // Refresh failed, redirect to login
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -21,6 +72,7 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
+  role?: string;
 }
 
 export interface User {
@@ -29,12 +81,17 @@ export interface User {
   firstName: string;
   lastName: string;
   isActive: boolean;
+  role: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface AuthResponse {
   user: User;
+  tokens: {
+    access_token: string;
+    refresh_token: string;
+  };
   message: string;
 }
 
@@ -92,12 +149,72 @@ export interface FlowResponse {
 export const authAPI = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
     const response = await api.post('/auth/login', data);
-    return response.data;
+    const authResponse = response.data;
+    
+    // Store tokens in localStorage
+    localStorage.setItem('access_token', authResponse.tokens.access_token);
+    localStorage.setItem('refresh_token', authResponse.tokens.refresh_token);
+    localStorage.setItem('user', JSON.stringify(authResponse.user));
+    
+    return authResponse;
   },
 
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
     const response = await api.post('/auth/register', data);
+    const authResponse = response.data;
+    
+    // Store tokens in localStorage
+    localStorage.setItem('access_token', authResponse.tokens.access_token);
+    localStorage.setItem('refresh_token', authResponse.tokens.refresh_token);
+    localStorage.setItem('user', JSON.stringify(authResponse.user));
+    
+    return authResponse;
+  },
+
+  refreshToken: async (): Promise<{ access_token: string }> => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+    
+    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+      refresh_token: refreshToken
+    });
+    
+    const newAccessToken = response.data.access_token;
+    localStorage.setItem('access_token', newAccessToken);
+    
     return response.data;
+  },
+
+  verifyToken: async (): Promise<{ valid: boolean; user?: User }> => {
+    try {
+      const response = await api.post('/auth/verify');
+      return response.data;
+    } catch (error) {
+      return { valid: false };
+    }
+  },
+
+  logout: () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+  },
+
+  getStoredUser: (): User | null => {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch (error) {
+      return null;
+    }
+  },
+
+  isAuthenticated: (): boolean => {
+    const token = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    return !!(token || refreshToken);
   },
 };
 

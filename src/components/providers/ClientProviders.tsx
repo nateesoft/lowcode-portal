@@ -10,6 +10,8 @@ import { DatabaseProvider } from "@/contexts/DatabaseContext";
 import { MediaProvider } from "@/contexts/MediaContext";
 import { ProjectManagementProvider } from "@/contexts/ProjectManagementContext";
 import { AlertProvider, setGlobalAlertContext, useAlert } from "@/contexts/AlertContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import RouteGuard from "@/components/auth/RouteGuard";
 import ChatbotOverlay from "@/components/ui/ChatbotOverlay";
 import { useChatbot } from "@/contexts/ChatbotContext";
 import "@/lib/i18n";
@@ -42,28 +44,32 @@ function ChatbotWrapper({ children }: { children: React.ReactNode }) {
 
 export function ClientProviders({ children }: ClientProvidersProps) {
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <CurrencyProvider>
-          <MediaProvider>
-            <DatabaseProvider>
-              <ProjectManagementProvider>
-                <CollaborationProvider>
-                  <ChatbotProvider>
-                    <AlertProvider position="top-right" maxAlerts={5}>
-                      <AlertWrapper>
-                        <ChatbotWrapper>
-                          {children}
-                        </ChatbotWrapper>
-                      </AlertWrapper>
-                    </AlertProvider>
-                  </ChatbotProvider>
-                </CollaborationProvider>
-              </ProjectManagementProvider>
-            </DatabaseProvider>
-          </MediaProvider>
-        </CurrencyProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <CurrencyProvider>
+            <MediaProvider>
+              <DatabaseProvider>
+                <ProjectManagementProvider>
+                  <CollaborationProvider>
+                    <ChatbotProvider>
+                      <AlertProvider position="top-right" maxAlerts={5}>
+                        <AlertWrapper>
+                          <RouteGuard>
+                            <ChatbotWrapper>
+                              {children}
+                            </ChatbotWrapper>
+                          </RouteGuard>
+                        </AlertWrapper>
+                      </AlertProvider>
+                    </ChatbotProvider>
+                  </CollaborationProvider>
+                </ProjectManagementProvider>
+              </DatabaseProvider>
+            </MediaProvider>
+          </CurrencyProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
