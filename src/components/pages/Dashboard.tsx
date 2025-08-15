@@ -53,6 +53,7 @@ import ComponentModal from '@/components/modals/ComponentModal';
 import ComponentHistoryPanel from '@/components/panels/ComponentHistoryPanel';
 import PageModal from '@/components/modals/PageModal';
 import PageHistoryPanel from '@/components/panels/PageHistoryPanel';
+import MyProjectModal from '@/components/modals/MyProjectModal';
 
 interface DashboardProps {
   projects: Project[];
@@ -352,6 +353,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [showSecretModal, setShowSecretModal] = useState(false);
   const [editingSecret, setEditingSecret] = useState<any>(null);
   const [secretSearchQuery, setSecretSearchQuery] = useState('');
+  
+  // My Project states
+  const [showMyProjectModal, setShowMyProjectModal] = useState(false);
+  const [myProjects, setMyProjects] = useState<MyProjectData[]>([]);
   const [secretTypeFilter, setSecretTypeFilter] = useState<string>('all');
   const stats = {
     totalProjects: projects.length,
@@ -369,7 +374,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('myProjects')}</h2>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button 
-                  onClick={() => onShowCreateSmartFlowModal?.()}
+                  onClick={() => setShowMyProjectModal(true)}
                   className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -2533,6 +2538,16 @@ const Dashboard: React.FC<DashboardProps> = ({
           loadPages();
         }}
         userId={1}
+      />
+
+      {/* My Project Modal */}
+      <MyProjectModal
+        isOpen={showMyProjectModal}
+        onClose={() => setShowMyProjectModal(false)}
+        onProjectCreated={(project) => {
+          console.log('Project created:', project);
+          setMyProjects(prev => [...prev, project]);
+        }}
       />
     </div>
   );
