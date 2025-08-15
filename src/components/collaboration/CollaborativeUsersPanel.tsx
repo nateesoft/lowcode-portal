@@ -13,10 +13,10 @@ const CollaborativeUsersPanel: React.FC = () => {
 
   if (!isCollaborativeMode) {
     return (
-      <div className="absolute top-4 right-4 z-10 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 p-3">
+      <div className="fixed top-4 right-20 z-[9999] bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-xl border-2 border-blue-300 p-3 transition-all duration-200">
         <button
           onClick={() => generateDemoUsers()}
-          className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400 hover:text-blue-600 transition"
+          className="flex items-center space-x-2 text-sm text-white font-medium"
         >
           <Users className="h-4 w-4" />
           <span>Enable Collaboration</span>
@@ -29,7 +29,7 @@ const CollaborativeUsersPanel: React.FC = () => {
   const offlineUsers = users.filter(user => !user.isOnline);
 
   return (
-    <div className="absolute top-4 right-4 z-10 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 p-4 min-w-[280px]">
+    <div className="fixed top-4 right-20 z-[9999] bg-white dark:bg-slate-800 rounded-lg shadow-xl border-2 border-blue-200 dark:border-blue-700 p-4 min-w-[280px]">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
           <Users className="h-4 w-4 text-slate-600 dark:text-slate-400" />

@@ -46,7 +46,7 @@ import {
 } from '@/components/secret-management';
 import { useSecretManagement } from '@/contexts/SecretManagementContext';
 import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
-import { flowAPI, componentAPI, ComponentData, ComponentStats, CreateComponentRequest, pageAPI, PageData, PageStats, CreatePageRequest } from '@/lib/api';
+import { flowAPI, componentAPI, ComponentData, ComponentStats, CreateComponentRequest, pageAPI, PageData, PageStats, CreatePageRequest, myProjectAPI, MyProjectData } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
 import AlertDemo from '@/components/ui/AlertDemo';
 import ComponentModal from '@/components/modals/ComponentModal';

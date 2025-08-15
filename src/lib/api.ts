@@ -537,3 +537,198 @@ export const pageAPI = {
     await api.delete(`/pages/history/${historyId}`);
   }
 };
+
+// ===== MY PROJECT API =====
+
+export interface MyProjectData {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  projectType: 'web' | 'mobile' | 'api' | 'desktop' | 'dashboard' | 'ecommerce' | 'blog' | 'portfolio' | 'other';
+  status: 'planning' | 'development' | 'testing' | 'production' | 'maintenance' | 'archived';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  isPublic: boolean;
+  version: string;
+  metadata?: any;
+  configuration?: any;
+  assets?: any;
+  tags?: string[];
+  thumbnailUrl?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  socialImage?: string;
+  createdBy: User;
+  createdById: number;
+  workflows?: WorkFlowData[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMyProjectRequest {
+  name: string;
+  slug: string;
+  description?: string;
+  projectType?: 'web' | 'mobile' | 'api' | 'desktop' | 'dashboard' | 'ecommerce' | 'blog' | 'portfolio' | 'other';
+  status?: 'planning' | 'development' | 'testing' | 'production' | 'maintenance' | 'archived';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  isPublic?: boolean;
+  metadata?: any;
+  configuration?: any;
+  assets?: any;
+  tags?: string[];
+  thumbnailUrl?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string[];
+  socialImage?: string;
+  createdById?: number;
+}
+
+export interface WorkFlowData {
+  id: number;
+  name: string;
+  description?: string;
+  workflowType: 'user-journey' | 'business-process' | 'api-flow' | 'data-flow' | 'ui-flow' | 'automation' | 'other';
+  status: 'draft' | 'active' | 'testing' | 'deployed' | 'archived';
+  isActive: boolean;
+  version: string;
+  configuration?: any;
+  canvasData?: any;
+  metadata?: any;
+  variables?: any;
+  permissions?: any;
+  tags?: string[];
+  projectId: number;
+  createdBy: User;
+  createdById: number;
+  nodes?: WorkFlowNodeData[];
+  history?: WorkFlowHistoryData[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkFlowNodeData {
+  id: number;
+  nodeId: string;
+  name: string;
+  description?: string;
+  nodeType: string;
+  status: string;
+  position?: any;
+  styling?: any;
+  nodeData?: any;
+  linkType?: string;
+  linkId?: number;
+  externalUrl?: string;
+  linkConfiguration?: any;
+  customCode?: string;
+  executionConfig?: any;
+  validationRules?: any;
+  metadata?: any;
+  documentation?: string;
+  tags?: string[];
+  workflowId: number;
+  linkedPageId?: number;
+  linkedComponentId?: number;
+  createdBy: User;
+  createdById: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkFlowHistoryData {
+  id: number;
+  workflowId: number;
+  version: string;
+  name: string;
+  description?: string;
+  workflowType: string;
+  status: string;
+  isActive: boolean;
+  configuration?: any;
+  canvasData?: any;
+  variables?: any;
+  permissions?: any;
+  tags?: string[];
+  changeDescription?: string;
+  changeType: string;
+  metadata?: any;
+  diff?: any;
+  user: User;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MyProjectStats {
+  total: number;
+  byStatus: Array<{ status: string; count: number }>;
+  byType: Array<{ projectType: string; count: number }>;
+  byPriority: Array<{ priority: string; count: number }>;
+  totalWorkflows: number;
+  totalNodes: number;
+  publicProjects: number;
+  recentActivity: Array<{
+    projectId: number;
+    projectName: string;
+    action: string;
+    date: string;
+  }>;
+}
+
+export const myProjectAPI = {
+  // Get all projects
+  getAll: async (params?: {
+    status?: string;
+    projectType?: string;
+    priority?: string;
+    public?: boolean;
+    search?: string;
+  }): Promise<MyProjectData[]> => {
+    const response = await api.get('/my-projects', { params });
+    return response.data;
+  },
+
+  // Get project by ID
+  getById: async (id: number): Promise<MyProjectData> => {
+    const response = await api.get(`/my-projects/${id}`);
+    return response.data;
+  },
+
+  // Get project by slug
+  getBySlug: async (slug: string): Promise<MyProjectData> => {
+    const response = await api.get(`/my-projects/slug/${slug}`);
+    return response.data;
+  },
+
+  // Create project
+  create: async (data: CreateMyProjectRequest): Promise<MyProjectData> => {
+    const response = await api.post('/my-projects', data);
+    return response.data;
+  },
+
+  // Update project
+  update: async (id: number, data: Partial<CreateMyProjectRequest>): Promise<MyProjectData> => {
+    const response = await api.patch(`/my-projects/${id}`, data);
+    return response.data;
+  },
+
+  // Delete project
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/my-projects/${id}`);
+  },
+
+  // Get project stats
+  getStats: async (): Promise<MyProjectStats> => {
+    const response = await api.get('/my-projects/stats');
+    return response.data;
+  },
+
+  // Duplicate project
+  duplicate: async (projectId: number, data: { name: string; slug: string; userId: number }): Promise<MyProjectData> => {
+    const response = await api.post(`/my-projects/${projectId}/duplicate`, data);
+    return response.data;
+  }
+};
