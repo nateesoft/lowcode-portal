@@ -46,6 +46,7 @@ import {
 } from '@/components/secret-management';
 import { useSecretManagement } from '@/contexts/SecretManagementContext';
 import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
+import NotesBoard from '@/components/ui/NotesBoard';
 import { flowAPI, componentAPI, ComponentData, ComponentStats, CreateComponentRequest, pageAPI, PageData, PageStats, CreatePageRequest, myProjectAPI, MyProjectData } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
 import AlertDemo from '@/components/ui/AlertDemo';
@@ -2153,6 +2154,17 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-white">{stats.completedTasks}</div>
                   <div className="text-sm text-slate-600 dark:text-slate-400">{t('completedTasks')}</div>
+                </div>
+              </div>
+
+              {/* Notes Board */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mb-8">
+                <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Quick Notes</h2>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Sticky notes from your team</p>
+                </div>
+                <div className="p-4 sm:p-6">
+                  <NotesBoard />
                 </div>
               </div>
 

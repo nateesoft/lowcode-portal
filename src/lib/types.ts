@@ -8,6 +8,18 @@ export interface Project {
   completed: number;
 }
 
+export interface Note {
+  id: number;
+  content: string;
+  color: string;
+  expiresAt?: Date;
+  userId: number;
+  positionX: number;
+  positionY: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Template {
   id: number;
   name: string;

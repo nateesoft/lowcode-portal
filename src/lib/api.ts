@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Note } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -730,5 +731,52 @@ export const myProjectAPI = {
   duplicate: async (projectId: number, data: { name: string; slug: string; userId: number }): Promise<MyProjectData> => {
     const response = await api.post(`/my-projects/${projectId}/duplicate`, data);
     return response.data;
+  }
+};
+
+export interface CreateNoteRequest {
+  content: string;
+  color?: string;
+  expiresAt?: string;
+  positionX?: number;
+  positionY?: number;
+}
+
+export interface UpdateNoteRequest {
+  content?: string;
+  color?: string;
+  expiresAt?: string;
+  positionX?: number;
+  positionY?: number;
+}
+
+export const notesAPI = {
+  // Get all notes for current user
+  getAll: async (): Promise<Note[]> => {
+    const response = await api.get('/notes');
+    return response.data;
+  },
+
+  // Get note by ID
+  getById: async (id: number): Promise<Note> => {
+    const response = await api.get(`/notes/${id}`);
+    return response.data;
+  },
+
+  // Create note
+  create: async (data: CreateNoteRequest): Promise<Note> => {
+    const response = await api.post('/notes', data);
+    return response.data;
+  },
+
+  // Update note
+  update: async (id: number, data: UpdateNoteRequest): Promise<Note> => {
+    const response = await api.patch(`/notes/${id}`, data);
+    return response.data;
+  },
+
+  // Delete note
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/notes/${id}`);
   }
 };

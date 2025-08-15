@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Code2, Star, Check, Menu, X } from 'lucide-react';
+import { Code2, Star, Check, Menu, X, Search } from 'lucide-react';
 import { TEMPLATES, TIER_LIMITS } from '@/lib/constants';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
@@ -24,6 +24,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
   const { t } = useTranslation();
   const { activeSection, scrollToSection } = useScrollToSection();
   const pricing = getPricing();
+  const [searchQuery, setSearchQuery] = useState('');
   return (
     <div className="min-h-screen relative">
       {/* Animated Background */}
@@ -143,6 +144,45 @@ const LandingPage: React.FC<LandingPageProps> = ({
           <p className="text-lg sm:text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-3xl mx-auto px-4">
             The AI-powered low-code platform that transforms your ideas into production-ready applications with visual workflows and intelligent automation.
           </p>
+          
+          {/* Modern Search Bar */}
+          <div className="max-w-2xl mx-auto mb-8 px-4">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
+              <div className="relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-slate-700/20 shadow-2xl">
+                <div className="flex items-center px-6 py-4">
+                  <Search className="h-6 w-6 text-slate-400 dark:text-slate-500 mr-4" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search templates, features, or ask anything..."
+                    className="flex-1 text-lg bg-transparent text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none"
+                  />
+                  <button className="ml-4 px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition transform hover:scale-105 flex items-center space-x-2">
+                    <span>Search</span>
+                  </button>
+                </div>
+                {searchQuery && (
+                  <div className="border-t border-slate-200 dark:border-slate-700 px-6 py-4">
+                    <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">Quick suggestions:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {['E-commerce', 'CRM', 'Dashboard', 'API Integration'].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          onClick={() => setSearchQuery(suggestion)}
+                          className="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
           <div className="flex flex-col sm:flex-row justify-center gap-4 px-4">
             <button 
               onClick={() => router.push('/login')}
