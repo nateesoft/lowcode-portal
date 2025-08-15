@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, History, RotateCcw, Eye, Trash2, Clock, User, GitBranch, FileText } from 'lucide-react';
 import { ComponentHistoryData, componentAPI } from '@/lib/api';
+import { useAlert } from '@/contexts/AlertContext';
 
 interface ComponentHistoryPanelProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ const ComponentHistoryPanel: React.FC<ComponentHistoryPanelProps> = ({
   onRestore,
   userId = 1
 }) => {
+  const { showConfirm, showSuccess, showError } = useAlert();
   const [history, setHistory] = useState<ComponentHistoryData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<ComponentHistoryData | null>(null);
@@ -43,7 +45,12 @@ const ComponentHistoryPanel: React.FC<ComponentHistoryPanelProps> = ({
   };
 
   const handleRestore = async (version: string) => {
-    if (!window.confirm(`Are you sure you want to restore to version ${version}? This will create a new version with the restored content.`)) {
+    const confirmed = await showConfirm(
+      'Restore Version',
+      `Are you sure you want to restore to version ${version}? This will create a new version with the restored content.`,
+      { confirmText: 'Restore', confirmType: 'primary' }
+    );
+    if (!confirmed) {
       return;
     }
 
@@ -57,25 +64,30 @@ const ComponentHistoryPanel: React.FC<ComponentHistoryPanelProps> = ({
         onRestore(version);
       }
       
-      alert('Component restored successfully!');
+      showSuccess('Component restored successfully!');
     } catch (error) {
       console.error('Failed to restore component:', error);
-      alert('Failed to restore component');
+      showError('Failed to restore component');
     }
   };
 
   const handleDeleteHistory = async (historyId: number) => {
-    if (!window.confirm('Are you sure you want to delete this history entry?')) {
+    const confirmed = await showConfirm(
+      'Delete History Entry',
+      'Are you sure you want to delete this history entry?',
+      { confirmText: 'Delete', confirmType: 'danger' }
+    );
+    if (!confirmed) {
       return;
     }
 
     try {
       await componentAPI.deleteHistoryEntry(historyId);
       setHistory(prev => prev.filter(h => h.id !== historyId));
-      alert('History entry deleted successfully!');
+      showSuccess('History entry deleted successfully!');
     } catch (error) {
       console.error('Failed to delete history entry:', error);
-      alert('Failed to delete history entry');
+      showError('Failed to delete history entry');
     }
   };
 

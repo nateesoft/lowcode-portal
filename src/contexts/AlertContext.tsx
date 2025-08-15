@@ -12,6 +12,11 @@ interface AlertContextType {
   showWarning: (title: string, message?: string, options?: Partial<AlertData>) => string;
   showError: (title: string, message?: string, options?: Partial<AlertData>) => string;
   showInfo: (title: string, message?: string, options?: Partial<AlertData>) => string;
+  showConfirm: (title: string, message?: string, options?: {
+    confirmText?: string;
+    cancelText?: string;
+    confirmType?: 'danger' | 'primary';
+  }) => Promise<boolean>;
 }
 
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
@@ -22,12 +27,30 @@ interface AlertProviderProps {
   maxAlerts?: number;
 }
 
+interface ConfirmDialogState {
+  isOpen: boolean;
+  title: string;
+  message?: string;
+  confirmText: string;
+  cancelText: string;
+  confirmType: 'danger' | 'primary';
+  resolve?: (value: boolean) => void;
+}
+
 export const AlertProvider: React.FC<AlertProviderProps> = ({
   children,
   position = 'top-right',
   maxAlerts = 5
 }) => {
   const [alerts, setAlerts] = useState<AlertData[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    confirmType: 'primary'
+  });
 
   const generateId = useCallback(() => {
     return `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -104,6 +127,35 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({
     });
   }, [showAlert]);
 
+  const showConfirm = useCallback((
+    title: string, 
+    message?: string, 
+    options: {
+      confirmText?: string;
+      cancelText?: string;
+      confirmType?: 'danger' | 'primary';
+    } = {}
+  ): Promise<boolean> => {
+    return new Promise((resolve) => {
+      setConfirmDialog({
+        isOpen: true,
+        title,
+        message,
+        confirmText: options.confirmText || 'Confirm',
+        cancelText: options.cancelText || 'Cancel',
+        confirmType: options.confirmType || 'primary',
+        resolve
+      });
+    });
+  }, []);
+
+  const handleConfirmAnswer = useCallback((answer: boolean) => {
+    if (confirmDialog.resolve) {
+      confirmDialog.resolve(answer);
+    }
+    setConfirmDialog(prev => ({ ...prev, isOpen: false, resolve: undefined }));
+  }, [confirmDialog.resolve]);
+
   const contextValue: AlertContextType = {
     alerts,
     showAlert,
@@ -113,6 +165,7 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({
     showWarning,
     showError,
     showInfo,
+    showConfirm,
   };
 
   return (
@@ -123,6 +176,42 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({
         position={position}
         onRemove={removeAlert}
       />
+      
+      {/* Confirm Dialog */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                {confirmDialog.title}
+              </h3>
+              {confirmDialog.message && (
+                <p className="text-slate-600 dark:text-slate-400 mb-6">
+                  {confirmDialog.message}
+                </p>
+              )}
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => handleConfirmAnswer(false)}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition"
+                >
+                  {confirmDialog.cancelText}
+                </button>
+                <button
+                  onClick={() => handleConfirmAnswer(true)}
+                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                    confirmDialog.confirmType === 'danger'
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
+                >
+                  {confirmDialog.confirmText}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AlertContext.Provider>
   );
 };
@@ -188,5 +277,17 @@ export const alert = {
     const emoji = alert.type === 'success' ? '✅' : alert.type === 'warning' ? '⚠️' : alert.type === 'error' ? '❌' : 'ℹ️';
     window.alert(`${emoji} ${alert.title}${alert.message ? `: ${alert.message}` : ''}`);
     return '';
+  },
+
+  confirm: async (title: string, message?: string, options?: {
+    confirmText?: string;
+    cancelText?: string;
+    confirmType?: 'danger' | 'primary';
+  }) => {
+    if (globalAlertContext) {
+      return globalAlertContext.showConfirm(title, message, options);
+    }
+    console.warn('Alert context not initialized. Using fallback confirm.');
+    return window.confirm(`${title}${message ? `\n${message}` : ''}`);
   }
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Code, Eye, Palette, Settings, FileText, Tag, Globe, Lock, Layout, Search } from 'lucide-react';
 import { PageData, CreatePageRequest } from '@/lib/api';
+import { useAlert } from '@/contexts/AlertContext';
 
 interface PageModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ const PageModal: React.FC<PageModalProps> = ({
   editingPage,
   userId = 1
 }) => {
+  const { showError } = useAlert();
   const [formData, setFormData] = useState<CreatePageRequest>({
     title: '',
     slug: '',
@@ -142,7 +144,7 @@ const PageModal: React.FC<PageModalProps> = ({
       try {
         content = JSON.parse(contentText);
       } catch (e) {
-        alert('Invalid JSON in content field');
+        showError('Invalid JSON in content field');
         setIsLoading(false);
         return;
       }
@@ -150,7 +152,7 @@ const PageModal: React.FC<PageModalProps> = ({
       try {
         layout = JSON.parse(layoutText);
       } catch (e) {
-        alert('Invalid JSON in layout field');
+        showError('Invalid JSON in layout field');
         setIsLoading(false);
         return;
       }
@@ -158,7 +160,7 @@ const PageModal: React.FC<PageModalProps> = ({
       try {
         components = JSON.parse(componentsText);
       } catch (e) {
-        alert('Invalid JSON in components field');
+        showError('Invalid JSON in components field');
         setIsLoading(false);
         return;
       }
@@ -166,7 +168,7 @@ const PageModal: React.FC<PageModalProps> = ({
       try {
         styles = JSON.parse(stylesText);
       } catch (e) {
-        alert('Invalid JSON in styles field');
+        showError('Invalid JSON in styles field');
         setIsLoading(false);
         return;
       }
@@ -184,7 +186,7 @@ const PageModal: React.FC<PageModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Error saving page:', error);
-      alert('Failed to save page');
+      showError('Failed to save page');
     } finally {
       setIsLoading(false);
     }

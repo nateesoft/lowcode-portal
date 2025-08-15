@@ -49,6 +49,7 @@ import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
 import NotesBoard from '@/components/ui/NotesBoard';
 import { flowAPI, componentAPI, ComponentData, ComponentStats, CreateComponentRequest, pageAPI, PageData, PageStats, CreatePageRequest, myProjectAPI, MyProjectData } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
+import { useAlert } from '@/contexts/AlertContext';
 import AlertDemo from '@/components/ui/AlertDemo';
 import ComponentModal from '@/components/modals/ComponentModal';
 import ComponentHistoryPanel from '@/components/panels/ComponentHistoryPanel';
@@ -92,6 +93,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const { t } = useTranslation();
   const { openChatbot } = useChatbot();
   const { alert } = useAlertActions();
+  const { showConfirm } = useAlert();
   const { logout } = useAuth();
   const { 
     connections, 
@@ -156,7 +158,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       setComponentStats(statsData);
     } catch (error) {
       console.error('Error loading components:', error);
-      alert('Failed to load components');
+      alert.error('Failed to load components');
     } finally {
       setComponentsLoading(false);
     }
@@ -176,10 +178,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     try {
       if (editingComponent) {
         await componentAPI.update(editingComponent.id!, { ...componentData, userId: 1 });
-        alert('Component updated successfully!');
+        alert.success('Component updated successfully!');
       } else {
         await componentAPI.create({ ...componentData, userId: 1 });
-        alert('Component created successfully!');
+        alert.success('Component created successfully!');
       }
       await loadComponents();
     } catch (error) {
@@ -189,17 +191,22 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const handleDeleteComponent = async (componentId: number) => {
-    if (!window.confirm('Are you sure you want to delete this component?')) {
+    const confirmed = await showConfirm(
+      'Delete Component',
+      'Are you sure you want to delete this component?',
+      { confirmText: 'Delete', confirmType: 'danger' }
+    );
+    if (!confirmed) {
       return;
     }
 
     try {
       await componentAPI.delete(componentId);
-      alert('Component deleted successfully!');
+      alert.success('Component deleted successfully!');
       await loadComponents();
     } catch (error) {
       console.error('Error deleting component:', error);
-      alert('Failed to delete component');
+      alert.error('Failed to delete component');
     }
   };
 
@@ -239,7 +246,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       setPageStats(statsData);
     } catch (error) {
       console.error('Error loading pages:', error);
-      alert('Failed to load pages');
+      alert.error('Failed to load pages');
     } finally {
       setPagesLoading(false);
     }
@@ -259,10 +266,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     try {
       if (editingPage) {
         await pageAPI.update(editingPage.id!, { ...pageData, userId: 1 });
-        alert('Page updated successfully!');
+        alert.success('Page updated successfully!');
       } else {
         await pageAPI.create({ ...pageData, userId: 1 });
-        alert('Page created successfully!');
+        alert.success('Page created successfully!');
       }
       await loadPages();
     } catch (error) {
@@ -272,17 +279,22 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const handleDeletePage = async (pageId: number) => {
-    if (!window.confirm('Are you sure you want to delete this page?')) {
+    const confirmed = await showConfirm(
+      'Delete Page',
+      'Are you sure you want to delete this page?',
+      { confirmText: 'Delete', confirmType: 'danger' }
+    );
+    if (!confirmed) {
       return;
     }
 
     try {
       await pageAPI.delete(pageId);
-      alert('Page deleted successfully!');
+      alert.success('Page deleted successfully!');
       await loadPages();
     } catch (error) {
       console.error('Error deleting page:', error);
-      alert('Failed to delete page');
+      alert.error('Failed to delete page');
     }
   };
 
@@ -329,7 +341,12 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   // Delete project function
   const handleDeleteProject = async (projectId: number) => {
-    if (window.confirm('Are you sure you want to delete this project?')) {
+    const confirmed = await showConfirm(
+      'Delete Project',
+      'Are you sure you want to delete this project?',
+      { confirmText: 'Delete', confirmType: 'danger' }
+    );
+    if (confirmed) {
       try {
         await myProjectAPI.delete(projectId);
         setMyProjects(prev => prev.filter(p => p.id !== projectId));

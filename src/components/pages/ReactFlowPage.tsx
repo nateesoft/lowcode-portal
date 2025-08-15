@@ -1,5 +1,5 @@
-import React, { useCallback, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -34,6 +34,8 @@ import {
   CollaborativeCursors, 
   CollaborativeNodeIndicator 
 } from '@/components/collaboration';
+import { flowAPI, myProjectAPI, FlowData } from '@/lib/api';
+import { useAlert } from '@/contexts/AlertContext';
 
 // Custom Node Components
 interface NodeData {
@@ -53,6 +55,7 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
   const [isResizing, setIsResizing] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [startSize, setStartSize] = useState({ width: 0, height: 0 });
+
 
   // Get execution state from window object (global state)
   const isExecuting = (window as any).__reactFlowExecutingNodeId === id;
@@ -126,18 +129,19 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
   if (data.isGroup) {
     return (
       <div 
-        className={`rounded-lg border-2 transition-colors relative ${
+        className={`rounded-lg border-2 transition-colors relative z-0 ${
           selected ? 'border-blue-500 shadow-blue-200' : 'border-slate-300'
         }`}
         style={{
           ...nodeStyle,
           minWidth: data.width || 400,
           minHeight: data.height || 300,
-          backgroundColor: data.backgroundColor || 'rgba(248, 250, 252, 0.8)',
+          backgroundColor: selected 
+            ? (data.backgroundColor || 'rgba(248, 250, 252, 0.8)')
+            : 'rgba(248, 250, 252, 0.1)', // โปร่งใสมากเมื่อไม่ได้เลือก
           borderStyle: 'dashed',
           borderWidth: '2px',
-          zIndex: -1, // ให้ group node อยู่ล่างสุด
-          pointerEvents: selected ? 'auto' : 'none', // ไม่รับ mouse events เมื่อไม่ได้เลือก
+          pointerEvents: 'auto', // รับ mouse events ปกติ
         }}
       >
         {/* Group Header */}
@@ -146,21 +150,36 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
           style={{ pointerEvents: 'auto' }} // Header สามารถคลิกได้
         >
           <div className="flex items-center space-x-1">
-            {data.icon && <data.icon className="h-3 w-3 text-slate-500" />}
+            {(() => {
+              try {
+                const IconComponent = data.icon;
+                if (IconComponent && typeof IconComponent === 'function') {
+                  return <IconComponent className="h-3 w-3 text-slate-500" />;
+                }
+                return null;
+              } catch (error) {
+                return <Box className="h-3 w-3 text-slate-500" />;
+              }
+            })()}
             <span className="text-xs font-medium text-slate-600">{data.label}</span>
           </div>
         </div>
         
-        {/* Group Content Area */}
-        <div 
-          className="h-full w-full p-4 flex items-center justify-center"
-          style={{ pointerEvents: selected ? 'auto' : 'none' }}
-        >
-          <div className="text-center text-slate-400">
-            <Layers className="h-8 w-8 mx-auto mb-2" />
-            <div className="text-sm">Drop nodes here to group</div>
+        {/* Group Content Area - แสดงเฉพาะเมื่อ group ถูกเลือกหรือว่างเปล่า */}
+        {selected && (
+          <div 
+            className="h-full w-full p-4 flex items-center justify-center"
+            style={{ pointerEvents: 'none' }} // ไม่รับ mouse events เพื่อไม่บล็อกการคลิก node ข้างใน
+          >
+            <div 
+              className="text-center text-slate-400" 
+              style={{ pointerEvents: 'none' }}
+            >
+              <Layers className="h-8 w-8 mx-auto mb-2" />
+              <div className="text-sm">Drop nodes here to group</div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Resize Handles and Delete Button */}
         {selected && (
@@ -205,7 +224,7 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
   // Regular Node
   return (
     <div 
-      className={`px-4 py-2 shadow-lg rounded-lg border-2 transition-all duration-300 relative ${
+      className={`px-4 py-2 shadow-lg rounded-lg border-2 transition-all duration-300 relative z-10 ${
         isExecuting ? 'animate-pulse border-amber-500 shadow-amber-200' : 
         selected ? 'border-blue-500 shadow-blue-200' : ''
       }`}
@@ -241,7 +260,18 @@ const CustomNode = ({ data, selected, id }: { data: NodeData; selected?: boolean
       
       {/* Node Content */}
       <div className="flex items-center">
-        {data.icon && <data.icon className={`h-4 w-4 mr-2 ${isExecuting ? 'text-amber-600' : 'text-blue-600'}`} />}
+        {(() => {
+          try {
+            const IconComponent = data.icon;
+            if (IconComponent && typeof IconComponent === 'function') {
+              return <IconComponent className={`h-4 w-4 mr-2 ${isExecuting ? 'text-amber-600' : 'text-blue-600'}`} />;
+            }
+            return null;
+          } catch (error) {
+            console.warn('Error rendering icon:', error);
+            return <Box className={`h-4 w-4 mr-2 ${isExecuting ? 'text-amber-600' : 'text-blue-600'}`} />;
+          }
+        })()}
         <div className="ml-2">
           <div className={`text-lg font-bold ${isExecuting ? 'text-amber-900' : 'text-slate-900'}`}>
             {data.label}
@@ -369,15 +399,43 @@ interface ReactFlowPageProps {
   setMobileSidebarOpen: (open: boolean) => void;
 }
 
+// Utility functions
+const getNodeIcon = (type: string) => {
+  const icons: Record<string, React.ComponentType<{ className?: string }>> = {
+    'API Call': Database,
+    'Database': Database,
+    'UI Component': Box,
+    'Logic': Cpu,
+    'Action': Zap,
+    'Web': Globe,
+    'Condition': Database,
+    'Loop': Database,
+    'Transform': Database,
+    'Group': Square,
+    'Frame': Square,
+    'Section': Square
+  };
+  return icons[type] || Box;
+};
+
 const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   mobileSidebarOpen,
   setMobileSidebarOpen,
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('projectId');
+  const { showAlert, showSuccess, showError } = useAlert();
+  
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  
+  // Project and Flow states
+  const [currentProject, setCurrentProject] = useState<any>(null);
+  const [currentFlow, setCurrentFlow] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   const [showPropertiesPanel, setShowPropertiesPanel] = useState(false);
@@ -389,6 +447,49 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
 
+  // Load project and flow data when projectId is available
+  useEffect(() => {
+    const loadProjectData = async () => {
+      if (!projectId) return;
+      
+      try {
+        // Load project data
+        const project = await myProjectAPI.getById(parseInt(projectId));
+        setCurrentProject(project);
+        
+        // Try to load existing flow for this project
+        try {
+          const flows = await flowAPI.getAll();
+          const projectFlow = flows.find(f => f.name === project.name || f.description?.includes(project.name));
+          
+          if (projectFlow) {
+            setCurrentFlow(projectFlow);
+            // Load flow configuration to nodes and edges
+            if (projectFlow.configuration && projectFlow.configuration.nodes) {
+              // Process nodes to restore icon components
+              const processedNodes = projectFlow.configuration.nodes.map(node => ({
+                ...node,
+                data: {
+                  ...node.data,
+                  icon: node.data.icon ? getNodeIcon(node.data.label || '') : undefined
+                }
+              }));
+              setNodes(processedNodes || []);
+              setEdges(projectFlow.configuration.edges || []);
+            }
+          }
+        } catch (flowError) {
+          console.log('No existing flow found for project:', projectId);
+        }
+        
+      } catch (error) {
+        console.error('Error loading project:', error);
+      }
+    };
+
+    loadProjectData();
+  }, [projectId, setNodes, setEdges]);
+
   // Update global execution state for visual feedback
   React.useEffect(() => {
     (window as any).__reactFlowExecutingNodeId = executingNodeId;
@@ -397,6 +498,11 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       reactFlowInstance.setNodes(nds => [...nds]);
     }
   }, [executingNodeId, reactFlowInstance]);
+
+  // Update global nodes state for group node checking
+  React.useEffect(() => {
+    (window as any).__reactFlowNodes = nodes;
+  }, [nodes]);
 
   const onConnect: OnConnect = useCallback(
     (params) => {
@@ -414,6 +520,59 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     },
     [setEdges],
   );
+
+  // Save flow function
+  const handleSave = async () => {
+    if (!projectId || !currentProject || !reactFlowInstance) {
+      showError('Cannot save: Project information is missing');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const flowData: FlowData = {
+        name: currentProject.name + ' Flow',
+        description: `WorkFlow for ${currentProject.name}`,
+        isActive: true,
+        nodes: nodes.map(node => ({
+          id: node.id,
+          type: node.type || 'default',
+          position: node.position,
+          data: node.data
+        })),
+        edges: edges.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle || undefined,
+          targetHandle: edge.targetHandle || undefined,
+          type: edge.type,
+          animated: edge.animated,
+          style: edge.style
+        })),
+        viewport: reactFlowInstance.getViewport(),
+        version: '1.0.0'
+      };
+
+      if (currentFlow) {
+        // Update existing flow
+        await flowAPI.update(currentFlow.id, flowData);
+        console.log('Flow updated successfully');
+      } else {
+        // Create new flow
+        const newFlow = await flowAPI.create(flowData);
+        setCurrentFlow(newFlow);
+        console.log('Flow created successfully');
+      }
+
+      showSuccess('Flow saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving flow:', error);
+      showError('Failed to save flow: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const onInit = (rfi: ReactFlowInstance) => {
     setReactFlowInstance(rfi);
@@ -607,21 +766,6 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     return descriptions[type] || 'Custom Node';
   };
 
-  const getNodeIcon = (type: string) => {
-    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-      'API Call': Database,
-      'Database': Database,
-      'UI Component': Box,
-      'Logic': Zap,
-      'Condition': Zap,
-      'Loop': Zap,
-      'Transform': Cpu,
-      'Group': Layers,
-      'Frame': Square,
-      'Section': Square
-    };
-    return icons[type] || Box;
-  };
 
   const getGroupBackgroundColor = (type: string) => {
     const colors: { [key: string]: string } = {
@@ -646,16 +790,8 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       items: ['API Call', 'Database', 'File Input']
     },
     {
-      title: 'UI Components',
-      items: ['Button', 'Form', 'Chart', 'Table']
-    },
-    {
       title: 'Logic',
       items: ['Condition', 'Loop', 'Transform', 'Function']
-    },
-    {
-      title: 'Outputs',
-      items: ['Display', 'Export', 'Notification']
     }
   ];
 
@@ -789,7 +925,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       );
 
       if (startingNodes.length === 0) {
-        alert('ไม่พบ starting node สำหรับเริ่มต้น flow');
+        showError('ไม่พบ starting node สำหรับเริ่มต้น flow');
         setIsExecuting(false);
         return;
       }
@@ -815,7 +951,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
 
     } catch (error) {
       console.error('Flow execution error:', error);
-      alert('เกิดข้อผิดพลาดในการรัน flow: ' + error);
+      showError('เกิดข้อผิดพลาดในการรัน flow: ' + error);
     } finally {
       setIsExecuting(false);
       setExecutingNodeId(null);
@@ -1235,7 +1371,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     // Check if there are nodes first
     const nonGroupNodes = nodes.filter(node => !node.data.isGroup);
     if (nonGroupNodes.length === 0) {
-      alert('กรุณาเพิ่มโหนดในแคนวาสก่อนสร้างเว็บไซต์');
+      showError('กรุณาเพิ่มโหนดในแคนวาสก่อนสร้างเว็บไซต์');
       return;
     }
     
@@ -1261,7 +1397,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       );
 
       if (startingNodes.length === 0) {
-        alert('ไม่พบ starting node สำหรับสร้างเว็บไซต์');
+        showError('ไม่พบ starting node สำหรับสร้างเว็บไซต์');
         setIsGeneratingWebsite(false);
         return;
       }
@@ -1300,7 +1436,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
 
     } catch (error) {
       console.error('Website generation error:', error);
-      alert('เกิดข้อผิดพลาดในการสร้างเว็บไซต์: ' + error);
+      showError('เกิดข้อผิดพลาดในการสร้างเว็บไซต์: ' + error);
     } finally {
       setIsGeneratingWebsite(false);
     }
@@ -1903,7 +2039,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Box className="h-6 w-6 text-blue-600" />
-              <span className="font-bold text-slate-900 dark:text-white">Project Overview</span>
+              <span className="font-bold text-slate-900 dark:text-white">Project WorkFlow</span>
             </div>
             <button 
               onClick={() => router.push('/dashboard')}
@@ -1956,8 +2092,13 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
           <div className="flex space-x-2">
-            <button className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <button 
+              onClick={handleSave}
+              disabled={isSaving || !currentProject}
+              className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <Save className="h-4 w-4 mx-auto" />
+              {isSaving && <span className="text-xs block">Saving...</span>}
             </button>
             <button className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
               <Play className="h-4 w-4 mx-auto" />
@@ -1978,7 +2119,9 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           </button>
           <div className="flex items-center space-x-2">
             <Box className="h-6 w-6 text-blue-600" />
-            <span className="font-bold text-slate-900 dark:text-white">Flow Builder</span>
+            <span className="font-bold text-slate-900 dark:text-white">
+              {currentProject ? `${currentProject.name} - Flow Builder` : 'Flow Builder'}
+            </span>
           </div>
           <div className="w-8"></div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Code, Eye, Palette, Settings, FileText, Tag, Globe, Lock } from 'lucide-react';
 import { ComponentData, CreateComponentRequest } from '@/lib/api';
+import { useAlert } from '@/contexts/AlertContext';
 
 interface ComponentModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
   editingComponent,
   userId = 1
 }) => {
+  const { showError } = useAlert();
   const [formData, setFormData] = useState<CreateComponentRequest>({
     name: '',
     description: '',
@@ -103,7 +105,7 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
       try {
         props = JSON.parse(propsText);
       } catch (e) {
-        alert('Invalid JSON in props field');
+        showError('Invalid JSON in props field');
         setIsLoading(false);
         return;
       }
@@ -111,7 +113,7 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
       try {
         styles = JSON.parse(stylesText);
       } catch (e) {
-        alert('Invalid JSON in styles field');
+        showError('Invalid JSON in styles field');
         setIsLoading(false);
         return;
       }
@@ -127,7 +129,7 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Error saving component:', error);
-      alert('Failed to save component');
+      showError('Failed to save component');
     } finally {
       setIsLoading(false);
     }
