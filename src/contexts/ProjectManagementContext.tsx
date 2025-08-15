@@ -306,7 +306,7 @@ export const ProjectManagementProvider: React.FC<{ children: React.ReactNode }> 
   const generateDemoData = useCallback(() => {
     const demoProject: ProjectTimeline = {
       id: 'demo-project-1',
-      name: 'TON NOW Development',
+      name: 'DEVLOOP Development',
       description: 'Lowcode platform development project with multiple phases',
       startDate: new Date(2024, 0, 1),
       endDate: new Date(2024, 11, 31),

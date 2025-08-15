@@ -68,4 +68,4 @@
 3. Indicators บน nodes ที่กำลังถูกแก้ไข
 
 ---
-*สร้างด้วย TON NOW Platform - Collaborative Flow Builder* 🚀
+*สร้างด้วย DEVLOOP Platform - Collaborative Flow Builder* 🚀
