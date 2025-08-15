@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Folder, Globe, Smartphone, Database, MonitorSpeaker, ShoppingCart, FileText, User, Package } from 'lucide-react';
+import { X, Folder, Globe, Smartphone, Database, MonitorSpeaker, ShoppingCart, FileText, User, Package, Type, Palette, Languages, Shield, Bell, Calendar, Settings } from 'lucide-react';
 import { myProjectAPI, CreateMyProjectRequest } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
 
@@ -20,11 +20,114 @@ const PROJECT_TYPES = [
   { key: 'portfolio', label: 'Portfolio', desc: 'Personal portfolio', icon: User },
 ];
 
-const PROJECT_PRIORITIES = [
-  { key: 'low', label: 'Low', color: 'bg-gray-100 text-gray-800' },
-  { key: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800' },
-  { key: 'high', label: 'High', color: 'bg-orange-100 text-orange-800' },
-  { key: 'critical', label: 'Critical', color: 'bg-red-100 text-red-800' },
+
+const FONT_OPTIONS = [
+  { key: 'inter', label: 'Inter', preview: 'font-sans', family: 'Inter, sans-serif' },
+  { key: 'roboto', label: 'Roboto', preview: 'font-sans', family: 'Roboto, sans-serif' },
+  { key: 'open-sans', label: 'Open Sans', preview: 'font-sans', family: 'Open Sans, sans-serif' },
+  { key: 'lato', label: 'Lato', preview: 'font-sans', family: 'Lato, sans-serif' },
+  { key: 'poppins', label: 'Poppins', preview: 'font-sans', family: 'Poppins, sans-serif' },
+  { key: 'montserrat', label: 'Montserrat', preview: 'font-sans', family: 'Montserrat, sans-serif' },
+  { key: 'nunito', label: 'Nunito', preview: 'font-sans', family: 'Nunito, sans-serif' },
+  { key: 'source-sans', label: 'Source Sans', preview: 'font-sans', family: 'Source Sans Pro, sans-serif' },
+  { key: 'custom', label: 'Custom Font', preview: 'font-sans', family: 'custom' },
+];
+
+const COLOR_THEMES = [
+  { key: 'blue', label: 'Blue', primary: '#3B82F6', secondary: '#1E40AF', preview: 'bg-blue-500' },
+  { key: 'purple', label: 'Purple', primary: '#8B5CF6', secondary: '#7C3AED', preview: 'bg-purple-500' },
+  { key: 'green', label: 'Green', primary: '#10B981', secondary: '#059669', preview: 'bg-green-500' },
+  { key: 'red', label: 'Red', primary: '#EF4444', secondary: '#DC2626', preview: 'bg-red-500' },
+  { key: 'orange', label: 'Orange', primary: '#F97316', secondary: '#EA580C', preview: 'bg-orange-500' },
+  { key: 'pink', label: 'Pink', primary: '#EC4899', secondary: '#DB2777', preview: 'bg-pink-500' },
+  { key: 'indigo', label: 'Indigo', primary: '#6366F1', secondary: '#4F46E5', preview: 'bg-indigo-500' },
+  { key: 'teal', label: 'Teal', primary: '#14B8A6', secondary: '#0D9488', preview: 'bg-teal-500' },
+];
+
+const AUTH_PROVIDERS = [
+  { key: 'manual', label: 'Manual Login', desc: 'Traditional email/password', icon: User },
+  { key: 'oauth', label: 'OAuth Services', desc: 'Google, Facebook, GitHub', icon: Shield },
+  { key: 'sso', label: 'Single Sign-On', desc: 'Enterprise SSO', icon: Shield },
+  { key: 'keycloak', label: 'Keycloak', desc: 'Identity management', icon: Shield },
+  { key: 'auth0', label: 'Auth0', desc: 'Authentication platform', icon: Shield },
+];
+
+const ALERT_TEMPLATES = [
+  { 
+    key: 'modal-center', 
+    label: 'Modal Center', 
+    desc: 'Center modal with header, content & close button',
+    preview: 'bg-white border shadow-lg'
+  },
+  { 
+    key: 'toast-top-right', 
+    label: 'Toast Top Right', 
+    desc: 'Small notification at top-right corner',
+    preview: 'bg-slate-800 text-white border-0'
+  },
+  { 
+    key: 'toast-top-left', 
+    label: 'Toast Top Left', 
+    desc: 'Small notification at top-left corner',
+    preview: 'bg-slate-800 text-white border-0'
+  },
+  { 
+    key: 'banner-top', 
+    label: 'Banner Top', 
+    desc: 'Full width banner at top of page',
+    preview: 'bg-blue-50 border-blue-200 text-blue-800'
+  },
+  { 
+    key: 'inline', 
+    label: 'Inline Alert', 
+    desc: 'Inline notification within content',
+    preview: 'bg-yellow-50 border-yellow-200 text-yellow-800'
+  },
+  { 
+    key: 'slide-in', 
+    label: 'Slide-in Panel', 
+    desc: 'Side panel sliding from right',
+    preview: 'bg-white border-l shadow-xl'
+  }
+];
+
+const DATE_PICKER_STYLES = [
+  {
+    key: 'modal',
+    label: 'Modal Calendar',
+    desc: 'Full calendar popup modal',
+    preview: 'bg-white border shadow-lg'
+  },
+  {
+    key: 'dropdown',
+    label: 'Dropdown Calendar',
+    desc: 'Dropdown calendar below input',
+    preview: 'bg-white border shadow-md'
+  },
+  {
+    key: 'inline',
+    label: 'Inline Calendar',
+    desc: 'Always visible calendar widget',
+    preview: 'bg-slate-50 border'
+  },
+  {
+    key: 'minimal',
+    label: 'Minimal Input',
+    desc: 'Simple text input with date format',
+    preview: 'bg-white border border-slate-300'
+  },
+  {
+    key: 'range',
+    label: 'Date Range Picker',
+    desc: 'Select start and end dates',
+    preview: 'bg-blue-50 border border-blue-200'
+  },
+  {
+    key: 'compact',
+    label: 'Compact Picker',
+    desc: 'Small size for tight spaces',
+    preview: 'bg-gray-50 border border-gray-300'
+  }
 ];
 
 const MyProjectModal: React.FC<MyProjectModalProps> = ({
@@ -43,8 +146,19 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
     tags: [],
     createdById: 1 // Default user ID
   });
+  
+  const [designSettings, setDesignSettings] = useState({
+    primaryFont: 'inter',
+    customFont: '',
+    colorTheme: 'blue',
+    multiLanguage: false,
+    authProvider: 'manual',
+    alertTemplate: 'modal-center',
+    datePickerStyle: 'dropdown'
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  const [activeTab, setActiveTab] = useState<'basic' | 'design'>('basic');
   const { showAlert } = useAlert();
 
   // Generate slug from name
@@ -107,6 +221,15 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
         tags: [],
         createdById: 1
       });
+      setDesignSettings({
+        primaryFont: 'inter',
+        customFont: '',
+        colorTheme: 'blue',
+        multiLanguage: false,
+        authProvider: 'manual',
+        alertTemplate: 'modal-center',
+        datePickerStyle: 'dropdown'
+      });
     } catch (error: any) {
       console.error('Error creating project:', error);
       showAlert(error.response?.data?.message || 'Failed to create project', 'error');
@@ -136,10 +259,49 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="border-b border-slate-200 dark:border-slate-700">
+          <div className="px-6 pt-4">
+            <div className="flex space-x-8">
+              <button
+                type="button"
+                onClick={() => setActiveTab('basic')}
+                className={`pb-4 px-1 border-b-2 font-medium text-sm transition ${
+                  activeTab === 'basic'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Folder className="h-4 w-4" />
+                  Basic Information
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('design')}
+                className={`pb-4 px-1 border-b-2 font-medium text-sm transition ${
+                  activeTab === 'design'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Design Settings
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Basic Information Tab */}
+          {activeTab === 'basic' && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Project Name *
@@ -209,43 +371,6 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
             </div>
           </div>
 
-          {/* Settings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Priority
-              </label>
-              <div className="flex space-x-2">
-                {PROJECT_PRIORITIES.map((priority) => (
-                  <button
-                    key={priority.key}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, priority: priority.key as any }))}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${
-                      formData.priority === priority.key
-                        ? 'ring-2 ring-blue-500'
-                        : ''
-                    } ${priority.color}`}
-                  >
-                    {priority.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.isPublic}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isPublic: e.target.checked }))}
-                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-slate-700 dark:text-slate-300">
-                  Public Project
-                </span>
-              </label>
-            </div>
-          </div>
 
           {/* Tags */}
           <div>
@@ -274,7 +399,7 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                 className="flex-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                 placeholder="Add tag..."
               />
@@ -287,6 +412,271 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
               </button>
             </div>
           </div>
+            </div>
+          )}
+
+          {/* Design Settings Tab */}
+          {activeTab === 'design' && (
+            <div className="space-y-6">
+              {/* Design Settings Section */}
+              <div>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Design Settings
+            </h3>
+
+            {/* Font Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                <Type className="h-4 w-4" />
+                Primary Font
+              </label>
+              <div className="grid grid-cols-3 md:grid-cols-4 gap-3 mb-3">
+                {FONT_OPTIONS.filter(font => font.key !== 'custom').map((font) => (
+                  <button
+                    key={font.key}
+                    type="button"
+                    onClick={() => setDesignSettings(prev => ({ ...prev, primaryFont: font.key }))}
+                    className={`p-3 border rounded-lg text-center transition ${
+                      designSettings.primaryFont === font.key
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-sm font-medium text-slate-900 dark:text-white" style={{ fontFamily: font.family }}>
+                      {font.label}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400 mt-1" style={{ fontFamily: font.family }}>
+                      Aa
+                    </div>
+                  </button>
+                ))}
+              </div>
+              
+              {/* Custom Font Option */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDesignSettings(prev => ({ ...prev, primaryFont: 'custom' }))}
+                  className={`px-4 py-2 border rounded-lg transition ${
+                    designSettings.primaryFont === 'custom'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  Custom Font
+                </button>
+                {designSettings.primaryFont === 'custom' && (
+                  <input
+                    type="text"
+                    value={designSettings.customFont}
+                    onChange={(e) => setDesignSettings(prev => ({ ...prev, customFont: e.target.value }))}
+                    className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                    placeholder="Enter font family name..."
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Color Theme Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                Color Theme
+              </label>
+              <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+                {COLOR_THEMES.map((theme) => (
+                  <button
+                    key={theme.key}
+                    type="button"
+                    onClick={() => setDesignSettings(prev => ({ ...prev, colorTheme: theme.key }))}
+                    className={`p-3 border rounded-lg text-center transition ${
+                      designSettings.colorTheme === theme.key
+                        ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-50'
+                        : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded mx-auto mb-1 ${theme.preview}`}></div>
+                    <div className="text-xs text-slate-700 dark:text-slate-300">{theme.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Multi-language Support */}
+            <div className="mb-6">
+              <label className="flex items-center gap-3">
+                <Languages className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <input
+                  type="checkbox"
+                  checked={designSettings.multiLanguage}
+                  onChange={(e) => setDesignSettings(prev => ({ ...prev, multiLanguage: e.target.checked }))}
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Multi-language Support
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  (Support for 2+ languages)
+                </span>
+              </label>
+            </div>
+
+            {/* Auth Provider Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Authentication Provider
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {AUTH_PROVIDERS.map((provider) => {
+                  const Icon = provider.icon;
+                  return (
+                    <button
+                      key={provider.key}
+                      type="button"
+                      onClick={() => setDesignSettings(prev => ({ ...prev, authProvider: provider.key }))}
+                      className={`p-3 border rounded-lg text-left transition ${
+                        designSettings.authProvider === provider.key
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5 mb-2 text-blue-600" />
+                      <div className="font-medium text-sm text-slate-900 dark:text-white">{provider.label}</div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400">{provider.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Alert Template Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Alert Template
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {ALERT_TEMPLATES.map((template) => (
+                  <button
+                    key={template.key}
+                    type="button"
+                    onClick={() => setDesignSettings(prev => ({ ...prev, alertTemplate: template.key }))}
+                    className={`p-4 border rounded-lg text-left transition ${
+                      designSettings.alertTemplate === template.key
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Template Preview */}
+                    <div className="mb-3 h-16 flex items-center justify-center relative overflow-hidden rounded border">
+                      <div className={`w-full h-8 rounded text-xs flex items-center justify-center ${template.preview}`}>
+                        {template.key === 'modal-center' && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-current rounded-full opacity-60"></div>
+                            <span className="text-xs">Alert</span>
+                            <div className="w-2 h-2 border border-current rounded opacity-60"></div>
+                          </div>
+                        )}
+                        {template.key.includes('toast') && (
+                          <div className="text-xs px-2 py-1 rounded">Toast</div>
+                        )}
+                        {template.key === 'banner-top' && (
+                          <div className="w-full text-center text-xs py-1">Banner Alert</div>
+                        )}
+                        {template.key === 'inline' && (
+                          <div className="text-xs px-2 py-1">⚠ Inline Alert</div>
+                        )}
+                        {template.key === 'slide-in' && (
+                          <div className="text-xs px-2 py-1 text-slate-600">Panel →</div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="font-medium text-sm text-slate-900 dark:text-white mb-1">
+                      {template.label}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                      {template.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Date Picker Style Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Date Picker Style
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {DATE_PICKER_STYLES.map((style) => (
+                  <button
+                    key={style.key}
+                    type="button"
+                    onClick={() => setDesignSettings(prev => ({ ...prev, datePickerStyle: style.key }))}
+                    className={`p-4 border rounded-lg text-left transition ${
+                      designSettings.datePickerStyle === style.key
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    {/* Date Picker Preview */}
+                    <div className="mb-3 h-16 flex items-center justify-center relative overflow-hidden rounded border">
+                      <div className={`w-full h-10 rounded text-xs flex items-center justify-center ${style.preview}`}>
+                        {style.key === 'modal' && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-6 h-6 border border-current rounded text-xs flex items-center justify-center">📅</div>
+                            <span className="text-xs">Modal</span>
+                          </div>
+                        )}
+                        {style.key === 'dropdown' && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-8 h-6 border border-current rounded text-xs flex items-center justify-center">📅</div>
+                            <span className="text-xs">↓</span>
+                          </div>
+                        )}
+                        {style.key === 'inline' && (
+                          <div className="grid grid-cols-7 gap-1 text-xs">
+                            {[...Array(7)].map((_, i) => (
+                              <div key={i} className="w-2 h-2 bg-current rounded opacity-60"></div>
+                            ))}
+                          </div>
+                        )}
+                        {style.key === 'minimal' && (
+                          <div className="w-20 h-6 border border-current rounded text-xs flex items-center justify-center">
+                            DD/MM/YYYY
+                          </div>
+                        )}
+                        {style.key === 'range' && (
+                          <div className="flex items-center gap-1 text-xs">
+                            <div className="w-6 h-4 border border-current rounded"></div>
+                            <span>~</span>
+                            <div className="w-6 h-4 border border-current rounded"></div>
+                          </div>
+                        )}
+                        {style.key === 'compact' && (
+                          <div className="w-12 h-6 border border-current rounded text-xs flex items-center justify-center">
+                            📅
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="font-medium text-sm text-slate-900 dark:text-white mb-1">
+                      {style.label}
+                    </div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                      {style.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-700">
