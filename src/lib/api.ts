@@ -224,3 +224,140 @@ export const nodeContentAPI = {
     await api.delete(`/flows/history/${historyId}`);
   }
 };
+
+export interface ComponentData {
+  id?: number;
+  name: string;
+  description?: string;
+  type: string;
+  category: string;
+  props?: any;
+  styles?: any;
+  template?: string;
+  code?: string;
+  status?: string;
+  version?: string;
+  isPublic?: boolean;
+  tags?: string[];
+  thumbnailUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: User;
+}
+
+export interface ComponentHistoryData {
+  id: number;
+  componentId: string;
+  version: string;
+  name: string;
+  description?: string;
+  type: string;
+  category: string;
+  props?: any;
+  styles?: any;
+  template?: string;
+  code?: string;
+  status?: string;
+  isPublic?: boolean;
+  tags?: string[];
+  thumbnailUrl?: string;
+  changeDescription?: string;
+  changeType: 'manual' | 'auto' | 'import' | 'restore';
+  metadata?: any;
+  createdAt: string;
+  user?: User;
+}
+
+export interface CreateComponentRequest {
+  name: string;
+  description?: string;
+  type: string;
+  category: string;
+  props?: any;
+  styles?: any;
+  template?: string;
+  code?: string;
+  status?: string;
+  isPublic?: boolean;
+  tags?: string[];
+  thumbnailUrl?: string;
+  userId?: number;
+  changeDescription?: string;
+}
+
+export interface ComponentStats {
+  total: number;
+  published: number;
+  draft: number;
+  publicComponents: number;
+  categories: Array<{
+    category: string;
+    count: number;
+  }>;
+}
+
+export const componentAPI = {
+  // Get all components
+  getAll: async (category?: string, isPublic?: boolean): Promise<ComponentData[]> => {
+    let url = '/components';
+    const params = new URLSearchParams();
+    if (category) params.append('category', category);
+    if (isPublic !== undefined) params.append('public', isPublic.toString());
+    if (params.toString()) url += `?${params.toString()}`;
+    
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  // Get component by ID
+  getById: async (id: number): Promise<ComponentData> => {
+    const response = await api.get(`/components/${id}`);
+    return response.data;
+  },
+
+  // Create component
+  create: async (data: CreateComponentRequest): Promise<ComponentData> => {
+    const response = await api.post('/components', data);
+    return response.data;
+  },
+
+  // Update component
+  update: async (id: number, data: Partial<CreateComponentRequest>): Promise<ComponentData> => {
+    const response = await api.patch(`/components/${id}`, data);
+    return response.data;
+  },
+
+  // Delete component
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/components/${id}`);
+  },
+
+  // Get component stats
+  getStats: async (): Promise<ComponentStats> => {
+    const response = await api.get('/components/stats');
+    return response.data;
+  },
+
+  // Get component history
+  getHistory: async (componentId: number): Promise<ComponentHistoryData[]> => {
+    const response = await api.get(`/components/${componentId}/history`);
+    return response.data;
+  },
+
+  // Get specific version
+  getHistoryVersion: async (componentId: number, version: string): Promise<ComponentHistoryData> => {
+    const response = await api.get(`/components/${componentId}/history/${version}`);
+    return response.data;
+  },
+
+  // Restore from history
+  restoreFromHistory: async (componentId: number, version: string, userId: number): Promise<ComponentData> => {
+    const response = await api.post(`/components/${componentId}/restore/${version}`, { userId });
+    return response.data;
+  },
+
+  // Delete history entry
+  deleteHistoryEntry: async (historyId: number): Promise<void> => {
+    await api.delete(`/components/history/${historyId}`);
+  }
+};

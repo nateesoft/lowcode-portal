@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Code2, Layers, Settings, Users, LogOut, Bell, Moon, Sun, Home, 
   Plus, Edit, Eye, Trash2, TrendingUp, Activity, Shield, Award, 
   Menu, Check, Zap, Globe, Smartphone, Cpu, Component, ServerIcon, Play,
   Globe2, MessageCircle, Database, Images, Calendar, Table, FileText, Key, Clock,
-  Wrench, FolderOpen, Cog
+  Wrench, FolderOpen, Cog, History, Filter, Search
 } from 'lucide-react';
 import { Project, UserRole, UserTier } from '@/lib/types';
 import SiteMap from '@/components/ui/SiteMap';
@@ -46,9 +46,11 @@ import {
 } from '@/components/secret-management';
 import { useSecretManagement } from '@/contexts/SecretManagementContext';
 import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
-import { flowAPI } from '@/lib/api';
+import { flowAPI, componentAPI, ComponentData, ComponentStats, CreateComponentRequest } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
 import AlertDemo from '@/components/ui/AlertDemo';
+import ComponentModal from '@/components/modals/ComponentModal';
+import ComponentHistoryPanel from '@/components/panels/ComponentHistoryPanel';
 
 interface DashboardProps {
   projects: Project[];
@@ -135,6 +137,89 @@ const Dashboard: React.FC<DashboardProps> = ({
       console.error('Error loading flows:', error);
     }
   };
+
+  // Component Management functions
+  const loadComponents = async () => {
+    setComponentsLoading(true);
+    try {
+      const [componentsData, statsData] = await Promise.all([
+        componentAPI.getAll(),
+        componentAPI.getStats()
+      ]);
+      setComponents(componentsData);
+      setComponentStats(statsData);
+    } catch (error) {
+      console.error('Error loading components:', error);
+      alert('Failed to load components');
+    } finally {
+      setComponentsLoading(false);
+    }
+  };
+
+  const handleCreateComponent = () => {
+    setEditingComponent(null);
+    setShowComponentModal(true);
+  };
+
+  const handleEditComponent = (component: ComponentData) => {
+    setEditingComponent(component);
+    setShowComponentModal(true);
+  };
+
+  const handleSaveComponent = async (componentData: CreateComponentRequest) => {
+    try {
+      if (editingComponent) {
+        await componentAPI.update(editingComponent.id!, { ...componentData, userId: 1 });
+        alert('Component updated successfully!');
+      } else {
+        await componentAPI.create({ ...componentData, userId: 1 });
+        alert('Component created successfully!');
+      }
+      await loadComponents();
+    } catch (error) {
+      console.error('Error saving component:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteComponent = async (componentId: number) => {
+    if (!window.confirm('Are you sure you want to delete this component?')) {
+      return;
+    }
+
+    try {
+      await componentAPI.delete(componentId);
+      alert('Component deleted successfully!');
+      await loadComponents();
+    } catch (error) {
+      console.error('Error deleting component:', error);
+      alert('Failed to delete component');
+    }
+  };
+
+  const handleShowComponentHistory = (component: ComponentData) => {
+    setSelectedComponentForHistory(component);
+    setShowComponentHistory(true);
+  };
+
+  const getFilteredComponents = () => {
+    return components.filter(component => {
+      const matchesSearch = component.name.toLowerCase().includes(componentSearchTerm.toLowerCase()) ||
+                           component.description?.toLowerCase().includes(componentSearchTerm.toLowerCase()) ||
+                           component.tags?.some(tag => tag.toLowerCase().includes(componentSearchTerm.toLowerCase()));
+      
+      const matchesCategory = componentCategoryFilter === 'all' || component.category === componentCategoryFilter;
+      const matchesType = componentTypeFilter === 'all' || component.type === componentTypeFilter;
+      
+      return matchesSearch && matchesCategory && matchesType;
+    });
+  };
+
+  useEffect(() => {
+    if (activeView === 'components') {
+      loadComponents();
+    }
+  }, [activeView]);
   
   // Database states
   const [showConnectionModal, setShowConnectionModal] = useState(false);
@@ -147,6 +232,18 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
   // const [editingFile, setEditingFile] = useState<any>(null);
+  
+  // Component Management states
+  const [components, setComponents] = useState<ComponentData[]>([]);
+  const [componentStats, setComponentStats] = useState<ComponentStats | null>(null);
+  const [showComponentModal, setShowComponentModal] = useState(false);
+  const [editingComponent, setEditingComponent] = useState<ComponentData | null>(null);
+  const [showComponentHistory, setShowComponentHistory] = useState(false);
+  const [selectedComponentForHistory, setSelectedComponentForHistory] = useState<ComponentData | null>(null);
+  const [componentSearchTerm, setComponentSearchTerm] = useState('');
+  const [componentCategoryFilter, setComponentCategoryFilter] = useState<string>('all');
+  const [componentTypeFilter, setComponentTypeFilter] = useState<string>('all');
+  const [componentsLoading, setComponentsLoading] = useState(false);
   
   // Project Management states
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -881,6 +978,238 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         );
 
+      case 'components':
+        const filteredComponents = getFilteredComponents();
+        const uniqueCategories = [...new Set(components.map(c => c.category))];
+        const uniqueTypes = [...new Set(components.map(c => c.type))];
+
+        return (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            {/* Header */}
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Component Library</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  สร้างและจัดการ UI components สำหรับพัฒนา lowcode platform
+                </p>
+              </div>
+              <button
+                onClick={handleCreateComponent}
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center justify-center"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Component
+              </button>
+            </div>
+
+            {/* Stats Cards */}
+            {componentStats && (
+              <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <Component className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Components</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{componentStats.total}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Published</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{componentStats.published}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <Edit className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Drafts</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{componentStats.draft}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <Globe className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Public</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{componentStats.publicComponents}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Filters */}
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="Search components..."
+                      value={componentSearchTerm}
+                      onChange={(e) => setComponentSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={componentCategoryFilter}
+                    onChange={(e) => setComponentCategoryFilter(e.target.value)}
+                    className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  >
+                    <option value="all">All Categories</option>
+                    {uniqueCategories.map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={componentTypeFilter}
+                    onChange={(e) => setComponentTypeFilter(e.target.value)}
+                    className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                  >
+                    <option value="all">All Types</option>
+                    {uniqueTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Components List */}
+            <div className="p-4 sm:p-6">
+              {componentsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-slate-600 dark:text-slate-400">Loading components...</span>
+                </div>
+              ) : filteredComponents.length === 0 ? (
+                <div className="text-center py-12">
+                  <Component className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                    {componentSearchTerm || componentCategoryFilter !== 'all' || componentTypeFilter !== 'all'
+                      ? 'No Components Found'
+                      : 'No Components Yet'
+                    }
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 mb-6">
+                    {componentSearchTerm || componentCategoryFilter !== 'all' || componentTypeFilter !== 'all'
+                      ? 'Try adjusting your search criteria or filters.'
+                      : 'Create your first component to get started building your library.'
+                    }
+                  </p>
+                  {!componentSearchTerm && componentCategoryFilter === 'all' && componentTypeFilter === 'all' && (
+                    <button
+                      onClick={handleCreateComponent}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center mx-auto"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Component
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredComponents.map(component => (
+                    <div key={component.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-1">
+                            {component.name}
+                          </h3>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              {component.type}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                              {component.category}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                              component.status === 'published' 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                            }`}>
+                              {component.status}
+                            </span>
+                          </div>
+                          {component.description && (
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-2">
+                              {component.description}
+                            </p>
+                          )}
+                          {component.tags && component.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {component.tags.slice(0, 3).map(tag => (
+                                <span key={tag} className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                                  {tag}
+                                </span>
+                              ))}
+                              {component.tags.length > 3 && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                                  +{component.tags.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+                            <span>v{component.version}</span>
+                            {component.isPublic && (
+                              <>
+                                <span className="mx-1">•</span>
+                                <Globe className="h-3 w-3 mr-1" />
+                                <span>Public</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          Updated {new Date(component.updatedAt!).toLocaleDateString()}
+                        </div>
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => handleShowComponentHistory(component)}
+                            className="p-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            title="View History"
+                          >
+                            <History className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditComponent(component)}
+                            className="p-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            title="Edit"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteComponent(component.id!)}
+                            className="p-2 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
       case 'project-management':
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -1334,6 +1663,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                 icon: FileText,
                 isActive: activeView === 'documentation',
                 onClick: () => setActiveView('documentation')
+              },
+              {
+                key: 'components',
+                label: 'Components',
+                icon: Component,
+                isActive: activeView === 'components',
+                onClick: () => setActiveView('components')
               }
             ]}
           />
@@ -1882,6 +2218,32 @@ const Dashboard: React.FC<DashboardProps> = ({
           }
         }}
         editingSecret={editingSecret}
+      />
+
+      {/* Component Management Modals */}
+      <ComponentModal
+        isOpen={showComponentModal}
+        onClose={() => {
+          setShowComponentModal(false);
+          setEditingComponent(null);
+        }}
+        onSave={handleSaveComponent}
+        editingComponent={editingComponent}
+        userId={1}
+      />
+
+      <ComponentHistoryPanel
+        isOpen={showComponentHistory}
+        onClose={() => {
+          setShowComponentHistory(false);
+          setSelectedComponentForHistory(null);
+        }}
+        componentId={selectedComponentForHistory?.id || 0}
+        componentName={selectedComponentForHistory?.name || ''}
+        onRestore={() => {
+          loadComponents();
+        }}
+        userId={1}
       />
     </div>
   );
