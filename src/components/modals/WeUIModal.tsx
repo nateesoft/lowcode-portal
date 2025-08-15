@@ -27,10 +27,13 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
     dragRef, 
     modalRef, 
     isDragging, 
+    isResizing,
     isFullscreen, 
     modalStyle, 
     dragHandleStyle, 
+    resizeHandles,
     handleMouseDown, 
+    handleResizeMouseDown,
     toggleFullscreen, 
     resetPosition 
   } = useModalDragAndResize();
@@ -1149,6 +1152,15 @@ const WeUIModal: React.FC<WeUIModalProps> = ({
         className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-6xl h-[90vh] flex flex-col"
         style={modalStyle}
       >
+        {/* Resize Handles */}
+        {!isFullscreen && resizeHandles.map((handle) => (
+          <div
+            key={handle.direction}
+            style={handle.style}
+            onMouseDown={(e) => handleResizeMouseDown(e, handle.direction)}
+            className="hover:bg-blue-500 hover:opacity-50 transition-colors"
+          />
+        ))}
         {/* Header */}
         <div 
           ref={dragRef}

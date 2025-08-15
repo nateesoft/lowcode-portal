@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Key, Shield, Calendar, Tag, Plus } from 'lucide-react';
+import { X, Key, Shield, Calendar, Tag, Plus, Maximize2, Minimize2, Move } from 'lucide-react';
+import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 
 interface SecretKey {
   id: string;
@@ -36,6 +37,20 @@ const SecretKeyModal: React.FC<SecretKeyModalProps> = ({
   });
   const [newTag, setNewTag] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { 
+    dragRef, 
+    modalRef, 
+    isDragging, 
+    isResizing,
+    isFullscreen, 
+    modalStyle, 
+    dragHandleStyle, 
+    resizeHandles,
+    handleMouseDown, 
+    handleResizeMouseDown,
+    toggleFullscreen, 
+    resetPosition 
+  } = useModalDragAndResize();
 
   useEffect(() => {
     if (editingSecret) {
@@ -58,6 +73,13 @@ const SecretKeyModal: React.FC<SecretKeyModalProps> = ({
       });
     }
   }, [editingSecret, isOpen]);
+
+  // Reset position when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      resetPosition();
+    }
+  }, [isOpen, resetPosition]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,22 +122,52 @@ const SecretKeyModal: React.FC<SecretKeyModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col"
+        style={modalStyle}
+      >
+        {/* Resize Handles */}
+        {!isFullscreen && resizeHandles.map((handle) => (
+          <div
+            key={handle.direction}
+            style={handle.style}
+            onMouseDown={(e) => handleResizeMouseDown(e, handle.direction)}
+            className="hover:bg-blue-500 hover:opacity-50 transition-colors"
+          />
+        ))}
+        <div 
+          ref={dragRef}
+          className="p-6 border-b border-slate-200 dark:border-slate-700"
+          style={dragHandleStyle}
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
               {editingSecret ? 'Edit Secret' : 'Create Secret'}
             </h2>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={toggleFullscreen}
+                className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
+              <div className="flex items-center text-slate-400 px-2">
+                <Move className="h-4 w-4" />
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">

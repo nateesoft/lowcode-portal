@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Building2, Globe, Computer, TabletSmartphone, ServerIcon,
-  Diamond, User2, Component
+  Diamond, User2, Component, Maximize2, Minimize2, Move
  } from 'lucide-react';
+import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 
 interface CreateSmartFlowModalProps {
   isOpen: boolean;
@@ -18,6 +19,20 @@ const CreateSmartFlowModal: React.FC<CreateSmartFlowModalProps> = ({
   const [projectType, setProjectType] = useState('web-app');
   const [butsinessType, setBusinessType] = useState('startup');
   const [description, setDescription] = useState('');
+  const { 
+    dragRef, 
+    modalRef, 
+    isDragging, 
+    isResizing,
+    isFullscreen, 
+    modalStyle, 
+    dragHandleStyle, 
+    resizeHandles,
+    handleMouseDown, 
+    handleResizeMouseDown,
+    toggleFullscreen, 
+    resetPosition 
+  } = useModalDragAndResize();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +57,13 @@ const CreateSmartFlowModal: React.FC<CreateSmartFlowModalProps> = ({
     setDescription('');
     onClose();
   };
+
+  // Reset position when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      resetPosition();
+    }
+  }, [isOpen, resetPosition]);
 
   if (!isOpen) return null;
 
@@ -101,20 +123,50 @@ const CreateSmartFlowModal: React.FC<CreateSmartFlowModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto flex flex-col"
+        style={modalStyle}
+      >
+        {/* Resize Handles */}
+        {!isFullscreen && resizeHandles.map((handle) => (
+          <div
+            key={handle.direction}
+            style={handle.style}
+            onMouseDown={(e) => handleResizeMouseDown(e, handle.direction)}
+            className="hover:bg-blue-500 hover:opacity-50 transition-colors"
+          />
+        ))}
+        <div 
+          ref={dragRef}
+          className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700"
+          style={dragHandleStyle}
+          onMouseDown={handleMouseDown}
+        >
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">
             Create New Smart Flow
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </button>
+            <div className="flex items-center text-slate-400 px-2">
+              <Move className="h-4 w-4" />
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto">
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
