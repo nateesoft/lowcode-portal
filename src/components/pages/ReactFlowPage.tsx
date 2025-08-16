@@ -778,20 +778,38 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
 
   const nodeCategories = [
     {
-      title: 'Organization',
-      items: ['Group', 'Frame', 'Section']
+      title: 'Panel',
+      items: [
+        { id: 'Box', type: 'PANEL_BOX' }
+      ]
+    },
+    {
+      title: 'Actors',
+      items: [
+        { id: 'User', type: 'ACTOR_USER'}, 
+        { id: 'System', type: 'ACTOR_SYSTEM'}
+      ]
     },
     {
       title: 'Application',
-      items: ['User', 'Page', 'Service']
+      items: [
+        { id: 'Single Page', type: 'SINGLE_PAGE'}, 
+        { id: 'Multiple Page', type: 'MULTIPLE_PAGE'}
+      ]
     },
     {
-      title: 'Data Sources',
-      items: ['API Call', 'Database', 'File Input']
+      title: 'Services',
+      items: [
+        { id: 'API Call', type: 'API_CALL'}, 
+        { id: 'External Link', type: 'EXTERNAL_LINK'}
+      ]
     },
     {
       title: 'Logic',
-      items: ['Condition', 'Loop', 'Transform', 'Function']
+      items: [
+        { id: 'Condition', type: 'LOGIC_CONDITION'}, 
+        { id: 'Loop', type: 'LOGIC_LOOP'}
+      ]
     }
   ];
 
@@ -2074,12 +2092,12 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
                     <div className="p-3 pt-0 space-y-2">
                       {category.items.map((item) => (
                         <div
-                          key={item}
+                          key={item.id}
                           className="w-full text-left px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-slate-700 dark:text-slate-300 transition-colors cursor-move"
                           draggable
-                          onDragStart={(event) => onDragStart(event, item)}
+                          onDragStart={(event) => onDragStart(event, item.type)}
                         >
-                          {item}
+                          {item.type}
                         </div>
                       ))}
                     </div>
