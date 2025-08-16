@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search, Wrench, Maximize2, Minimize2 } from 'lucide-react';
 import { PageData, CreatePageRequest } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
+import dynamic from 'next/dynamic';
 
+// Dynamically import Puck editor to avoid SSR issues
+const PuckEditor = dynamic(() => import('@/components/editors/PuckEditor'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-96 text-slate-500">Loading Page Builder...</div>
+});
 
 interface PageModalProps {
   isOpen: boolean;
@@ -47,7 +53,7 @@ const PageModal: React.FC<PageModalProps> = ({
     changeDescription: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'basic' | 'content' | 'design' | 'seo' | 'settings'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'content' | 'design' | 'build' | 'seo' | 'settings'>('basic');
   const [tagInput, setTagInput] = useState('');
   const [keywordInput, setKeywordInput] = useState('');
   const [contentText, setContentText] = useState('{}');
@@ -55,6 +61,23 @@ const PageModal: React.FC<PageModalProps> = ({
   const [componentsText, setComponentsText] = useState('{}');
   const [stylesText, setStylesText] = useState('{}');
   const [isLoading, setIsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [modalSize, setModalSize] = useState({ width: 1200, height: 800 });
+  const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Center modal when opened
+  useEffect(() => {
+    if (isOpen && !isFullscreen) {
+      const centerX = (window.innerWidth - modalSize.width) / 2;
+      const centerY = (window.innerHeight - modalSize.height) / 2;
+      setModalPosition({ x: Math.max(0, centerX), y: Math.max(0, centerY) });
+    }
+  }, [isOpen, modalSize.width, modalSize.height, isFullscreen]);
 
   useEffect(() => {
     if (editingPage) {
@@ -113,6 +136,11 @@ const PageModal: React.FC<PageModalProps> = ({
     }
     setTagInput('');
     setKeywordInput('');
+    // Reset modal state when opening
+    if (isOpen) {
+      setIsFullscreen(false);
+      setModalSize({ width: 1200, height: 800 });
+    }
   }, [editingPage, userId, isOpen]);
 
   const generateSlug = (title: string) => {
@@ -193,6 +221,25 @@ const PageModal: React.FC<PageModalProps> = ({
     }
   };
 
+  const handlePuckSave = async () => {
+    setIsLoading(true);
+    
+    try {
+      const pageData = {
+        ...formData,
+        changeDescription: formData.changeDescription || (editingPage ? 'Page updated via builder' : 'Page created via builder')
+      };
+
+      await onSave(pageData);
+      onClose();
+    } catch (error) {
+      console.error('Error saving page:', error);
+      showError('Failed to save page');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const addTag = () => {
     if (tagInput.trim() && !formData.tags?.includes(tagInput.trim())) {
       setFormData(prev => ({
@@ -227,415 +274,552 @@ const PageModal: React.FC<PageModalProps> = ({
     }));
   };
 
+  // Drag functionality
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isFullscreen) return;
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - modalPosition.x,
+      y: e.clientY - modalPosition.y
+    });
+  }, [isFullscreen, modalPosition]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isDragging && !isFullscreen) {
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+      setModalPosition({
+        x: Math.max(0, Math.min(newX, window.innerWidth - modalSize.width)),
+        y: Math.max(0, Math.min(newY, window.innerHeight - modalSize.height))
+      });
+    }
+    if (isResizing && !isFullscreen) {
+      const deltaX = e.clientX - resizeStart.x;
+      const deltaY = e.clientY - resizeStart.y;
+      const newWidth = Math.max(800, resizeStart.width + deltaX);
+      const newHeight = Math.max(600, resizeStart.height + deltaY);
+      setModalSize({ width: newWidth, height: newHeight });
+    }
+  }, [isDragging, isResizing, isFullscreen, dragStart, resizeStart, modalSize]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    setIsResizing(false);
+  }, []);
+
+  // Resize functionality
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    if (isFullscreen) return;
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      width: modalSize.width,
+      height: modalSize.height
+    });
+  }, [isFullscreen, modalSize]);
+
+  // Fullscreen toggle
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(!isFullscreen);
+    if (!isFullscreen) {
+      // Save current size and position before going fullscreen
+      setModalPosition({ x: 0, y: 0 });
+    }
+  }, [isFullscreen]);
+
+  // Add event listeners
+  useEffect(() => {
+    if (isDragging || isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = isDragging ? 'move' : 'nw-resize';
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'default';
+      };
+    }
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 p-4">
+      <div
+        ref={modalRef}
+        className={`bg-white dark:bg-slate-800 rounded-lg shadow-xl flex flex-col ${
+          isFullscreen 
+            ? 'fixed inset-4' 
+            : 'absolute'
+        }`}
+        style={isFullscreen ? {} : {
+          width: modalSize.width,
+          height: modalSize.height,
+          left: modalPosition.x,
+          top: modalPosition.y,
+        }}
+      >
+        <div 
+          className={`flex-shrink-0 flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 ${
+            !isFullscreen ? 'cursor-move' : ''
+          }`}
+          onMouseDown={handleMouseDown}
+        >
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white select-none">
             {editingPage ? 'Edit Page' : 'Create New Page'}
           </h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={toggleFullscreen}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[calc(90vh-200px)]">
-          {/* Tab Navigation */}
-          <div className="flex border-b border-slate-200 dark:border-slate-700">
-            {[
-              { key: 'basic', label: 'Basic Info', icon: FileText },
-              { key: 'content', label: 'Content', icon: Layout },
-              { key: 'design', label: 'Design', icon: Palette },
-              { key: 'seo', label: 'SEO', icon: Search },
-              { key: 'settings', label: 'Settings', icon: Settings }
-            ].map(tab => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key as any)}
-                className={`flex items-center px-6 py-3 border-b-2 font-medium text-sm transition ${
-                  activeTab === tab.key
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
-                }`}
-              >
-                <tab.icon className="h-4 w-4 mr-2" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex-shrink-0 flex border-b border-slate-200 dark:border-slate-700">
+          {[
+            { key: 'basic', label: 'Basic Info', icon: FileText },
+            { key: 'content', label: 'Content', icon: Layout },
+            { key: 'design', label: 'Design', icon: Palette },
+            { key: 'build', label: 'Build', icon: Wrench },
+            { key: 'seo', label: 'SEO', icon: Search },
+            { key: 'settings', label: 'Settings', icon: Settings }
+          ].map(tab => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`flex items-center px-6 py-3 border-b-2 font-medium text-sm transition ${
+                activeTab === tab.key
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+              }`}
+            >
+              <tab.icon className="h-4 w-4 mr-2" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          <div className="flex-1 overflow-y-auto p-6">
-            {/* Basic Info Tab */}
-            {activeTab === 'basic' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Page Title *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => handleTitleChange(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                      placeholder="Enter page title"
-                      required
-                    />
-                  </div>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* Build Tab - Outside form */}
+          {activeTab === 'build' && (
+            <div className="flex flex-col flex-1 overflow-hidden">
+              {/* Puck Editor - Full height */}
+              <div className="flex-1 overflow-hidden">
+                <PuckEditor
+                  initialData={formData.content as any}
+                  onSave={(data) => {
+                    // Update form data with Puck content
+                    setFormData(prev => ({
+                      ...prev,
+                      content: data
+                    }));
+                  }}
+                  height="100%"
+                />
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Slug *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.slug}
-                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                      placeholder="page-slug"
-                      required
-                    />
-                  </div>
+              {/* Save button for build tab */}
+              <div className="flex-shrink-0 flex justify-end space-x-3 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePuckSave}
+                  disabled={isLoading}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Saving...' : 'Save Page'}
+                </button>
+              </div>
+            </div>
+          )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Page Type *
-                    </label>
-                    <select
-                      value={formData.pageType}
-                      onChange={(e) => setFormData({ ...formData, pageType: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                      required
-                    >
-                      {pageTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                  </div>
+          {/* Other tabs - Inside form */}
+          {activeTab !== 'build' && (
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* Basic Info Tab */}
+                {activeTab === 'basic' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Page Title *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.title}
+                          onChange={(e) => handleTitleChange(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                          placeholder="Enter page title"
+                          required
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Status
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </div>
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Slug *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.slug}
+                          onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                          placeholder="page-slug"
+                          required
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                    rows={3}
-                    placeholder="Describe what this page is about..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Route Path
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.routePath}
-                    onChange={(e) => setFormData({ ...formData, routePath: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                    placeholder="/path/to/page"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Tags
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {formData.tags?.map(tag => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                      >
-                        <Tag className="h-3 w-3 mr-1" />
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Page Type *
+                        </label>
+                        <select
+                          value={formData.pageType}
+                          onChange={(e) => setFormData({ ...formData, pageType: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                          required
                         >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                      className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                      placeholder="Add a tag..."
-                    />
-                    <button
-                      type="button"
-                      onClick={addTag}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+                          {pageTypes.map(type => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
 
-            {/* Content Tab */}
-            {activeTab === 'content' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Page Content (JSON)
-                    </label>
-                    <textarea
-                      value={contentText}
-                      onChange={(e) => setContentText(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
-                      rows={8}
-                      placeholder='{\n  "sections": [],\n  "blocks": []\n}'
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Layout Configuration (JSON)
-                    </label>
-                    <textarea
-                      value={layoutText}
-                      onChange={(e) => setLayoutText(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
-                      rows={8}
-                      placeholder='{\n  "type": "standard",\n  "header": true,\n  "footer": true\n}'
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Components Map (JSON)
-                    </label>
-                    <textarea
-                      value={componentsText}
-                      onChange={(e) => setComponentsText(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
-                      rows={6}
-                      placeholder='{\n  "hero": "hero-component-1",\n  "footer": "footer-component-2"\n}'
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                      Page Styles (JSON)
-                    </label>
-                    <textarea
-                      value={stylesText}
-                      onChange={(e) => setStylesText(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
-                      rows={6}
-                      placeholder='{\n  "theme": "modern",\n  "primaryColor": "#007bff"\n}'
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Design Tab */}
-            {activeTab === 'design' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Custom CSS
-                  </label>
-                  <textarea
-                    value={formData.customCSS}
-                    onChange={(e) => setFormData({ ...formData, customCSS: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
-                    rows={8}
-                    placeholder="/* Add your custom CSS here */&#10;.my-class {&#10;  color: blue;&#10;}"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Custom JavaScript
-                  </label>
-                  <textarea
-                    value={formData.customJS}
-                    onChange={(e) => setFormData({ ...formData, customJS: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
-                    rows={8}
-                    placeholder="// Add your custom JavaScript here&#10;document.addEventListener('DOMContentLoaded', function() {&#10;  console.log('Page loaded');&#10;});"
-                  />
-                </div>
-              </div>
-            )}
-
-
-            {/* SEO Tab */}
-            {activeTab === 'seo' && (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    SEO Title
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.seoTitle}
-                    onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                    placeholder="SEO optimized title for search engines"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    SEO Description
-                  </label>
-                  <textarea
-                    value={formData.seoDescription}
-                    onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                    rows={3}
-                    placeholder="SEO meta description (150-160 characters recommended)"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    SEO Keywords
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {formData.seoKeywords?.map(keyword => (
-                      <span
-                        key={keyword}
-                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                      >
-                        {keyword}
-                        <button
-                          type="button"
-                          onClick={() => removeKeyword(keyword)}
-                          className="ml-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Status
+                        </label>
+                        <select
+                          value={formData.status}
+                          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
                         >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      value={keywordInput}
-                      onChange={(e) => setKeywordInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
-                      className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                      placeholder="Add SEO keyword..."
-                    />
-                    <button
-                      type="button"
-                      onClick={addKeyword}
-                      className="px-4 py-2 bg-green-600 text-white rounded-r-lg hover:bg-green-700"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+                          <option value="draft">Draft</option>
+                          <option value="published">Published</option>
+                          <option value="archived">Archived</option>
+                        </select>
+                      </div>
+                    </div>
 
-            {/* Settings Tab */}
-            {activeTab === 'settings' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                  <div className="flex items-center">
-                    <Globe className="h-5 w-5 text-slate-500 mr-3" />
                     <div>
-                      <h3 className="text-sm font-medium text-slate-900 dark:text-white">Public Page</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Make this page accessible to all users</p>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                        rows={3}
+                        placeholder="Describe what this page is about..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Route Path
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.routePath}
+                        onChange={(e) => setFormData({ ...formData, routePath: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                        placeholder="/path/to/page"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Tags
+                      </label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {formData.tags?.map(tag => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                          >
+                            <Tag className="h-3 w-3 mr-1" />
+                            {tag}
+                            <button
+                              type="button"
+                              onClick={() => removeTag(tag)}
+                              className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                          className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                          placeholder="Add a tag..."
+                        />
+                        <button
+                          type="button"
+                          onClick={addTag}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
+                        >
+                          Add
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.isPublic}
-                      onChange={(e) => setFormData({ ...formData, isPublic: e.target.checked })}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
-                  </label>
-                </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Thumbnail URL
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.thumbnailUrl || ''}
-                    onChange={(e) => setFormData({ ...formData, thumbnailUrl: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                    placeholder="https://example.com/page-thumbnail.png"
-                  />
-                </div>
+                {/* Content Tab */}
+                {activeTab === 'content' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Page Content (JSON)
+                        </label>
+                        <textarea
+                          value={contentText}
+                          onChange={(e) => setContentText(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
+                          rows={8}
+                          placeholder='{\n  "sections": [],\n  "blocks": []\n}'
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Change Description
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.changeDescription}
-                    onChange={(e) => setFormData({ ...formData, changeDescription: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
-                    placeholder="Describe what changed in this version..."
-                  />
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Layout Configuration (JSON)
+                        </label>
+                        <textarea
+                          value={layoutText}
+                          onChange={(e) => setLayoutText(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
+                          rows={8}
+                          placeholder='{\n  "type": "standard",\n  "header": true,\n  "footer": true\n}'
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Components Map (JSON)
+                        </label>
+                        <textarea
+                          value={componentsText}
+                          onChange={(e) => setComponentsText(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
+                          rows={6}
+                          placeholder='{\n  "hero": "hero-component-1",\n  "footer": "footer-component-2"\n}'
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                          Page Styles (JSON)
+                        </label>
+                        <textarea
+                          value={stylesText}
+                          onChange={(e) => setStylesText(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
+                          rows={6}
+                          placeholder='{\n  "theme": "modern",\n  "primaryColor": "#007bff"\n}'
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Design Tab */}
+                {activeTab === 'design' && (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Custom CSS
+                      </label>
+                      <textarea
+                        value={formData.customCSS}
+                        onChange={(e) => setFormData({ ...formData, customCSS: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
+                        rows={8}
+                        placeholder="/* Add your custom CSS here */&#10;.my-class {&#10;  color: blue;&#10;}"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Custom JavaScript
+                      </label>
+                      <textarea
+                        value={formData.customJS}
+                        onChange={(e) => setFormData({ ...formData, customJS: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
+                        rows={8}
+                        placeholder="// Add your custom JavaScript here&#10;document.addEventListener('DOMContentLoaded', function() {&#10;  console.log('Page loaded');&#10;});"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* SEO Tab */}
+                {activeTab === 'seo' && (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        SEO Title
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.seoTitle}
+                        onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                        placeholder="SEO optimized title for search engines"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        SEO Description
+                      </label>
+                      <textarea
+                        value={formData.seoDescription}
+                        onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                        rows={3}
+                        placeholder="SEO meta description (150-160 characters recommended)"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        SEO Keywords
+                      </label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {formData.seoKeywords?.map(keyword => (
+                          <span
+                            key={keyword}
+                            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          >
+                            {keyword}
+                            <button
+                              type="button"
+                              onClick={() => removeKeyword(keyword)}
+                              className="ml-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex">
+                        <input
+                          type="text"
+                          value={keywordInput}
+                          onChange={(e) => setKeywordInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+                          className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                          placeholder="Add SEO keyword..."
+                        />
+                        <button
+                          type="button"
+                          onClick={addKeyword}
+                          className="px-4 py-2 bg-green-600 text-white rounded-r-lg hover:bg-green-700"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Settings Tab */}
+                {activeTab === 'settings' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                      <div className="flex items-center">
+                        <Globe className="h-5 w-5 text-slate-500 mr-3" />
+                        <div>
+                          <h3 className="text-sm font-medium text-slate-900 dark:text-white">Public Page</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Make this page accessible to all users</p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.isPublic}
+                          onChange={(e) => setFormData({ ...formData, isPublic: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Change Description
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.changeDescription}
+                        onChange={(e) => setFormData({ ...formData, changeDescription: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
+                        placeholder="Describe what changed in this version..."
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Footer */}
-          <div className="flex justify-end space-x-3 p-6 border-t border-slate-200 dark:border-slate-700">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isLoading ? 'Saving...' : 'Save Page'}
-            </button>
+              {/* Footer */}
+              <div className="flex-shrink-0 flex justify-end space-x-3 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Saving...' : 'Save Page'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+        {/* Resize handle */}
+        {!isFullscreen && (
+          <div
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-nw-resize"
+            onMouseDown={handleResizeStart}
+          >
+            <div className="absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-slate-400"></div>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );

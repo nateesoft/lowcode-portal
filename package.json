@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@formatjs/intl-locale": "^4.2.11",
+    "@measured/puck": "^0.20.0",
     "axios": "^1.11.0",
     "dinero.js": "^1.9.1",
     "i18next": "^25.3.4",
