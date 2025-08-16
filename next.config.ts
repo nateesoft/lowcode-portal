@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Ensure trailing slash consistency
+  trailingSlash: false,
 };
 
 export default nextConfig;

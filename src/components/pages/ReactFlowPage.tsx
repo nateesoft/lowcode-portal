@@ -780,7 +780,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     {
       title: 'Panel',
       items: [
-        { id: 'Box', type: 'PANEL_BOX' }
+        { id: 'Panel Box', type: 'PANEL_BOX' }
       ]
     },
     {
@@ -2095,9 +2095,9 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
                           key={item.id}
                           className="w-full text-left px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-slate-700 dark:text-slate-300 transition-colors cursor-move"
                           draggable
-                          onDragStart={(event) => onDragStart(event, item.type)}
+                          onDragStart={(event) => onDragStart(event, item.id)}
                         >
-                          {item.type}
+                          {item.id}
                         </div>
                       ))}
                     </div>
@@ -2279,11 +2279,11 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
             <div className="space-y-1">
               {nodeCategories.flatMap(category => category.items).map((nodeType) => (
                 <button
-                  key={nodeType}
-                  onClick={() => handleNodeSelection(nodeType)}
+                  key={nodeType.id}
+                  onClick={() => handleNodeSelection(nodeType.id)}
                   className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 text-slate-700 dark:text-slate-300 transition-colors"
                 >
-                  {nodeType}
+                  {nodeType.id}
                 </button>
               ))}
             </div>
