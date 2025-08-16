@@ -3,6 +3,7 @@ import { Node, Edge, MarkerType } from 'reactflow';
 import { X, Settings, Database, Globe, Smartphone, Cpu, Box, Zap, Code, Workflow, ArrowRight } from 'lucide-react';
 import WeUIModal from '@/components/modals/WeUIModal';
 import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
+import CodeEditorModal from '@/components/modals/CodeEditorModal';
 
 interface NodePropertiesPanelProps {
   selectedNode: Node | null;
@@ -21,6 +22,9 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
 }) => {
   const [showWeUIModal, setShowWeUIModal] = useState(false);
   const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
+  const [showCodeEditorModal, setShowCodeEditorModal] = useState(false);
+
+  console.log('selectedNode:', selectedNode)
   
   if (!selectedNode && !selectedEdge) return null;
 
@@ -101,6 +105,11 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                 <div className="text-sm text-slate-500 dark:text-slate-400">
                   ID: {selectedNode ? selectedNode.id : selectedEdge?.id}
                 </div>
+                {selectedNode && (
+                  <div className="text-xs text-blue-600 dark:text-blue-400 font-mono">
+                    Type: {selectedNode.data.type || 'N/A'}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -484,21 +493,32 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                   <h4 className="font-medium text-white dark:text-white">Actions</h4>
                   
                   <div className="space-y-3">
-                    <button
-                      onClick={() => setShowWeUIModal(true)}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-blue-300/50"
-                    >
-                      <Code className="h-4 w-4" />
-                      <span>Open WeUI</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setShowServiceFlowModal(true)}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-slate-300/50"
-                    >
-                      <Workflow className="h-4 w-4" />
-                      <span>Open Service Flow</span>
-                    </button>
+                    {/* Show different buttons based on node type */}
+                    {selectedNode.data.type && selectedNode.data.type.endsWith('_PAGE') ? (
+                      <button
+                        onClick={() => setShowWeUIModal(true)}
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-blue-300/50"
+                      >
+                        <Code className="h-4 w-4" />
+                        <span>Open WeUI</span>
+                      </button>
+                    ) : selectedNode.data.type === 'API_CALL' ? (
+                      <button
+                        onClick={() => setShowServiceFlowModal(true)}
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-green-300/50"
+                      >
+                        <Workflow className="h-4 w-4" />
+                        <span>Open Service Flow</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowCodeEditorModal(true)}
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-purple-300/50"
+                      >
+                        <Code className="h-4 w-4" />
+                        <span>Open Code Editor</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </>
@@ -520,6 +540,12 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
       <ServiceFlowModal
         isOpen={showServiceFlowModal}
         onClose={() => setShowServiceFlowModal(false)}
+        nodeData={selectedNode?.data}
+      />
+      
+      <CodeEditorModal
+        isOpen={showCodeEditorModal}
+        onClose={() => setShowCodeEditorModal(false)}
         nodeData={selectedNode?.data}
       />
     </div>

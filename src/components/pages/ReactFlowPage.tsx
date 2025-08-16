@@ -28,6 +28,9 @@ import {
   Database, Cpu, Box, Zap, Globe,
   Menu, ChevronDown, ChevronRight, Plus, Square, Layers, X
 } from 'lucide-react';
+import WeUIModal from '@/components/modals/WeUIModal';
+import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
+import CodeEditorModal from '@/components/modals/CodeEditorModal';
 import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
 import { 
   CollaborativeUsersPanel, 
@@ -446,6 +449,12 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   const [isGeneratingWebsite, setIsGeneratingWebsite] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('modern');
+  
+  // Modal states
+  const [showWeUIModal, setShowWeUIModal] = useState(false);
+  const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
+  const [showCodeEditorModal, setShowCodeEditorModal] = useState(false);
+  const [doubleClickedNode, setDoubleClickedNode] = useState<Node | null>(null);
 
   // Load project and flow data when projectId is available
   useEffect(() => {
@@ -649,6 +658,30 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     [],
   );
 
+  const onNodeDoubleClick = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      setDoubleClickedNode(node);
+      
+      // Debug log to check node data
+      console.log('Double clicked node(master):', node);
+      console.log('Double clicked node:', node.data);
+      
+      // Open appropriate modal based on node type
+      const nodeType = node.data.type;
+      if (nodeType && nodeType.endsWith('_PAGE')) {
+        console.log('Opening WeUI Modal for:', nodeType);
+        setShowWeUIModal(true);
+      } else if (nodeType === 'API_CALL') {
+        console.log('Opening Service Flow Modal for:', nodeType);
+        setShowServiceFlowModal(true);
+      } else {
+        console.log('Opening Code Editor Modal for:', nodeType);
+        setShowCodeEditorModal(true);
+      }
+    },
+    [],
+  );
+
   const onUpdateNode = useCallback(
     (nodeId: string, updates: Partial<Node['data']>) => {
       setNodes((nds) =>
@@ -721,6 +754,11 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
         // Check if it's a group type
         const isGroupType = ['Group', 'Frame', 'Section'].includes(type);
         
+        // Find the actual node type from nodeCategories
+        const nodeType = nodeCategories
+          .flatMap(category => category.items)
+          .find(item => item.id === type)?.type || type;
+        
         const newNode: Node = {
           id: `${Date.now()}`, // Use timestamp for unique ID
           type: 'custom',
@@ -728,6 +766,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
           zIndex: isGroupType ? -100 : 1, // Group nodes ด้านล่าง, regular nodes ด้านบน
           data: {
             label: type,
+            type: nodeType, // Add the actual node type
             description: getNodeDescription(type),
             icon: getNodeIcon(type),
             isGroup: isGroupType,
@@ -2219,6 +2258,7 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
             onDrop={onDrop}
             onDragOver={onDragOver}
             onSelectionChange={onSelectionChange}
+            onNodeDoubleClick={onNodeDoubleClick}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
@@ -2420,6 +2460,25 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       {/* Collaborative Features */}
       <CollaborativeUsersPanel />
       <CollaborativeCursors />
+      
+      {/* Modals */}
+      <WeUIModal
+        isOpen={showWeUIModal}
+        onClose={() => setShowWeUIModal(false)}
+        nodeData={doubleClickedNode?.data}
+      />
+      
+      <ServiceFlowModal
+        isOpen={showServiceFlowModal}
+        onClose={() => setShowServiceFlowModal(false)}
+        nodeData={doubleClickedNode?.data}
+      />
+      
+      <CodeEditorModal
+        isOpen={showCodeEditorModal}
+        onClose={() => setShowCodeEditorModal(false)}
+        nodeData={doubleClickedNode?.data}
+      />
     </div>
   );
 };
