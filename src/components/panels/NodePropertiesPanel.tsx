@@ -4,6 +4,7 @@ import { X, Settings, Database, Globe, Smartphone, Cpu, Box, Zap, Code, Workflow
 import WeUIModal from '@/components/modals/WeUIModal';
 import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
+import UserTypeModal from '@/components/modals/UserTypeModal';
 
 interface NodePropertiesPanelProps {
   selectedNode: Node | null;
@@ -23,6 +24,7 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
   const [showWeUIModal, setShowWeUIModal] = useState(false);
   const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
   const [showCodeEditorModal, setShowCodeEditorModal] = useState(false);
+  const [showUserTypeModal, setShowUserTypeModal] = useState(false);
 
   console.log('selectedNode:', selectedNode)
   
@@ -510,6 +512,14 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
                         <Workflow className="h-4 w-4" />
                         <span>Open Service Flow</span>
                       </button>
+                    ) : selectedNode.data.type === 'ACTOR_USER' ? (
+                      <button
+                        onClick={() => setShowUserTypeModal(true)}
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-amber-300/50"
+                      >
+                        <Settings className="h-4 w-4" />
+                        <span>Open User Type</span>
+                      </button>
                     ) : (
                       <button
                         onClick={() => setShowCodeEditorModal(true)}
@@ -546,6 +556,12 @@ const NodePropertiesPanel: React.FC<NodePropertiesPanelProps> = ({
       <CodeEditorModal
         isOpen={showCodeEditorModal}
         onClose={() => setShowCodeEditorModal(false)}
+        nodeData={selectedNode?.data}
+      />
+      
+      <UserTypeModal
+        isOpen={showUserTypeModal}
+        onClose={() => setShowUserTypeModal(false)}
         nodeData={selectedNode?.data}
       />
     </div>

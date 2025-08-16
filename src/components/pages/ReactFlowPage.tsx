@@ -26,18 +26,19 @@ import 'reactflow/dist/style.css';
 import {
   ArrowLeft, Save, Play, Download, Upload, 
   Database, Cpu, Box, Zap, Globe,
-  Menu, ChevronDown, ChevronRight, Plus, Square, Layers, X
+  Menu, ChevronDown, ChevronRight, Plus, Square, Layers, X, GitBranch
 } from 'lucide-react';
 import WeUIModal from '@/components/modals/WeUIModal';
 import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
 import NodePropertiesPanel from '@/components/panels/NodePropertiesPanel';
+import FlowVersionPanel from '@/components/panels/FlowVersionPanel';
 import { 
   CollaborativeUsersPanel, 
   CollaborativeCursors, 
   CollaborativeNodeIndicator 
 } from '@/components/collaboration';
-import { flowAPI, myProjectAPI, FlowData } from '@/lib/api';
+import { flowAPI, myProjectAPI, FlowData, FlowVersion } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
 
 // Custom Node Components
@@ -362,7 +363,7 @@ const initialNodes: Node[] = [
     position: { x: 250, y: 25 },
     zIndex: 1,
     data: {
-      label: 'API Call',
+      label: 'API Call2',
       description: 'HTTP Request',
       icon: Database
     },
@@ -373,7 +374,7 @@ const initialNodes: Node[] = [
     position: { x: 100, y: 125 },
     zIndex: 1,
     data: {
-      label: 'UI Component',
+      label: 'UI Component2',
       description: 'Button/Form',
       icon: Box
     },
@@ -455,6 +456,9 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
   const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
   const [showCodeEditorModal, setShowCodeEditorModal] = useState(false);
   const [doubleClickedNode, setDoubleClickedNode] = useState<Node | null>(null);
+  
+  // Version control state
+  const [showVersionPanel, setShowVersionPanel] = useState(false);
 
   // Load project and flow data when projectId is available
   useEffect(() => {
@@ -583,6 +587,29 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
     }
   };
 
+  // Handle loading a version
+  const handleLoadVersion = useCallback((version: FlowVersion) => {
+    if (version.nodes && version.edges) {
+      // Update the flow with version data
+      const versionNodes = version.nodes.map(node => ({
+        ...node,
+        position: node.position || { x: 0, y: 0 }
+      }));
+      const versionEdges = version.edges.map(edge => ({
+        ...edge,
+        animated: edge.animated || false
+      }));
+      
+      setNodes(versionNodes);
+      setEdges(versionEdges);
+      
+      // Close the version panel
+      setShowVersionPanel(false);
+      
+      showSuccess(`Loaded version ${version.version} successfully`);
+    }
+  }, [setNodes, setEdges, showSuccess]);
+
   const onInit = (rfi: ReactFlowInstance) => {
     setReactFlowInstance(rfi);
     
@@ -680,6 +707,49 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       }
     },
     [],
+  );
+
+  const handleSaveCode = useCallback(
+    (nodeId: string, code: string, language: string) => {
+      // Update the node data with the saved code
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                code: code,
+                language: language,
+                lastModified: new Date().toISOString(),
+              },
+            };
+          }
+          return node;
+        })
+      );
+      
+      // Update the doubleClickedNode state as well
+      setDoubleClickedNode(prev => 
+        prev?.id === nodeId 
+          ? {
+              ...prev,
+              data: {
+                ...prev.data,
+                code: code,
+                language: language,
+                lastModified: new Date().toISOString(),
+              },
+            }
+          : prev
+      );
+      
+      // Show success message
+      showSuccess(`บันทึกโค้ดสำหรับ node ${nodeId} เรียบร้อยแล้ว`);
+      
+      console.log(`Code saved for node ${nodeId}:`, { code, language });
+    },
+    [setNodes, showSuccess],
   );
 
   const onUpdateNode = useCallback(
@@ -2196,6 +2266,13 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
                 <Upload className="h-4 w-4 mr-2" />
                 Import
               </button>
+              <button 
+                onClick={() => setShowVersionPanel(true)}
+                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center"
+              >
+                <GitBranch className="h-4 w-4 mr-2" />
+                Versions
+              </button>
               <button className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center">
                 <Download className="h-4 w-4 mr-2" />
                 Export
@@ -2477,7 +2554,18 @@ const ReactFlowPage: React.FC<ReactFlowPageProps> = ({
       <CodeEditorModal
         isOpen={showCodeEditorModal}
         onClose={() => setShowCodeEditorModal(false)}
-        nodeData={doubleClickedNode?.data}
+        nodeData={{...doubleClickedNode?.data, id: doubleClickedNode?.id}}
+        onSaveCode={handleSaveCode}
+      />
+      
+      {/* Flow Version Panel */}
+      <FlowVersionPanel
+        isOpen={showVersionPanel}
+        onClose={() => setShowVersionPanel(false)}
+        flowId={parseInt(projectId || '1')}
+        currentNodes={nodes}
+        currentEdges={edges}
+        onLoadVersion={handleLoadVersion}
       />
     </div>
   );

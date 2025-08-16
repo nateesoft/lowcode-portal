@@ -909,3 +909,220 @@ export const notesAPI = {
     await api.delete(`/notes/${id}`);
   }
 };
+
+// User Type API interfaces
+export interface UserType {
+  id?: number;
+  name: string;
+  description: string;
+  permissions: string[];
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateUserTypeRequest {
+  name: string;
+  description?: string;
+  permissions: string[];
+  isActive?: boolean;
+}
+
+export interface UpdateUserTypeRequest {
+  id: number;
+  name?: string;
+  description?: string;
+  permissions?: string[];
+  isActive?: boolean;
+}
+
+export const userTypeAPI = {
+  // Get all user types
+  getAll: async (): Promise<UserType[]> => {
+    const response = await fetch('/api/user-types');
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data;
+  },
+
+  // Create user type
+  create: async (data: CreateUserTypeRequest): Promise<UserType> => {
+    const response = await fetch('/api/user-types', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data;
+  },
+
+  // Update user type
+  update: async (data: UpdateUserTypeRequest): Promise<UserType> => {
+    const response = await fetch('/api/user-types', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data;
+  },
+
+  // Delete user type
+  delete: async (id: number): Promise<void> => {
+    const response = await fetch(`/api/user-types?id=${id}`, {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+  },
+};
+
+// Flow Version API interfaces
+export interface FlowVersion {
+  id?: number;
+  flowId: number;
+  version: string;
+  versionNumber: number;
+  name: string;
+  description?: string;
+  nodes: any[];
+  edges: any[];
+  metadata?: any;
+  createdBy: number;
+  createdAt?: string;
+  isActive?: boolean;
+  changeLog?: string;
+}
+
+export interface CreateFlowVersionRequest {
+  flowId: number;
+  name: string;
+  description?: string;
+  nodes: any[];
+  edges: any[];
+  metadata?: any;
+  createdBy: number;
+  changeLog?: string;
+  versionType?: 'major' | 'minor' | 'patch';
+}
+
+export interface UpdateFlowVersionRequest {
+  id: number;
+  name?: string;
+  description?: string;
+  nodes?: any[];
+  edges?: any[];
+  metadata?: any;
+  isActive?: boolean;
+  changeLog?: string;
+  action?: 'update' | 'restore';
+}
+
+export const flowVersionAPI = {
+  // Get all versions for a flow
+  getByFlowId: async (flowId: number): Promise<FlowVersion[]> => {
+    const response = await fetch(`/api/flow-versions?flowId=${flowId}`);
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data;
+  },
+
+  // Get active version for a flow
+  getActiveVersion: async (flowId: number): Promise<FlowVersion | null> => {
+    const response = await fetch(`/api/flow-versions?flowId=${flowId}&isActive=true`);
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data.length > 0 ? result.data[0] : null;
+  },
+
+  // Get specific version
+  getById: async (versionId: number): Promise<FlowVersion> => {
+    const response = await fetch(`/api/flow-versions?versionId=${versionId}`);
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data[0];
+  },
+
+  // Create new version
+  create: async (data: CreateFlowVersionRequest): Promise<FlowVersion> => {
+    const response = await fetch('/api/flow-versions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data;
+  },
+
+  // Update version
+  update: async (data: UpdateFlowVersionRequest): Promise<FlowVersion> => {
+    const response = await fetch('/api/flow-versions', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data;
+  },
+
+  // Restore version (make it active)
+  restore: async (versionId: number, changeLog?: string): Promise<FlowVersion> => {
+    const response = await fetch('/api/flow-versions', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: versionId,
+        action: 'restore',
+        changeLog: changeLog || 'Version restored'
+      }),
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data;
+  },
+
+  // Delete version
+  delete: async (versionId: number): Promise<void> => {
+    const response = await fetch(`/api/flow-versions?id=${versionId}`, {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+  },
+};

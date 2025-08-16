@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Code, Eye, Palette, Settings, FileText, Tag, Globe, Lock, Layout, Search } from 'lucide-react';
+import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search } from 'lucide-react';
 import { PageData, CreatePageRequest } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
+
 
 interface PageModalProps {
   isOpen: boolean;
@@ -387,7 +388,7 @@ const PageModal: React.FC<PageModalProps> = ({
                       type="text"
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                       className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
                       placeholder="Add a tag..."
                     />
@@ -493,6 +494,7 @@ const PageModal: React.FC<PageModalProps> = ({
               </div>
             )}
 
+
             {/* SEO Tab */}
             {activeTab === 'seo' && (
               <div className="space-y-6">
@@ -548,7 +550,7 @@ const PageModal: React.FC<PageModalProps> = ({
                       type="text"
                       value={keywordInput}
                       onChange={(e) => setKeywordInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
                       className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
                       placeholder="Add SEO keyword..."
                     />
