@@ -2021,20 +2021,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                 icon: FileText,
                 isActive: activeView === 'documentation',
                 onClick: () => setActiveView('documentation')
-              },
-              {
-                key: 'components',
-                label: 'Components',
-                icon: Component,
-                isActive: activeView === 'components',
-                onClick: () => setActiveView('components')
-              },
-              {
-                key: 'pages',
-                label: 'Pages',
-                icon: FileText,
-                isActive: activeView === 'pages',
-                onClick: () => setActiveView('pages')
               }
             ]}
           />
