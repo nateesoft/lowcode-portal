@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Code, Eye, Palette, Settings, FileText, Tag, Globe, Lock } from 'lucide-react';
+import { X, Save, Code, Eye, Palette, Settings, FileText, Tag, Globe, Lock, FormInput } from 'lucide-react';
 import { ComponentData, CreateComponentRequest } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
 
@@ -45,10 +45,12 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
     changeDescription: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'basic' | 'design' | 'code' | 'settings'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'design' | 'code' | 'jsonform' | 'settings'>('basic');
   const [tagInput, setTagInput] = useState('');
   const [propsText, setPropsText] = useState('{}');
   const [stylesText, setStylesText] = useState('{}');
+  const [jsonFormSchema, setJsonFormSchema] = useState('{}');
+  const [jsonFormUiSchema, setJsonFormUiSchema] = useState('{}');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -70,6 +72,11 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
       });
       setPropsText(JSON.stringify(editingComponent.props || {}, null, 2));
       setStylesText(JSON.stringify(editingComponent.styles || {}, null, 2));
+      
+      // Extract JSONForm schemas from props if they exist
+      const props = editingComponent.props || {};
+      setJsonFormSchema(JSON.stringify(props.jsonSchema || {}, null, 2));
+      setJsonFormUiSchema(JSON.stringify(props.uiSchema || {}, null, 2));
     } else {
       // Reset for new component
       setFormData({
@@ -89,6 +96,8 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
       });
       setPropsText('{}');
       setStylesText('{}');
+      setJsonFormSchema('{}');
+      setJsonFormUiSchema('{}');
     }
     setTagInput('');
   }, [editingComponent, userId, isOpen]);
@@ -101,6 +110,8 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
       // Parse JSON fields
       let props = {};
       let styles = {};
+      let jsonSchema = {};
+      let uiSchema = {};
       
       try {
         props = JSON.parse(propsText);
@@ -117,10 +128,33 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
         setIsLoading(false);
         return;
       }
+      
+      try {
+        jsonSchema = JSON.parse(jsonFormSchema);
+      } catch (e) {
+        showError('Invalid JSON in JSONForm schema field');
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        uiSchema = JSON.parse(jsonFormUiSchema);
+      } catch (e) {
+        showError('Invalid JSON in JSONForm UI schema field');
+        setIsLoading(false);
+        return;
+      }
+
+      // Merge JSONForm schemas into props
+      const mergedProps = {
+        ...props,
+        jsonSchema,
+        uiSchema
+      };
 
       const componentData = {
         ...formData,
-        props,
+        props: mergedProps,
         styles,
         changeDescription: formData.changeDescription || (editingComponent ? 'Component updated' : 'Component created')
       };
@@ -176,6 +210,7 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
               { key: 'basic', label: 'Basic Info', icon: FileText },
               { key: 'design', label: 'Design', icon: Palette },
               { key: 'code', label: 'Code', icon: Code },
+              { key: 'jsonform', label: 'JSONForm.io', icon: FormInput },
               { key: 'settings', label: 'Settings', icon: Settings }
             ].map(tab => (
               <button
@@ -301,7 +336,7 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
                       type="text"
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                       className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white"
                       placeholder="Add a tag..."
                     />
@@ -377,6 +412,80 @@ const ComponentModal: React.FC<ComponentModalProps> = ({
                     rows={12}
                     placeholder="function handleClick() {&#10;  console.log('Component action');&#10;}&#10;&#10;// Add your component logic here..."
                   />
+                </div>
+              </div>
+            )}
+
+            {/* JSONForm.io Tab */}
+            {activeTab === 'jsonform' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      JSON Schema
+                    </label>
+                    <textarea
+                      value={jsonFormSchema}
+                      onChange={(e) => setJsonFormSchema(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
+                      rows={10}
+                      placeholder={`{
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string",
+      "title": "First Name"
+    },
+    "lastName": {
+      "type": "string",
+      "title": "Last Name"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "title": "Email"
+    }
+  },
+  "required": ["firstName", "lastName", "email"]
+}`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                      UI Schema (Optional)
+                    </label>
+                    <textarea
+                      value={jsonFormUiSchema}
+                      onChange={(e) => setJsonFormUiSchema(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white font-mono text-sm"
+                      rows={8}
+                      placeholder={`{
+  "firstName": {
+    "ui:placeholder": "Enter your first name"
+  },
+  "lastName": {
+    "ui:placeholder": "Enter your last name"
+  },
+  "email": {
+    "ui:placeholder": "Enter your email address",
+    "ui:help": "We'll never share your email"
+  }
+}`}
+                    />
+                  </div>
+
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">JSONForm.io Configuration</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                      This tab allows you to define form schemas using JSON Schema and UI Schema for dynamic form generation.
+                    </p>
+                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                      <li>• JSON Schema defines the data structure and validation rules</li>
+                      <li>• UI Schema controls the appearance and behavior of form fields</li>
+                      <li>• Both schemas will be stored in the component's props field</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             )}

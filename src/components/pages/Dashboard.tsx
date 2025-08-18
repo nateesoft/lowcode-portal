@@ -51,7 +51,7 @@ import { serviceAPI, ServiceResponse, componentAPI, ComponentData, ComponentStat
 import { useAlertActions } from '@/hooks/useAlert';
 import { useAlert } from '@/contexts/AlertContext';
 import AlertDemo from '@/components/ui/AlertDemo';
-import ComponentModal from '@/components/modals/ComponentModal';
+import ComponentBuilderModal from '@/components/modals/ComponentBuilderModal';
 import ComponentHistoryPanel from '@/components/panels/ComponentHistoryPanel';
 import PageModal from '@/components/modals/PageModal';
 import PageHistoryPanel from '@/components/panels/PageHistoryPanel';
@@ -880,64 +880,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                   ))}
                 </div>
               )}
-            </div>
-          </div>
-        );
-
-      case 'components':
-        return (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('components')}</h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                  สร้างและจัดการข้อมูล Components ที่ใช้ในแต่ละ page
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowWeUIModal(true)}
-                className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {t('newComponent')}
-              </button>
-            </div>
-            <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { name: 'Header Navigation', category: 'Layout', usage: 15 },
-                  { name: 'Product Card', category: 'Display', usage: 8 },
-                  { name: 'Contact Form', category: 'Form', usage: 5 },
-                  { name: 'Footer', category: 'Layout', usage: 12 },
-                  { name: 'Modal Dialog', category: 'Overlay', usage: 6 },
-                  { name: 'Button Group', category: 'Control', usage: 20 }
-                ].map((component, index) => (
-                  <div key={index} className="border border-slate-200 dark:border-slate-700 rounded-lg p-4 hover:shadow-md transition">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded">
-                          <Component className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-900 dark:text-white">{component.name}</div>
-                          <div className="text-sm text-slate-600 dark:text-slate-400">{component.category}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-600 dark:text-slate-400">Used in {component.usage} places</span>
-                      <div className="flex items-center space-x-2">
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                          <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                        </button>
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
-                          <Eye className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         );
@@ -2606,7 +2548,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       />
 
       {/* Component Management Modals */}
-      <ComponentModal
+      <ComponentBuilderModal
         isOpen={showComponentModal}
         onClose={() => {
           setShowComponentModal(false);
