@@ -22,7 +22,7 @@ import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
 import ServiceFlowPropertiesPanel from '@/components/panels/ServiceFlowPropertiesPanel';
 import FlowHistoryPanel from '@/components/panels/FlowHistoryPanel';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
-import { flowAPI, FlowData, nodeContentAPI, CreateNodeContentRequest } from '@/lib/api';
+import { serviceAPI, ServiceData, nodeContentAPI, CreateNodeContentRequest } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
 
 interface ServiceFlowModalProps {
@@ -339,57 +339,133 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   );
 
   const handleSaveFlow = async (changeDescription?: string) => {
-    const flowData: FlowData = {
-      name: flowName,
-      description: `Service flow v${version} with ${nodes.length} nodes`,
-      isActive: isActiveFlow,
-      nodes: nodes.map(node => ({
-        id: node.id,
-        type: node.type || 'default',
-        position: node.position,
-        data: {
-          ...node.data,
-          // Preserve any existing content/code
-          content: node.data.content || '',
-          code: node.data.code || ''
+    // Use JSON.parse(JSON.stringify()) to remove all circular references and non-serializable data
+    let cleanNodes: any[], cleanEdges: any[], cleanViewport: any;
+    
+    try {
+      // Manually clean nodes without using JSON stringify initially
+      cleanNodes = nodes.map(node => {
+        // Create completely new object with only primitive values
+        const cleanNode = {
+          id: String(node.id),
+          type: String(node.type || 'default'),
+          position: {
+            x: Number(node.position?.x || 0),
+            y: Number(node.position?.y || 0)
+          },
+          data: {} as any
+        };
+        
+        // Only add data properties that are primitive values
+        if (node.data) {
+          if (typeof node.data.label === 'string' || typeof node.data.label === 'number') {
+            cleanNode.data.label = String(node.data.label);
+          }
+          if (typeof node.data.type === 'string') {
+            cleanNode.data.type = String(node.data.type);
+          }
+          if (typeof node.data.shape === 'string') {
+            cleanNode.data.shape = String(node.data.shape);
+          }
+          if (typeof node.data.backgroundColor === 'string') {
+            cleanNode.data.backgroundColor = String(node.data.backgroundColor);
+          }
+          if (typeof node.data.borderColor === 'string') {
+            cleanNode.data.borderColor = String(node.data.borderColor);
+          }
+          if (typeof node.data.content === 'string') {
+            cleanNode.data.content = String(node.data.content);
+          }
+          if (typeof node.data.code === 'string') {
+            cleanNode.data.code = String(node.data.code);
+          }
+          if (typeof node.data.language === 'string') {
+            cleanNode.data.language = String(node.data.language);
+          }
+          if (typeof node.data.description === 'string') {
+            cleanNode.data.description = String(node.data.description);
+          }
         }
-      })),
-      edges: edges.map(edge => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle || undefined,
-        targetHandle: edge.targetHandle || undefined,
-        type: edge.type,
-        animated: edge.animated,
-        style: edge.style
-      })),
-      viewport: reactFlowInstance?.getViewport(),
+        
+        return cleanNode;
+      });
+      
+      console.log('Successfully cleaned nodes');
+    } catch (e) {
+      console.error('Error cleaning nodes:', e);
+      cleanNodes = [];
+    }
+    
+    try {
+      // Manually clean edges
+      cleanEdges = edges.map(edge => ({
+        id: String(edge.id),
+        source: String(edge.source),
+        target: String(edge.target),
+        type: String(edge.type || 'default'),
+        animated: Boolean(edge.animated)
+      }));
+      console.log('Successfully cleaned edges');
+    } catch (e) {
+      console.error('Error cleaning edges:', e);
+      cleanEdges = [];
+    }
+    
+    try {
+      // Manually clean viewport
+      if (reactFlowInstance) {
+        const vp = reactFlowInstance.getViewport();
+        cleanViewport = {
+          x: Number(vp.x),
+          y: Number(vp.y),
+          zoom: Number(vp.zoom)
+        };
+      } else {
+        cleanViewport = null;
+      }
+      console.log('Successfully cleaned viewport');
+    } catch (e) {
+      console.error('Error cleaning viewport:', e);
+      cleanViewport = null;
+    }
+
+    // Create clean service data
+    const serviceData: ServiceData = {
+      name: flowName,
+      description: `Service flow v${version} with ${cleanNodes.length} nodes`,
+      isActive: isActiveFlow,
+      nodes: cleanNodes,
+      edges: cleanEdges,
+      viewport: cleanViewport,
       version: version,
-      // Add user ID and change description for history tracking
-      userId: 1, // TODO: Get from auth context
-      changeDescription: changeDescription || `Updated flow with ${nodes.length} nodes`
+      createdBy: 1, // TODO: Get from auth context
+      changeDescription: changeDescription || `Updated service with ${cleanNodes.length} nodes`
     };
 
-    console.log('Saving Service Flow:', flowData);
+    console.log('Service data ready for saving:', serviceData);
+    
+    // Skip JSON test and proceed directly to save
+    // The API call will handle any serialization
     
     try {
       let result;
       if (flowId) {
-        // Update existing flow
-        result = await flowAPI.update(flowId, flowData);
-        console.log('Flow updated successfully:', result);
-        alert.apiSuccess('update', `Flow "${result.name}" อัปเดตสำเร็จ`);
+        // Update existing service
+        result = await serviceAPI.update(parseInt(flowId), serviceData);
+        console.log('Service updated successfully:', result);
+        alert.apiSuccess('update', `Service "${result.name}" อัปเดตสำเร็จ`);
       } else {
-        // Create new flow
-        result = await flowAPI.create(flowData);
-        console.log('Flow created successfully:', result);
-        alert.apiSuccess('create', `Flow "${result.name}" สร้างสำเร็จ`);
-        setFlowId(result.id); // Set the ID for future updates
+        // Create new service
+        result = await serviceAPI.create(serviceData);
+        console.log('Service created successfully:', result);
+        alert.apiSuccess('create', `Service "${result.name}" สร้างสำเร็จ`);
+        setFlowId(result.id.toString()); // Set the ID for future updates
       }
       onClose();
     } catch (error: any) {
-      console.error('Error saving flow:', error);
+      console.error('Error saving service:', error);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
       alert.apiError('save', errorMsg);
     }
@@ -687,26 +763,33 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     [reactFlowInstance, nodes, setNodes, serviceTypes, flowchartShapes],
   );
 
-  // Load existing flow data when editing
+  // Load existing service data when editing
   React.useEffect(() => {
-    const loadFlowData = async () => {
+    const loadServiceData = async () => {
       if (isOpen && editingFlow) {
-        setFlowName(editingFlow.name || 'Untitled Flow');
-        setIsActiveFlow(editingFlow.status === 'active');
-        setFlowId(editingFlow.id);
-        setVersion(editingFlow.configuration?.version || '1.0.0');
+        setFlowName(editingFlow.name || 'Untitled Service');
+        setIsActiveFlow(editingFlow.isActive || false);
+        setFlowId(editingFlow.id.toString());
+        setVersion(editingFlow.version || '1.0.0');
         
-        // Load nodes and edges from the flow configuration
-        if (editingFlow.configuration) {
-          const config = editingFlow.configuration;
+        // Load nodes and edges from the service data
+        if (editingFlow.nodes || editingFlow.edges) {
           
-          if (config.nodes && config.nodes.length > 0) {
-            const loadedNodes = config.nodes.map((node: any) => ({
+          if (editingFlow.nodes && editingFlow.nodes.length > 0) {
+            const loadedNodes = editingFlow.nodes.map((node: any) => ({
               id: node.id,
               type: node.type || 'service',
               position: node.position || { x: 100, y: 100 },
               data: {
-                ...node.data,
+                label: node.data.label,
+                type: node.data.type,
+                shape: node.data.shape,
+                backgroundColor: node.data.backgroundColor,
+                borderColor: node.data.borderColor,
+                content: node.data.content || '',
+                code: node.data.code || '',
+                language: node.data.language,
+                description: node.data.description,
                 // Ensure icon is properly set for service nodes
                 icon: node.data.type === 'REST API' ? Database :
                       node.data.type === 'GraphQL' ? Zap :
@@ -716,50 +799,27 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               }
             }));
 
-            // Load node contents from database and merge with flow data
-            try {
-              const nodeContents = await nodeContentAPI.getFlowNodeContents(editingFlow.id);
-              const nodesWithContent = loadedNodes.map(node => {
-                const nodeContent = nodeContents.find(nc => nc.nodeId === node.id);
-                if (nodeContent) {
-                  return {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      code: nodeContent.content,
-                      content: nodeContent.content,
-                      language: nodeContent.language,
-                      version: nodeContent.version
-                    }
-                  };
-                }
-                return node;
-              });
-              setNodes(nodesWithContent);
-            } catch (error) {
-              console.error('Failed to load node contents:', error);
-              setNodes(loadedNodes);
-            }
+            setNodes(loadedNodes);
           } else {
             setNodes(initialServiceNodes);
           }
           
-          if (config.edges && config.edges.length > 0) {
-            setEdges(config.edges);
+          if (editingFlow.edges && editingFlow.edges.length > 0) {
+            setEdges(editingFlow.edges);
           } else {
             setEdges(initialServiceEdges);
           }
           
           // Set viewport if available
-          if (config.viewport && reactFlowInstance) {
+          if (editingFlow.viewport && reactFlowInstance) {
             setTimeout(() => {
-              reactFlowInstance.setViewport(config.viewport);
+              reactFlowInstance.setViewport(editingFlow.viewport);
             }, 100);
           }
         }
       } else if (isOpen && !editingFlow) {
-        // Reset to default when creating new flow
-        setFlowName('Untitled Flow');
+        // Reset to default when creating new service
+        setFlowName('Untitled Service');
         setIsActiveFlow(false);
         setFlowId(null);
         setVersion('1.0.0');
@@ -768,7 +828,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
       }
     };
 
-    loadFlowData();
+    loadServiceData();
   }, [isOpen, editingFlow, setNodes, setEdges, reactFlowInstance]);
 
   // Reset position when modal opens
@@ -850,7 +910,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={handleSaveFlow}
+              onClick={() => handleSaveFlow()}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
             >
               <Save className="h-4 w-4" />

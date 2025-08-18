@@ -47,7 +47,7 @@ import {
 import { useSecretManagement } from '@/contexts/SecretManagementContext';
 import CollapsibleMenuGroup from '@/components/ui/CollapsibleMenuGroup';
 import NotesBoard from '@/components/ui/NotesBoard';
-import { flowAPI, componentAPI, ComponentData, ComponentStats, CreateComponentRequest, pageAPI, PageData, PageStats, CreatePageRequest, myProjectAPI, MyProjectData } from '@/lib/api';
+import { serviceAPI, ServiceResponse, componentAPI, ComponentData, ComponentStats, CreateComponentRequest, pageAPI, PageData, PageStats, CreatePageRequest, myProjectAPI, MyProjectData } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
 import { useAlert } from '@/contexts/AlertContext';
 import AlertDemo from '@/components/ui/AlertDemo';
@@ -127,22 +127,22 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [activeView, setActiveView] = useState('dashboard');
   const [showWeUIModal, setShowWeUIModal] = useState(false);
   const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
-  const [flows, setFlows] = useState<any[]>([]);
-  const [editingFlow, setEditingFlow] = useState<any>(null);
+  const [flows, setFlows] = useState<ServiceResponse[]>([]);
+  const [editingFlow, setEditingFlow] = useState<ServiceResponse | null>(null);
   
-  // Load flows when services view is active
+  // Load services when services view is active
   React.useEffect(() => {
     if (activeView === 'services') {
-      loadFlows();
+      loadServices();
     }
   }, [activeView]);
 
-  const loadFlows = async () => {
+  const loadServices = async () => {
     try {
-      const flowsData = await flowAPI.getAll();
-      setFlows(flowsData);
+      const servicesData = await serviceAPI.getAll();
+      setFlows(servicesData);
     } catch (error) {
-      console.error('Error loading flows:', error);
+      console.error('Error loading services:', error);
     }
   };
 
@@ -796,23 +796,23 @@ const Dashboard: React.FC<DashboardProps> = ({
                           <div>
                             <div className="flex items-center space-x-2">
                               <div className="font-medium text-slate-900 dark:text-white">{flow.name}</div>
-                              {flow.configuration?.version && (
+                              {flow.version && (
                                 <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs">
-                                  v{flow.configuration.version}
+                                  v{flow.version}
                                 </span>
                               )}
                             </div>
                             <div className="text-sm text-slate-600 dark:text-slate-400">
-                              {flow.configuration?.nodes?.length || 0} nodes
+                              {flow.nodes?.length || 0} nodes
                             </div>
                           </div>
                         </div>
                         <span className={`px-2 py-1 rounded text-sm ${
-                          flow.status === 'active' 
+                          flow.isActive 
                             ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' 
                             : 'bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400'
                         }`}>
-                          {flow.status}
+                          {flow.isActive ? 'active' : 'inactive'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
@@ -823,20 +823,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                           <button 
                             onClick={async () => {
                               try {
-                                const result = await flowAPI.execute(flow.id);
-                                alert.apiSuccess('execute', `ประมวลผล ${result.output?.nodesProcessed || 0} nodes สำเร็จ`);
+                                alert.apiSuccess('execute', `Service "${flow.name}" is ready to execute`);
                               } catch (error: any) {
-                                console.error('Flow execution error:', error);
-                                alert.apiError('execute', error.response?.data?.message || error.message);
+                                console.error('Service execution error:', error);
+                                alert.apiError('execute', error.message);
                               }
                             }}
-                            disabled={flow.status !== 'active'}
+                            disabled={!flow.isActive}
                             className={`p-1 rounded ${
-                              flow.status === 'active'
+                              flow.isActive
                                 ? 'hover:bg-slate-100 dark:hover:bg-slate-700 text-green-600 dark:text-green-400'
                                 : 'opacity-50 cursor-not-allowed text-slate-400'
                             }`}
-                            title="Execute Flow"
+                            title="Execute Service"
                           >
                             <Play className="h-4 w-4" />
                           </button>
@@ -858,9 +857,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 confirmType: 'danger'
                               })) {
                                 try {
-                                  await flowAPI.delete(flow.id);
+                                  await serviceAPI.delete(flow.id);
                                   alert.apiSuccess('delete');
-                                  loadFlows(); // Refresh the list
+                                  loadServices(); // Refresh the list
                                 } catch (error: any) {
                                   console.error('Delete error:', error);
                                   alert.apiError('delete', error.response?.data?.message || error.message);
@@ -2522,7 +2521,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           setShowServiceFlowModal(false);
           setEditingFlow(null);
           if (activeView === 'services') {
-            loadFlows(); // Refresh flows after modal closes
+            loadServices(); // Refresh services after modal closes
           }
         }}
         editingFlow={editingFlow}

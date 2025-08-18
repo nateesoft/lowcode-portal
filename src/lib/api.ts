@@ -1126,3 +1126,67 @@ export const flowVersionAPI = {
     }
   },
 };
+
+// Services API
+export interface ServiceData {
+  id?: number;
+  name: string;
+  description?: string;
+  nodes?: any;
+  edges?: any;
+  viewport?: any;
+  version?: string;
+  isActive?: boolean;
+  changeDescription?: string;
+  createdBy: number;
+  creator?: User;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ServiceResponse extends ServiceData {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const serviceAPI = {
+  // Get all services
+  getAll: async (userId?: number): Promise<ServiceResponse[]> => {
+    let url = '/services';
+    if (userId) {
+      url += `?userId=${userId}`;
+    }
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  // Get active services
+  getActive: async (): Promise<ServiceResponse[]> => {
+    const response = await api.get('/services/active');
+    return response.data;
+  },
+
+  // Get service by ID
+  getById: async (id: number): Promise<ServiceResponse> => {
+    const response = await api.get(`/services/${id}`);
+    return response.data;
+  },
+
+  // Create new service
+  create: async (data: ServiceData): Promise<ServiceResponse> => {
+    const response = await api.post('/services', data);
+    return response.data;
+  },
+
+  // Update service
+  update: async (id: number, data: Partial<ServiceData>): Promise<ServiceResponse> => {
+    const response = await api.patch(`/services/${id}`, data);
+    return response.data;
+  },
+
+  // Delete service
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/services/${id}`);
+  },
+};
