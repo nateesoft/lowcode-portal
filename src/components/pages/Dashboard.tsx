@@ -422,7 +422,12 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('myProjects')}</h2>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('myProjects')}</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  ภาพรวมการทำงานทั้งหมดภายใน Project
+                </p>
+              </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button 
                   onClick={() => setShowMyProjectModal(true)}
@@ -748,7 +753,12 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('services')}</h2>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('services')}</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  สร้างและจัดการ APIs ในระบบ
+                </p>
+              </div>
               <button 
                 onClick={() => setShowServiceFlowModal(true)}
                 className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
@@ -842,7 +852,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                           </button>
                           <button 
                             onClick={async () => {
-                              if (confirm(`Are you sure you want to delete "${flow.name}"? This action cannot be undone.`)) {
+                              if (await showConfirm(`Are you sure you want to delete "${flow.name}"?`, 'This action cannot be undone.', {
+                                confirmText: 'Delete',
+                                cancelText: 'Cancel',
+                                confirmType: 'danger'
+                              })) {
                                 try {
                                   await flowAPI.delete(flow.id);
                                   alert.apiSuccess('delete');
@@ -875,7 +889,12 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
             <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('components')}</h2>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{t('components')}</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  สร้างและจัดการข้อมูล Components ที่ใช้ในแต่ละ page
+                </p>
+              </div>
               <button 
                 onClick={() => setShowWeUIModal(true)}
                 className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
