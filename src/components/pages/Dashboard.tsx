@@ -1886,6 +1886,54 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         );
 
+      case 'user-groups':
+        return (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">User Groups</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  จัดการกลุ่มผู้ใช้งานและสิทธิ์การเข้าถึง
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button 
+                  onClick={() => {
+                    // TODO: Open create user group modal
+                    console.log('Create user group');
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition flex items-center justify-center"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Group
+                </button>
+              </div>
+            </div>
+
+            {/* User Groups Content */}
+            <div className="p-4 sm:p-6">
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                  No User Groups Yet
+                </h3>
+                <p className="text-slate-600 dark:text-slate-400 mb-6">
+                  Create your first user group to organize team members and manage permissions
+                </p>
+                <button
+                  onClick={() => {
+                    // TODO: Open create user group modal
+                    console.log('Create first group');
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                >
+                  Create First Group
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -2015,6 +2063,21 @@ const Dashboard: React.FC<DashboardProps> = ({
                 isActive: activeView === 'secret-management',
                 onClick: () => setActiveView('secret-management'),
                 badge: secrets.length > 0 ? secrets.length : undefined
+              }
+            ]}
+          />
+          {/* Users */}
+          <CollapsibleMenuGroup
+            title="Users"
+            icon={Users}
+            defaultExpanded={false}
+            items={[
+              {
+                key: 'user-groups',
+                label: 'User Groups',
+                icon: Users,
+                isActive: activeView === 'user-groups',
+                onClick: () => setActiveView('user-groups')
               }
             ]}
           />

@@ -1127,6 +1127,117 @@ export const flowVersionAPI = {
   },
 };
 
+// User Groups API interfaces
+export interface UserGroupData {
+  id?: number;
+  name: string;
+  description?: string;
+  status?: string;
+  permissions?: string[];
+  settings?: any;
+  color?: string;
+  icon?: string;
+  isSystem?: boolean;
+  createdById?: number;
+  createdBy?: User;
+  members?: User[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateUserGroupRequest {
+  name: string;
+  description?: string;
+  status?: string;
+  permissions?: string[];
+  settings?: any;
+  color?: string;
+  icon?: string;
+  memberIds?: number[];
+}
+
+export interface UpdateUserGroupRequest {
+  name?: string;
+  description?: string;
+  status?: string;
+  permissions?: string[];
+  settings?: any;
+  color?: string;
+  icon?: string;
+}
+
+export interface UserGroupStats {
+  totalGroups: number;
+  totalMembers: number;
+  byStatus: { [key: string]: number };
+  averageMembersPerGroup: number;
+  topGroups: Array<{
+    id: number;
+    name: string;
+    memberCount: number;
+    status: string;
+  }>;
+}
+
+export const userGroupAPI = {
+  // Get all user groups
+  getAll: async (includeAll?: boolean): Promise<UserGroupData[]> => {
+    let url = '/user-groups';
+    if (includeAll) {
+      url += '?all=true';
+    }
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  // Get user group by ID
+  getById: async (id: number): Promise<UserGroupData> => {
+    const response = await api.get(`/user-groups/${id}`);
+    return response.data;
+  },
+
+  // Create user group
+  create: async (data: CreateUserGroupRequest): Promise<UserGroupData> => {
+    const response = await api.post('/user-groups', data);
+    return response.data;
+  },
+
+  // Update user group
+  update: async (id: number, data: UpdateUserGroupRequest): Promise<UserGroupData> => {
+    const response = await api.patch(`/user-groups/${id}`, data);
+    return response.data;
+  },
+
+  // Delete user group
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/user-groups/${id}`);
+  },
+
+  // Get groups stats
+  getStats: async (): Promise<UserGroupStats> => {
+    const response = await api.get('/user-groups/stats');
+    return response.data;
+  },
+
+  // Get groups that user belongs to
+  getMyGroups: async (): Promise<UserGroupData[]> => {
+    const response = await api.get('/user-groups/my-groups');
+    return response.data;
+  },
+
+  // Add members to group
+  addMembers: async (id: number, userIds: number[]): Promise<UserGroupData> => {
+    const response = await api.post(`/user-groups/${id}/members`, { userIds });
+    return response.data;
+  },
+
+  // Remove members from group
+  removeMembers: async (id: number, userIds: number[]): Promise<UserGroupData> => {
+    const response = await api.delete(`/user-groups/${id}/members`, { data: { userIds } });
+    return response.data;
+  },
+};
+
 // Services API
 export interface ServiceData {
   id?: number;
