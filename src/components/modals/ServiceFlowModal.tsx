@@ -298,6 +298,13 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     setReactFlowInstance(rfi);
   };
 
+  // Handle node double click to open CodeEditorModal
+  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+    console.log('Double clicked node:', node);
+    setSelectedNodeForEditor(node);
+    setShowCodeEditor(true);
+  }, []);
+
   // Handle node deletion with useEffect
   React.useEffect(() => {
     const handleDeleteServiceNode = (event: any) => {
@@ -1062,6 +1069,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
               onDrop={onDrop}
               onDragOver={onDragOver}
               onSelectionChange={onSelectionChange}
+              onNodeDoubleClick={onNodeDoubleClick}
               nodeTypes={serviceNodeTypes}
               fitView
               deleteKeyCode={null}
