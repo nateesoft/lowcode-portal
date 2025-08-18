@@ -697,13 +697,6 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     setShowHistoryPanel(!showHistoryPanel);
   }, [flowId, showHistoryPanel, alert]);
 
-  // Legacy service types for drag & drop (keeping for compatibility)
-  const dragDropServiceTypes = [
-    { type: 'REST API', icon: Database, color: 'bg-blue-100 text-blue-800' },
-    { type: 'GraphQL', icon: Zap, color: 'bg-purple-100 text-purple-800' },
-    { type: 'Microservice', icon: Box, color: 'bg-green-100 text-green-800' },
-    { type: 'Function', icon: Cpu, color: 'bg-yellow-100 text-yellow-800' },
-  ];
 
   const flowchartShapes = [
     { shape: 'rectangle', name: 'Process', icon: Square, color: 'bg-slate-100 text-slate-800' },
@@ -714,14 +707,6 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     { shape: 'octagon', name: 'Stop', icon: Octagon, color: 'bg-red-100 text-red-800' },
   ];
 
-  const onServiceDragStart = (event: React.DragEvent, serviceType: string, icon: any) => {
-    event.dataTransfer.setData('application/reactflow', JSON.stringify({
-      nodeType: 'service',
-      type: serviceType,
-      icon: icon.name
-    }));
-    event.dataTransfer.effectAllowed = 'move';
-  };
 
   const onShapeDragStart = (event: React.DragEvent, shape: string) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify({
@@ -762,7 +747,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
             data: {
               label: `New ${parsedData.type}`,
               type: parsedData.type,
-              icon: dragDropServiceTypes.find(s => s.type === parsedData.type)?.icon || Box
+              icon: Box // Default icon for service nodes
             },
           };
         } else if (parsedData.nodeType === 'flowchart') {
@@ -785,7 +770,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         setNodes((nds) => nds.concat(newNode));
       }
     },
-    [reactFlowInstance, nodes, setNodes, dragDropServiceTypes, flowchartShapes],
+    [reactFlowInstance, nodes, setNodes, flowchartShapes],
   );
 
   // Load existing service data when editing
@@ -1011,32 +996,6 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
           {/* Tool Palette Sidebar */}
           <div className="w-64 bg-slate-50 dark:bg-slate-700 border-r border-slate-200 dark:border-slate-600 flex flex-col">
             <div className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
-              {/* Service Types Section */}
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
-                  Service Types
-                </h3>
-                <div className="space-y-2">
-                  {dragDropServiceTypes.map((service) => {
-                    const IconComponent = service.icon;
-                    return (
-                      <div
-                        key={service.type}
-                        className="p-3 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 cursor-move transition-colors"
-                        draggable
-                        onDragStart={(event) => onServiceDragStart(event, service.type, service.icon)}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <IconComponent className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                          <span className="text-sm text-slate-700 dark:text-slate-300">
-                            {service.type}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
 
               {/* Flowchart Shapes Section */}
               <div>
