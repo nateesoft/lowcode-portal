@@ -801,6 +801,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                                   v{flow.version}
                                 </span>
                               )}
+                              {flow.serviceType && (
+                                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded text-xs">
+                                  {flow.serviceType.replace('_', ' ')}
+                                </span>
+                              )}
                             </div>
                             <div className="text-sm text-slate-600 dark:text-slate-400">
                               {flow.nodes?.length || 0} nodes

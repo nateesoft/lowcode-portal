@@ -273,6 +273,21 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
   const [flowId, setFlowId] = useState<string | null>(null);
   const [version, setVersion] = useState('1.0.0');
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
+  const [serviceType, setServiceType] = useState('REST_API');
+
+  // Service Type Options
+  const serviceTypes = [
+    { value: 'REST_API', label: 'REST API', description: 'HTTP REST API service' },
+    { value: 'GRAPHQL', label: 'GraphQL', description: 'GraphQL API service' },
+    { value: 'WEBSOCKET', label: 'WebSocket', description: 'Real-time WebSocket service' },
+    { value: 'DATABASE', label: 'Database', description: 'Database operation service' },
+    { value: 'MESSAGE_QUEUE', label: 'Message Queue', description: 'Message queue service' },
+    { value: 'FILE_STORAGE', label: 'File Storage', description: 'File upload/download service' },
+    { value: 'AUTHENTICATION', label: 'Authentication', description: 'User authentication service' },
+    { value: 'NOTIFICATION', label: 'Notification', description: 'Push notification service' },
+    { value: 'WORKFLOW', label: 'Workflow', description: 'Business workflow service' },
+    { value: 'CUSTOM', label: 'Custom', description: 'Custom service implementation' }
+  ];
   const { 
     dragRef, 
     modalRef, 
@@ -437,16 +452,18 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     }
 
     // Create clean service data
+    const serviceTypeData = serviceTypes.find(type => type.value === serviceType);
     const serviceData: ServiceData = {
       name: flowName,
-      description: `Service flow v${version} with ${cleanNodes.length} nodes`,
+      description: `${serviceTypeData?.label || 'Service'} flow v${version} with ${cleanNodes.length} nodes - ${serviceTypeData?.description || ''}`,
       isActive: isActiveFlow,
       nodes: cleanNodes,
       edges: cleanEdges,
       viewport: cleanViewport,
       version: version,
       createdBy: 1, // TODO: Get from auth context
-      changeDescription: changeDescription || `Updated service with ${cleanNodes.length} nodes`
+      changeDescription: changeDescription || `Updated ${serviceTypeData?.label || 'service'} with ${cleanNodes.length} nodes`,
+      serviceType: serviceType // Add service type to the data
     };
 
     console.log('Service data ready for saving:', serviceData);
@@ -680,7 +697,8 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     setShowHistoryPanel(!showHistoryPanel);
   }, [flowId, showHistoryPanel, alert]);
 
-  const serviceTypes = [
+  // Legacy service types for drag & drop (keeping for compatibility)
+  const dragDropServiceTypes = [
     { type: 'REST API', icon: Database, color: 'bg-blue-100 text-blue-800' },
     { type: 'GraphQL', icon: Zap, color: 'bg-purple-100 text-purple-800' },
     { type: 'Microservice', icon: Box, color: 'bg-green-100 text-green-800' },
@@ -744,7 +762,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
             data: {
               label: `New ${parsedData.type}`,
               type: parsedData.type,
-              icon: serviceTypes.find(s => s.type === parsedData.type)?.icon || Box
+              icon: dragDropServiceTypes.find(s => s.type === parsedData.type)?.icon || Box
             },
           };
         } else if (parsedData.nodeType === 'flowchart') {
@@ -767,7 +785,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         setNodes((nds) => nds.concat(newNode));
       }
     },
-    [reactFlowInstance, nodes, setNodes, serviceTypes, flowchartShapes],
+    [reactFlowInstance, nodes, setNodes, dragDropServiceTypes, flowchartShapes],
   );
 
   // Load existing service data when editing
@@ -778,6 +796,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         setIsActiveFlow(editingFlow.isActive || false);
         setFlowId(editingFlow.id.toString());
         setVersion(editingFlow.version || '1.0.0');
+        setServiceType(editingFlow.serviceType || 'REST_API');
         
         // Load nodes and edges from the service data
         if (editingFlow.nodes || editingFlow.edges) {
@@ -868,10 +887,12 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
           ref={dragRef}
           className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700"
           style={dragHandleStyle}
-          onMouseDown={handleMouseDown}
         >
           <div className="flex items-center space-x-4">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+            <div 
+              className="p-2 bg-green-100 dark:bg-green-900 rounded-lg cursor-move"
+              onMouseDown={handleMouseDown}
+            >
               <Workflow className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
@@ -897,6 +918,20 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
                 </div>
               </div>
               <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3">
+                  <label className="text-sm font-medium text-slate-600 dark:text-slate-300">Service Type:</label>
+                  <select
+                    value={serviceType}
+                    onChange={(e) => setServiceType(e.target.value)}
+                    className="px-3 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
+                  >
+                    {serviceTypes.map(type => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   {editingFlow ? 'Edit your service architecture flow' : 'Design and manage your service architecture flow'}
                 </p>
@@ -955,7 +990,11 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
-            <div className="flex items-center text-slate-400 px-2">
+            <div 
+              className="flex items-center text-slate-400 px-2 cursor-move hover:text-slate-600 dark:hover:text-slate-300"
+              onMouseDown={handleMouseDown}
+              title="Drag to move modal"
+            >
               <Move className="h-4 w-4" />
             </div>
             <button
@@ -978,7 +1017,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
                   Service Types
                 </h3>
                 <div className="space-y-2">
-                  {serviceTypes.map((service) => {
+                  {dragDropServiceTypes.map((service) => {
                     const IconComponent = service.icon;
                     return (
                       <div

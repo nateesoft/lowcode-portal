@@ -1137,6 +1137,7 @@ export interface ServiceData {
   viewport?: any;
   version?: string;
   isActive?: boolean;
+  serviceType?: string;
   changeDescription?: string;
   createdBy: number;
   creator?: User;
