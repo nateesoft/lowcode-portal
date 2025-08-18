@@ -34,11 +34,6 @@ interface ServiceFlowModalProps {
 
 // Flowchart Shape Components
 const FlowchartNode = ({ data, selected, id }: { data: any; selected?: boolean; id?: string }) => {
-  const baseStyle = {
-    backgroundColor: data.backgroundColor || '#ffffff',
-    borderColor: selected ? '#3b82f6' : (data.borderColor || '#6b7280'),
-  };
-
   // Handle delete node
   const handleDeleteNode = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -52,23 +47,72 @@ const FlowchartNode = ({ data, selected, id }: { data: any; selected?: boolean; 
     }
   }, [id]);
 
-  const shapeClasses = {
-    rectangle: 'rounded-md',
-    circle: 'rounded-full aspect-square',
-    diamond: 'transform rotate-45 rounded-sm',
-    triangle: 'clip-triangle',
-    hexagon: 'clip-hexagon',
-    octagon: 'clip-octagon'
+  // Shape specific styling similar to ServiceNode
+  const getShapeStyle = (shape: string) => {
+    const styles = {
+      rectangle: {
+        gradient: 'from-indigo-500 to-purple-600',
+        icon: '📋',
+        iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
+        iconColor: 'text-indigo-700 dark:text-indigo-300',
+        bgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
+      },
+      circle: {
+        gradient: 'from-green-500 to-emerald-600', 
+        icon: '🔵',
+        iconBg: 'bg-green-100 dark:bg-green-900/30',
+        iconColor: 'text-green-700 dark:text-green-300',
+        bgColor: 'bg-green-50 dark:bg-green-900/20'
+      },
+      diamond: {
+        gradient: 'from-orange-500 to-red-600',
+        icon: '💎',
+        iconBg: 'bg-orange-100 dark:bg-orange-900/30',
+        iconColor: 'text-orange-700 dark:text-orange-300',
+        bgColor: 'bg-orange-50 dark:bg-orange-900/20'
+      },
+      triangle: {
+        gradient: 'from-purple-500 to-pink-600',
+        icon: '📐',
+        iconBg: 'bg-purple-100 dark:bg-purple-900/30',
+        iconColor: 'text-purple-700 dark:text-purple-300',
+        bgColor: 'bg-purple-50 dark:bg-purple-900/20'
+      },
+      hexagon: {
+        gradient: 'from-blue-500 to-cyan-600',
+        icon: '⬡',
+        iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+        iconColor: 'text-blue-700 dark:text-blue-300',
+        bgColor: 'bg-blue-50 dark:bg-blue-900/20'
+      },
+      octagon: {
+        gradient: 'from-red-500 to-pink-600',
+        icon: '🛑',
+        iconBg: 'bg-red-100 dark:bg-red-900/30',
+        iconColor: 'text-red-700 dark:text-red-300',
+        bgColor: 'bg-red-50 dark:bg-red-900/20'
+      }
+    };
+    return styles[shape as keyof typeof styles] || styles.rectangle;
   };
 
-  const shapeClass = shapeClasses[data.shape as keyof typeof shapeClasses] || 'rounded-md';
+  const shapeStyle = getShapeStyle(data.shape);
   
   return (
-    <div className="relative">
+    <div className="relative group">
+      {/* Input Handle */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="flowchart-input"
+        className="w-3 h-3 !bg-blue-500 !border-2 !border-white shadow-lg opacity-60 group-hover:opacity-100 transition-opacity"
+        style={{ left: -6 }}
+      />
+
       {/* Delete Button */}
       {selected && (
         <button
-          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 nodrag transition-colors shadow-lg"
+          className="absolute -top-3 -right-3 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 nodrag transition-all duration-200 shadow-lg hover:shadow-xl"
           style={{ pointerEvents: 'auto' }}
           onClick={handleDeleteNode}
           title="Delete Node"
@@ -76,54 +120,208 @@ const FlowchartNode = ({ data, selected, id }: { data: any; selected?: boolean; 
           <X className="h-3 w-3" />
         </button>
       )}
-
-      {/* Input Handle */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="flowchart-input"
-        className="w-2 h-2 !bg-blue-500 !border !border-white shadow-sm"
-        style={{ left: -4 }}
-      />
       
-      <div 
-        className={`w-20 h-12 border-2 transition-colors flex items-center justify-center text-xs font-medium text-slate-700 ${shapeClass} ${
-          selected ? 'border-blue-500 shadow-blue-200 shadow-md' : ''
-        }`}
-        style={baseStyle}
-      >
-        {data.shape === 'diamond' ? (
-          <span className="transform -rotate-45 text-center leading-tight">
-            {data.label}
-          </span>
-        ) : (
-          <div className="text-center leading-tight px-1 relative">
-            <span>{data.label}</span>
-            {data.code && (
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" title="Has custom code"></div>
-            )}
+      {/* Main Node Container - Special handling for circle and diamond shapes */}
+      {data.shape === 'circle' ? (
+        /* Circle Shape - Compact circular design */
+        <div 
+          className={`
+            relative w-20 h-20 ${shapeStyle.bgColor}
+            rounded-full shadow-lg hover:shadow-xl transition-all duration-300
+            border-2 overflow-hidden flex items-center justify-center
+            ${selected ? 'border-blue-500 shadow-blue-300/50 scale-110' : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500'}
+          `}
+        >
+          {/* Gradient Border */}
+          <div className={`absolute inset-0 rounded-full bg-gradient-to-br ${shapeStyle.gradient} p-0.5`}>
+            <div className={`w-full h-full rounded-full ${shapeStyle.bgColor} flex items-center justify-center`}>
+              {/* Icon and Label in center */}
+              <div className="text-center">
+                <div className="text-lg mb-1">{shapeStyle.icon}</div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                  {data.label}
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+          
+          {/* Status indicators for circle */}
+          {(data.code || data.isActive) && (
+            <div className="absolute -top-1 -right-1 flex items-center space-x-1">
+              {data.code && (
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-md border border-white" title="Has custom code"></div>
+              )}
+              {data.isActive && (
+                <div className="w-3 h-3 bg-blue-500 rounded-full shadow-md animate-pulse border border-white" title="Active shape"></div>
+              )}
+            </div>
+          )}
+          
+          {/* Hover Effect Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-full"></div>
+        </div>
+      ) : data.shape === 'diamond' ? (
+        /* Diamond Shape - Compact diamond design */
+        <div 
+          className={`
+            relative w-20 h-20 ${shapeStyle.bgColor}
+            transform rotate-45 shadow-lg hover:shadow-xl transition-all duration-300
+            border-2 overflow-hidden flex items-center justify-center
+            ${selected ? 'border-blue-500 shadow-blue-300/50 scale-110' : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500'}
+          `}
+        >
+          {/* Gradient Border */}
+          <div className={`absolute inset-0 bg-gradient-to-br ${shapeStyle.gradient} p-0.5`}>
+            <div className={`w-full h-full ${shapeStyle.bgColor} flex items-center justify-center`}>
+              {/* Icon and Label in center - counter-rotate to keep text upright */}
+              <div className="text-center transform -rotate-45">
+                <div className="text-lg mb-1">{shapeStyle.icon}</div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                  {data.label}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Status indicators for diamond */}
+          {(data.code || data.isActive) && (
+            <div className="absolute -top-1 -right-1 flex items-center space-x-1 transform -rotate-45">
+              {data.code && (
+                <div className="w-3 h-3 bg-green-500 rounded-full shadow-md border border-white" title="Has custom code"></div>
+              )}
+              {data.isActive && (
+                <div className="w-3 h-3 bg-blue-500 rounded-full shadow-md animate-pulse border border-white" title="Active shape"></div>
+              )}
+            </div>
+          )}
+          
+          {/* Hover Effect Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+        </div>
+      ) : (
+        /* Regular shapes - Modern Design like ServiceNode */
+        <div 
+          className={`
+            relative min-w-[180px] ${shapeStyle.bgColor}
+            rounded-xl shadow-lg hover:shadow-xl transition-all duration-300
+            border-2 overflow-hidden
+            ${selected ? 'border-blue-500 shadow-blue-300/50 scale-105' : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500'}
+          `}
+        >
+          {/* Gradient Header */}
+          <div className={`h-2 bg-gradient-to-r ${shapeStyle.gradient}`}></div>
+          
+          {/* Node Content */}
+          <div className="p-4">
+            {/* Top Row - Icon and Status */}
+            <div className="flex items-start justify-between mb-3">
+              <div className={`w-10 h-10 ${shapeStyle.iconBg} rounded-lg flex items-center justify-center text-lg shadow-sm`}>
+                {shapeStyle.icon}
+              </div>
+              <div className="flex items-center space-x-1.5">
+                {data.code && (
+                  <div 
+                    className="w-4 h-4 bg-green-500 rounded-full shadow-md border-2 border-white" 
+                    title="Has custom code"
+                  ></div>
+                )}
+                {data.isActive && (
+                  <div 
+                    className="w-4 h-4 bg-blue-500 rounded-full shadow-md animate-pulse border-2 border-white" 
+                    title="Active shape"
+                  ></div>
+                )}
+              </div>
+            </div>
+            
+            {/* Shape Name */}
+            <div className="mb-3">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate leading-tight">
+                {data.label}
+              </h3>
+            </div>
+            
+            {/* Shape Type Badge */}
+            <div className="flex items-center justify-between">
+              <span className={`
+                px-2.5 py-1 rounded-md text-xs font-bold
+                ${shapeStyle.iconBg} ${shapeStyle.iconColor}
+              `}>
+                {data.shape.charAt(0).toUpperCase() + data.shape.slice(1)}
+              </span>
+              
+              {/* Connection indicator */}
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Hover Effect Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+        </div>
+      )}
       
       {/* Output Handle */}
       <Handle
         type="source"
         position={Position.Right}
         id="flowchart-output"
-        className="w-2 h-2 !bg-green-500 !border !border-white shadow-sm"
-        style={{ right: -4 }}
+        className="w-3 h-3 !bg-green-500 !border-2 !border-white shadow-lg opacity-60 group-hover:opacity-100 transition-opacity"
+        style={{ right: -6 }}
       />
     </div>
   );
 };
 
-// Custom Service Node Component
+// Custom Service Node Component - Modern Design
 const ServiceNode = ({ data, selected, id }: { data: any; selected?: boolean; id?: string }) => {
-  const nodeStyle = {
-    backgroundColor: data.backgroundColor || '#ffffff',
-    borderColor: selected ? '#3b82f6' : (data.borderColor || '#a1a1aa'),
+  // Service type specific styling
+  const getServiceTypeStyle = (type: string) => {
+    const styles = {
+      'REST API': {
+        gradient: 'from-blue-500 to-indigo-600',
+        icon: '🌐',
+        iconBg: 'bg-blue-100',
+        iconColor: 'text-blue-700'
+      },
+      'GraphQL': {
+        gradient: 'from-purple-500 to-pink-600',
+        icon: '🔮',
+        iconBg: 'bg-purple-100',
+        iconColor: 'text-purple-700'
+      },
+      'Database': {
+        gradient: 'from-green-500 to-emerald-600',
+        icon: '🗄️',
+        iconBg: 'bg-green-100',
+        iconColor: 'text-green-700'
+      },
+      'Microservice': {
+        gradient: 'from-orange-500 to-red-600',
+        icon: '⚙️',
+        iconBg: 'bg-orange-100',
+        iconColor: 'text-orange-700'
+      },
+      'Function': {
+        gradient: 'from-yellow-500 to-amber-600',
+        icon: '⚡',
+        iconBg: 'bg-yellow-100',
+        iconColor: 'text-yellow-700'
+      },
+      default: {
+        gradient: 'from-slate-500 to-gray-600',
+        icon: '📦',
+        iconBg: 'bg-slate-100',
+        iconColor: 'text-slate-700'
+      }
+    };
+    return styles[type as keyof typeof styles] || styles.default;
   };
+
+  const serviceStyle = getServiceTypeStyle(data.type);
 
   // Handle delete node
   const handleDeleteNode = React.useCallback((e: React.MouseEvent) => {
@@ -139,25 +337,20 @@ const ServiceNode = ({ data, selected, id }: { data: any; selected?: boolean; id
   }, [id]);
   
   return (
-    <div 
-      className={`px-3 py-2 shadow-md rounded-md border-2 transition-colors relative ${
-        selected ? 'border-blue-500 shadow-blue-200' : ''
-      }`}
-      style={nodeStyle}
-    >
+    <div className="relative group">
       {/* Input Handle - Left side */}
       <Handle
         type="target"
         position={Position.Left}
         id="service-input"
-        className="w-3 h-3 !bg-purple-500 !border-2 !border-white shadow-md"
+        className="w-3 h-3 !bg-blue-500 !border-2 !border-white shadow-lg opacity-60 group-hover:opacity-100 transition-opacity"
         style={{ left: -6 }}
       />
       
       {/* Delete Button */}
       {selected && (
         <button
-          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 nodrag transition-colors shadow-lg"
+          className="absolute -top-3 -right-3 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center z-20 nodrag transition-all duration-200 shadow-lg hover:shadow-xl"
           style={{ pointerEvents: 'auto' }}
           onClick={handleDeleteNode}
           title="Delete Node"
@@ -166,18 +359,68 @@ const ServiceNode = ({ data, selected, id }: { data: any; selected?: boolean; id
         </button>
       )}
 
-      {/* Service Node Content */}
-      <div className="flex items-center">
-        {data.icon && <data.icon className="h-3 w-3 mr-2 text-purple-600" />}
-        <div className="flex-1">
-          <div className="flex items-center space-x-2">
-            <div className="text-sm font-medium text-slate-900">{data.label}</div>
-            {data.code && (
-              <div className="w-2 h-2 bg-green-500 rounded-full" title="Has custom code"></div>
-            )}
+      {/* Main Node Container */}
+      <div 
+        className={`
+          relative min-w-[200px] bg-orange-50 dark:bg-orange-900/20 
+          rounded-xl shadow-lg hover:shadow-xl transition-all duration-300
+          border-2 overflow-hidden
+          ${selected ? 'border-blue-500 shadow-blue-300/50 scale-105' : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500'}
+        `}
+      >
+        {/* Gradient Header */}
+        <div className={`h-2 bg-gradient-to-r ${serviceStyle.gradient}`}></div>
+        
+        {/* Node Content */}
+        <div className="p-5">
+          {/* Top Row - Icon and Status */}
+          <div className="flex items-start justify-between mb-4">
+            <div className={`w-12 h-12 ${serviceStyle.iconBg} rounded-lg flex items-center justify-center text-xl`}>
+              {serviceStyle.icon}
+            </div>
+            <div className="flex items-center space-x-1.5">
+              {data.code && (
+                <div 
+                  className="w-4 h-4 bg-green-500 rounded-full shadow-md border-2 border-white" 
+                  title="Has custom code"
+                ></div>
+              )}
+              {data.isActive && (
+                <div 
+                  className="w-4 h-4 bg-blue-500 rounded-full shadow-md animate-pulse border-2 border-white" 
+                  title="Active service"
+                ></div>
+              )}
+            </div>
           </div>
-          <div className="text-xs text-gray-500">{data.type}</div>
+          
+          {/* Service Name */}
+          <div className="mb-3">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white truncate leading-tight">
+              {data.label}
+            </h3>
+          </div>
+          
+          {/* Service Type Badge */}
+          <div className="flex items-center justify-between">
+            <span className={`
+              px-3 py-1.5 rounded-md text-sm font-bold
+              ${serviceStyle.iconBg} ${serviceStyle.iconColor}
+            `}>
+              {data.type}
+            </span>
+            
+            {/* Connection indicator */}
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+              <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-slate-600 rounded-full"></div>
+            </div>
+          </div>
         </div>
+        
+        {/* Hover Effect Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
       </div>
       
       {/* Output Handle - Right side */}
@@ -185,7 +428,7 @@ const ServiceNode = ({ data, selected, id }: { data: any; selected?: boolean; id
         type="source"
         position={Position.Right}
         id="service-output"
-        className="w-3 h-3 !bg-green-500 !border-2 !border-white shadow-md"
+        className="w-3 h-3 !bg-green-500 !border-2 !border-white shadow-lg opacity-60 group-hover:opacity-100 transition-opacity"
         style={{ right: -6 }}
       />
     </div>
@@ -740,6 +983,19 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
         let newNode: Node;
 
         if (parsedData.nodeType === 'service') {
+          // Get appropriate icon based on service type
+          const getServiceIcon = (type: string) => {
+            switch (type) {
+              case 'REST API': return Database;
+              case 'GraphQL': return Zap;
+              case 'Database': return Database;
+              case 'Microservice': return Box;
+              case 'Function': return Cpu;
+              case 'Middleware': return Zap;
+              default: return Box;
+            }
+          };
+
           newNode = {
             id: `service-${nodes.length + 1}`,
             type: 'service',
@@ -747,7 +1003,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
             data: {
               label: `New ${parsedData.type}`,
               type: parsedData.type,
-              icon: Box // Default icon for service nodes
+              icon: getServiceIcon(parsedData.type)
             },
           };
         } else if (parsedData.nodeType === 'flowchart') {
@@ -996,6 +1252,46 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
           {/* Tool Palette Sidebar */}
           <div className="w-64 bg-slate-50 dark:bg-slate-700 border-r border-slate-200 dark:border-slate-600 flex flex-col">
             <div className="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
+
+              {/* Service Types Section */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+                  Service Types
+                </h3>
+                <div className="space-y-2 mb-6">
+                  {[
+                    { type: 'REST API', icon: Database, color: 'text-blue-600' },
+                    { type: 'GraphQL', icon: Zap, color: 'text-purple-600' },
+                    { type: 'Database', icon: Database, color: 'text-green-600' },
+                    { type: 'Microservice', icon: Box, color: 'text-orange-600' },
+                    { type: 'Function', icon: Cpu, color: 'text-yellow-600' },
+                    { type: 'Middleware', icon: Zap, color: 'text-indigo-600' },
+                  ].map((service) => {
+                    const IconComponent = service.icon;
+                    return (
+                      <div
+                        key={service.type}
+                        className="p-3 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-move transition-colors"
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData('application/reactflow', JSON.stringify({
+                            nodeType: 'service',
+                            type: service.type
+                          }));
+                          event.dataTransfer.effectAllowed = 'move';
+                        }}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <IconComponent className={`h-4 w-4 ${service.color}`} />
+                          <span className="text-sm text-slate-700 dark:text-slate-300">
+                            {service.type}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               {/* Flowchart Shapes Section */}
               <div>
