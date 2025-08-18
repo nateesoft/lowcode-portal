@@ -138,11 +138,17 @@ const Dashboard: React.FC<DashboardProps> = ({
   }, [activeView]);
 
   const loadServices = async () => {
+    setComponentsLoading(true);
     try {
-      const servicesData = await serviceAPI.getAll();
+      const [servicesData] = await Promise.all([
+        serviceAPI.getAll()
+      ])
       setFlows(servicesData);
     } catch (error) {
       console.error('Error loading services:', error);
+      alert.error('Failed to load services');
+    } finally {
+      setComponentsLoading(false);
     }
   };
 
