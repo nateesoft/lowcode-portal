@@ -3,13 +3,6 @@ import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search, Wrenc
 import { PageData, CreatePageRequest } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
 import { useAuth } from '@/contexts/AuthContext';
-import dynamic from 'next/dynamic';
-
-// Dynamically import Puck editor to avoid SSR issues
-const PuckEditor = dynamic(() => import('@/components/editors/PuckEditor'), {
-  ssr: false,
-  loading: () => <div className="flex items-center justify-center h-96 text-slate-500">Loading Page Builder...</div>
-});
 
 interface PageModalProps {
   isOpen: boolean;
@@ -22,6 +15,20 @@ interface PageModalProps {
 const pageTypes = [
   'standard', 'landing', 'blog', 'product', 'contact', 'about', 
   'portfolio', 'documentation', 'support', 'checkout', 'other'
+];
+
+// HTML Elements for Visual Builder (similar to ComponentBuilderModal)
+const htmlElements = [
+  { id: 'div', name: 'Container (div)', icon: Layout, tag: 'div', type: 'layout' },
+  { id: 'section', name: 'Section', icon: Layout, tag: 'section', type: 'layout' },
+  { id: 'header', name: 'Header', icon: Layout, tag: 'header', type: 'layout' },
+  { id: 'main', name: 'Main', icon: Layout, tag: 'main', type: 'layout' },
+  { id: 'h1', name: 'Heading 1', icon: FileText, tag: 'h1', type: 'text', content: 'Heading 1' },
+  { id: 'h2', name: 'Heading 2', icon: FileText, tag: 'h2', type: 'text', content: 'Heading 2' },
+  { id: 'p', name: 'Paragraph', icon: FileText, tag: 'p', type: 'text', content: 'Your paragraph text here' },
+  { id: 'button', name: 'Button', icon: Settings, tag: 'button', type: 'interactive', content: 'Click me' },
+  { id: 'input', name: 'Input', icon: Settings, tag: 'input', type: 'form', attributes: { type: 'text', placeholder: 'Enter text' } },
+  { id: 'textarea', name: 'Textarea', icon: Settings, tag: 'textarea', type: 'form', attributes: { placeholder: 'Enter text', rows: '3' } },
 ];
 
 const PageModal: React.FC<PageModalProps> = ({
@@ -62,6 +69,11 @@ const PageModal: React.FC<PageModalProps> = ({
   const [layoutText, setLayoutText] = useState('{}');
   const [componentsText, setComponentsText] = useState('{}');
   const [stylesText, setStylesText] = useState('{}');
+  // JSONForm Visual Builder states
+  const [jsonFormSchema, setJsonFormSchema] = useState('{}');
+  const [jsonFormUiSchema, setJsonFormUiSchema] = useState('{}');
+  const [builderElements, setBuilderElements] = useState<any[]>([]);
+  const [selectedElement, setSelectedElement] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [modalSize, setModalSize] = useState({ width: 1200, height: 800 });
@@ -71,6 +83,45 @@ const PageModal: React.FC<PageModalProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Visual Builder functions
+  const onDragStart = (e: React.DragEvent, element: any) => {
+    e.dataTransfer.setData('application/json', JSON.stringify(element));
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const elementData = JSON.parse(e.dataTransfer.getData('application/json'));
+    const newElement = {
+      ...elementData,
+      id: `${elementData.tag}-${Date.now()}`,
+      uniqueId: Date.now()
+    };
+    setBuilderElements(prev => [...prev, newElement]);
+  };
+
+  const removeBuilderElement = (uniqueId: number) => {
+    setBuilderElements(prev => prev.filter(el => el.uniqueId !== uniqueId));
+  };
+
+  const generateHTML = () => {
+    return builderElements.map(element => {
+      const attributes = element.attributes || {};
+      const attributeString = Object.entries(attributes)
+        .map(([key, value]) => `${key}="${value}"`)
+        .join(' ');
+      
+      if (['input', 'img'].includes(element.tag)) {
+        return `<${element.tag} ${attributeString} />`;
+      }
+      
+      return `<${element.tag} ${attributeString}>${element.content || ''}</${element.tag}>`;
+    }).join('\n');
+  };
 
   // Center modal when opened
   useEffect(() => {
@@ -215,37 +266,6 @@ const PageModal: React.FC<PageModalProps> = ({
       };
 
       console.log('Saving page with data:', pageData); // Debug logging
-      await onSave(pageData);
-      onClose();
-    } catch (error: any) {
-      console.error('Error saving page:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      
-      // Show more detailed error message
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Failed to save page';
-      showError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePuckSave = async () => {
-    setIsLoading(true);
-    
-    try {
-      const pageData = {
-        ...formData,
-        userId: user?.id || userId || 1, // Ensure we use current user ID
-        changeDescription: formData.changeDescription || (editingPage ? 'Page updated via builder' : 'Page created via builder')
-      };
-
-      console.log('Saving page via builder with data:', pageData); // Debug logging
       await onSave(pageData);
       onClose();
     } catch (error: any) {
@@ -440,42 +460,122 @@ const PageModal: React.FC<PageModalProps> = ({
         </div>
 
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Build Tab - Outside form */}
+          {/* Build Tab - JSONForm Visual Builder */}
           {activeTab === 'build' && (
-            <div className="flex flex-col flex-1 overflow-hidden">
-              {/* Puck Editor - Full height */}
-              <div className="flex-1 overflow-hidden">
-                <PuckEditor
-                  initialData={formData.content as any}
-                  onSave={(data) => {
-                    // Update form data with Puck content
-                    setFormData(prev => ({
-                      ...prev,
-                      content: data
-                    }));
-                  }}
-                  height="100%"
-                />
+            <div className="flex-1 flex min-h-0">
+              {/* Tools Panel */}
+              <div className="w-64 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col">
+                <div className="p-4 flex-1 overflow-y-auto">
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">HTML Elements</h3>
+                  <div className="space-y-2">
+                    {htmlElements.map((element) => {
+                      const IconComponent = element.icon;
+                      return (
+                        <div
+                          key={element.id}
+                          draggable
+                          onDragStart={(e) => onDragStart(e, element)}
+                          className="flex items-center space-x-2 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-move hover:border-slate-400 dark:hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors shadow-sm"
+                        >
+                          <IconComponent className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{element.name}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, content: { html: generateHTML() } })}
+                      className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <Wrench className="h-4 w-4" />
+                      <span>Generate HTML</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Save button for build tab */}
-              <div className="flex-shrink-0 flex justify-end space-x-3 p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+              {/* Drop Area */}
+              <div className="flex-1 p-4">
+                <div
+                  onDragOver={onDragOver}
+                  onDrop={onDrop}
+                  className={`h-full border-2 border-dashed rounded-lg p-4 transition-colors overflow-y-auto ${
+                    builderElements.length === 0 
+                      ? 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50' 
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                  }`}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePuckSave}
-                  disabled={isLoading}
-                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? 'Saving...' : 'Save Page'}
-                </button>
+                  {builderElements.length === 0 ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <Layout className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                          Drag & Drop HTML Elements
+                        </h3>
+                        <p className="text-slate-500 dark:text-slate-400">
+                          Drag elements from the left panel to build your page
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Page Preview</h3>
+                      {builderElements.map((element) => {
+                        // Get icon component based on element type
+                        const getIconComponent = (tag: string) => {
+                          const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+                            div: Layout,
+                            section: Layout,
+                            header: Layout,
+                            main: Layout,
+                            h1: FileText,
+                            h2: FileText,
+                            h3: FileText,
+                            p: FileText,
+                            span: FileText,
+                            button: Settings,
+                            input: Settings,
+                            textarea: Settings,
+                            select: Settings,
+                            img: FileText,
+                            a: FileText
+                          };
+                          return iconMap[tag] || FileText;
+                        };
+                        
+                        const IconComponent = getIconComponent(element.tag);
+                        
+                        return (
+                          <div
+                            key={element.uniqueId}
+                            className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-400 transition-colors"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <IconComponent className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                              <div>
+                                <div className="text-sm font-medium text-slate-900 dark:text-white">
+                                  {element.name}
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                  {element.content || `<${element.tag}>`}
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => removeBuilderElement(element.uniqueId)}
+                              className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
