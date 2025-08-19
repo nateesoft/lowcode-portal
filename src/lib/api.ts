@@ -384,6 +384,11 @@ export interface ComponentData {
   createdAt?: string;
   updatedAt?: string;
   createdBy?: User;
+  userId?: number;
+  // JSONForm specific properties
+  jsonSchema?: string;
+  uiSchema?: string;
+  formData?: string;
 }
 
 export interface ComponentHistoryData {
@@ -424,6 +429,10 @@ export interface CreateComponentRequest {
   thumbnailUrl?: string;
   userId?: number;
   changeDescription?: string;
+  // JSONForm specific properties
+  jsonSchema?: string;
+  uiSchema?: string;
+  formData?: string;
 }
 
 export interface ComponentStats {

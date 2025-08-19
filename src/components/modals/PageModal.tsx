@@ -101,10 +101,7 @@ const PageModal: React.FC<PageModalProps> = ({
   const [componentsText, setComponentsText] = useState('{}');
   const [stylesText, setStylesText] = useState('{}');
   // JSONForm Visual Builder states
-  const [jsonFormSchema, setJsonFormSchema] = useState('{}');
-  const [jsonFormUiSchema, setJsonFormUiSchema] = useState('{}');
   const [builderElements, setBuilderElements] = useState<any[]>([]);
-  const [selectedElement, setSelectedElement] = useState<any>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [customComponents, setCustomComponents] = useState<ComponentData[]>([]);
   const [loadingComponents, setLoadingComponents] = useState(false);
@@ -143,12 +140,67 @@ const PageModal: React.FC<PageModalProps> = ({
   };
 
   const generateHTML = () => {
-    return builderElements.map(element => {
-      // Handle custom components
+    if (builderElements.length === 0) {
+      return '<!-- No elements in canvas -->';
+    }
+
+    return builderElements.map((element) => {
+      // Handle JsonForm components
+      if (element.type === 'jsonform' && element.customComponent && element.componentData) {
+        const component = element.componentData;
+        return `<!-- JsonForm Component: ${component.name} -->
+<!-- Component ID: ${component.id} -->
+<!-- Description: ${component.description || 'No description'} -->
+<!-- Category: ${component.category} -->
+<!-- Type: ${component.type} -->
+
+<!-- JSON Schema -->
+<script type="application/json" id="schema-${component.id}">
+${component.jsonSchema || '{}'}
+</script>
+
+<!-- UI Schema -->
+<script type="application/json" id="uischema-${component.id}">
+${component.uiSchema || '{}'}
+</script>
+
+<!-- Form Data -->
+<script type="application/json" id="formdata-${component.id}">
+${component.formData || '{}'}
+</script>
+
+<!-- JsonForm Container -->
+<div id="jsonform-${component.id}" class="jsonform-component" data-component-name="${component.name}">
+  <!-- This will be rendered by JsonForms -->
+  <div class="jsonform-placeholder">
+    <h3>${component.name}</h3>
+    <p>${component.description || 'JsonForm Component'}</p>
+    <p><em>This form will be rendered using JsonForms library</em></p>
+  </div>
+</div>
+
+<!-- JsonForm Initialization Script -->
+<script>
+  // Initialize JsonForm for component ${component.id}
+  document.addEventListener('DOMContentLoaded', function() {
+    const schema = JSON.parse(document.getElementById('schema-${component.id}').textContent);
+    const uiSchema = JSON.parse(document.getElementById('uischema-${component.id}').textContent);
+    const formData = JSON.parse(document.getElementById('formdata-${component.id}').textContent);
+    
+    // Initialize your JsonForms renderer here
+    console.log('JsonForm ${component.name} ready:', { schema, uiSchema, formData });
+  });
+</script>`;
+      }
+      
+      // Handle custom components (non-JsonForm)
       if (element.customComponent && element.componentData) {
         const component = element.componentData;
         return `<!-- Custom Component: ${component.name} -->
-${component.template || ''}`;
+<!-- Component ID: ${component.id} -->
+<!-- Type: ${component.type} -->
+<!-- Category: ${component.category} -->
+${component.template || '<!-- No template defined -->'}`;
       }
       
       // Handle regular HTML elements
@@ -162,7 +214,7 @@ ${component.template || ''}`;
       }
       
       return `<${element.tag} ${attributeString}>${element.content || ''}</${element.tag}>`;
-    }).join('\n');
+    }).join('\n\n');
   };
 
   const toggleGroup = (groupName: string) => {
@@ -173,16 +225,35 @@ ${component.template || ''}`;
   };
 
   const loadCustomComponents = useCallback(async () => {
-    if (!isOpen || !user?.id) return;
+    if (!isOpen || !user?.id) {
+      console.log('Skipping component load:', { isOpen, userId: user?.id });
+      return;
+    }
     
+    console.log('Loading custom components...');
     setLoadingComponents(true);
     try {
       const components = await componentAPI.getAll();
+      console.log('Raw components from API:', components);
+      console.log('Total components received:', components.length);
+      
       // Filter components that are published/public and belong to the user or are public
-      const availableComponents = components.filter(comp => 
-        comp.status === 'published' || comp.isPublic || comp.userId === user.id
-      );
-      setCustomComponents(availableComponents);
+      const availableComponents = components.filter(comp => {
+        const isAvailable = comp.status === 'published' || comp.isPublic || comp.userId === user.id;
+        console.log(`Component "${comp.name}": status=${comp.status}, isPublic=${comp.isPublic}, userId=${comp.userId}, currentUserId=${user.id}, available=${isAvailable}`);
+        return isAvailable;
+      });
+      
+      console.log('Filtered available components:', availableComponents);
+      console.log('Available components count:', availableComponents.length);
+      
+      // Temporary: Show all components for debugging (remove this later)
+      if (availableComponents.length === 0 && components.length > 0) {
+        console.log('No components passed filter, showing all for debugging...');
+        setCustomComponents(components);
+      } else {
+        setCustomComponents(availableComponents);
+      }
     } catch (error) {
       console.error('Error loading custom components:', error);
       showError('Failed to load custom components');
@@ -533,10 +604,10 @@ ${component.template || ''}`;
         </div>
 
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Build Tab - JSONForm Visual Builder */}
+          {/* Build Tab - Visual Builder */}
           {activeTab === 'build' && (
-            <div className="flex-1 flex min-h-0">
-              {/* Tools Panel */}
+            <div className="flex-1 overflow-hidden flex">
+              {/* Left Panel - Tools */}
               <div className="w-64 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col">
                 <div className="p-4 flex-1 overflow-y-auto">
                   <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">HTML Elements</h3>
@@ -625,11 +696,20 @@ ${component.template || ''}`;
                               const componentElement = {
                                 id: `custom-${component.id}`,
                                 name: component.name,
-                                tag: 'div',
-                                type: 'custom',
-                                content: component.template || '',
+                                tag: 'JsonForm',
+                                type: 'jsonform',
+                                content: `<JsonForm 
+  schema={${JSON.stringify(JSON.parse(component.jsonSchema || '{}'), null, 2)}}
+  uiSchema={${JSON.stringify(JSON.parse(component.uiSchema || '{}'), null, 2)}}
+  formData={${JSON.stringify(JSON.parse(component.formData || '{}'), null, 2)}}
+  onChange={(data) => console.log('Form data changed:', data)}
+  onSubmit={(data) => console.log('Form submitted:', data)}
+/>`,
                                 customComponent: true,
-                                componentData: component
+                                componentData: component,
+                                schema: component.jsonSchema ? JSON.parse(component.jsonSchema) : {},
+                                uiSchema: component.uiSchema ? JSON.parse(component.uiSchema) : {},
+                                formData: component.formData ? JSON.parse(component.formData) : {}
                               };
                               
                               return (
@@ -642,7 +722,14 @@ ${component.template || ''}`;
                                   <Component className="h-3 w-3 text-purple-600 dark:text-purple-400" />
                                   <div className="flex-1">
                                     <span className="text-xs font-medium text-purple-700 dark:text-purple-300">{component.name}</span>
-                                    <div className="text-xs text-purple-500 dark:text-purple-400">{component.type}</div>
+                                    <div className="text-xs text-purple-500 dark:text-purple-400">
+                                      {component.type} • {component.category}
+                                    </div>
+                                    {component.description && (
+                                      <div className="text-xs text-purple-400 dark:text-purple-500 truncate mt-1">
+                                        {component.description}
+                                      </div>
+                                    )}
                                   </div>
                                   {component.isPublic && (
                                     <div className="w-2 h-2 bg-green-500 rounded-full" title="Public component"></div>
@@ -655,46 +742,50 @@ ${component.template || ''}`;
                       )}
                     </div>
                   </div>
-                  
-                  <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, content: { html: generateHTML() } })}
-                      className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      <Wrench className="h-4 w-4" />
-                      <span>Generate HTML</span>
-                    </button>
-                  </div>
                 </div>
               </div>
 
-              {/* Drop Area */}
-              <div className="flex-1 p-4">
-                <div
-                  onDragOver={onDragOver}
-                  onDrop={onDrop}
-                  className={`h-full border-2 border-dashed rounded-lg p-4 transition-colors overflow-y-auto ${
-                    builderElements.length === 0 
-                      ? 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50' 
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                  }`}
-                >
-                  {builderElements.length === 0 ? (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <Layout className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-                          Drag & Drop HTML Elements
-                        </h3>
-                        <p className="text-slate-500 dark:text-slate-400">
-                          Drag elements from the left panel to build your page
-                        </p>
-                      </div>
+              {/* Center Panel - Canvas/Drop Area */}
+              <div className="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-700">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Canvas</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Drag elements here to build your page</p>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Page Preview</h3>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                      Elements: {builderElements.length}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex-1 p-4">
+                  <div
+                    onDragOver={onDragOver}
+                    onDrop={onDrop}
+                    className={`h-full border-2 border-dashed rounded-lg p-4 transition-colors overflow-y-auto ${
+                      builderElements.length === 0 
+                        ? 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50' 
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                    }`}
+                  >
+                    {builderElements.length === 0 ? (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <Layout className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                            Drag & Drop Elements
+                          </h3>
+                          <p className="text-slate-500 dark:text-slate-400">
+                            Drag elements from the left panel to build your page
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-slate-900 dark:text-white mb-3 sticky top-0 bg-white dark:bg-slate-800 pb-2 border-b border-slate-200 dark:border-slate-700">
+                          Canvas Elements
+                        </h4>
                       {builderElements.map((element) => {
                         // Get icon component based on element type
                         const getIconComponent = (element: any) => {
@@ -760,7 +851,9 @@ ${component.template || ''}`;
                                     : 'text-slate-500 dark:text-slate-400'
                                 }`}>
                                   {element.customComponent 
-                                    ? element.componentData?.type || 'Custom Component'
+                                    ? element.type === 'jsonform' 
+                                      ? `JsonForm • ${element.componentData?.category || 'Form'}`
+                                      : element.componentData?.type || 'Custom Component'
                                     : element.content || `<${element.tag}>`
                                   }
                                 </div>
@@ -775,8 +868,281 @@ ${component.template || ''}`;
                           </div>
                         );
                       })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Panel - Live Preview */}
+              <div className="w-96 bg-slate-50 dark:bg-slate-700 flex flex-col">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Globe className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Preview</h3>
                     </div>
-                  )}
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-hidden">
+                  <div className="h-full overflow-y-auto p-4">
+                    {builderElements.length === 0 ? (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <Globe className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                          <h4 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            No Preview Available
+                          </h4>
+                          <p className="text-slate-500 dark:text-slate-400 text-sm">
+                            Add elements to the canvas to see the live preview
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {builderElements.map((element) => {
+                          // Render JsonForm components
+                          if (element.type === 'jsonform' && element.customComponent && element.componentData) {
+                            const component = element.componentData;
+                            let schema: any = {};
+                            let uiSchema: any = {};
+                            let formData: any = {};
+                            
+                            try {
+                              
+                              // Parse jsonSchema
+                              if (component.jsonSchema && component.jsonSchema.trim() !== '{}' && component.jsonSchema.trim() !== '') {
+                                schema = JSON.parse(component.jsonSchema);
+                              } else {
+                                // Fallback schema สำหรับ demo
+                                schema = {
+                                  type: "object",
+                                  title: component.name + " Form",
+                                  properties: {
+                                    name: {
+                                      type: "string",
+                                      title: "Name"
+                                    },
+                                    email: {
+                                      type: "string",
+                                      title: "Email",
+                                      format: "email"
+                                    },
+                                    message: {
+                                      type: "string",
+                                      title: "Message",
+                                      format: "textarea"
+                                    }
+                                  },
+                                  required: ["name", "email"]
+                                };
+                              }
+                              
+                              // Parse uiSchema
+                              if (component.uiSchema && component.uiSchema.trim() !== '{}' && component.uiSchema.trim() !== '') {
+                                uiSchema = JSON.parse(component.uiSchema);
+                              } else {
+                                // Fallback uiSchema สำหรับ demo
+                                uiSchema = {
+                                  name: {
+                                    "ui:placeholder": "Enter your full name"
+                                  },
+                                  email: {
+                                    "ui:placeholder": "Enter your email address"
+                                  },
+                                  message: {
+                                    "ui:widget": "textarea",
+                                    "ui:placeholder": "Enter your message",
+                                    "ui:options": {
+                                      rows: 4
+                                    }
+                                  }
+                                };
+                              }
+                              
+                              // Parse formData
+                              if (component.formData && component.formData.trim() !== '{}' && component.formData.trim() !== '') {
+                                formData = JSON.parse(component.formData);
+                              }
+                              
+                            } catch (error) {
+                              console.error('Error parsing JsonForm data:', error);
+                            }
+
+                            return (
+                              <div key={element.uniqueId} className="border border-purple-200 dark:border-purple-600 rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20">
+                                <div className="flex items-center space-x-2 mb-3">
+                                  <Component className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                  <h4 className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                                    {component.name}
+                                  </h4>
+                                  <span className="text-xs px-2 py-1 bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded">
+                                    JsonForm Component
+                                  </span>
+                                </div>
+                                {component.description && (
+                                  <p className="text-sm text-purple-600 dark:text-purple-400 mb-3">
+                                    {component.description}
+                                  </p>
+                                )}
+                                
+                                {/* JsonForm Preview */}
+                                <div className="bg-white dark:bg-slate-800 p-4 rounded border">
+                                  {Object.keys(schema).length > 0 ? (
+                                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                                      <p className="font-medium mb-2">Live JsonForm Preview:</p>
+                                      {schema.properties && Object.keys(schema.properties).map(key => {
+                                        const property = schema.properties[key];
+                                        const uiConfig = uiSchema[key] || {};
+                                        const placeholder = uiConfig['ui:placeholder'] || `Enter ${property.title || key}`;
+                                        const widget = uiConfig['ui:widget'];
+                                        const options = uiConfig['ui:options'] || {};
+                                        const defaultValue = formData[key] || '';
+                                        
+                                        return (
+                                          <div key={key} className="mb-3 p-2 bg-slate-50 dark:bg-slate-700 rounded">
+                                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                              {property.title || key}
+                                              {schema.required?.includes(key) && <span className="text-red-500 ml-1">*</span>}
+                                            </label>
+                                            
+                                            {/* String field with uiSchema support */}
+                                            {property.type === 'string' && widget === 'textarea' && (
+                                              <textarea
+                                                placeholder={placeholder}
+                                                className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white resize-none"
+                                                rows={options.rows || 3}
+                                                defaultValue={defaultValue}
+                                                disabled
+                                              />
+                                            )}
+                                            {property.type === 'string' && widget !== 'textarea' && !property.enum && (
+                                              <input 
+                                                type={property.format === 'email' ? 'email' : 'text'}
+                                                placeholder={placeholder}
+                                                className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" 
+                                                defaultValue={defaultValue}
+                                                disabled 
+                                              />
+                                            )}
+                                            
+                                            {/* Number field */}
+                                            {property.type === 'number' && (
+                                              <input 
+                                                type="number" 
+                                                placeholder={placeholder}
+                                                className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" 
+                                                defaultValue={defaultValue}
+                                                disabled 
+                                              />
+                                            )}
+                                            
+                                            {/* Boolean field */}
+                                            {property.type === 'boolean' && (
+                                              <div className="flex items-center space-x-2">
+                                                <input 
+                                                  type="checkbox" 
+                                                  disabled 
+                                                  className="rounded" 
+                                                  defaultChecked={defaultValue}
+                                                />
+                                                <span className="text-sm">{property.title || key}</span>
+                                              </div>
+                                            )}
+                                            
+                                            {/* Enum/Select field */}
+                                            {property.enum && (
+                                              <select 
+                                                className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white" 
+                                                disabled
+                                                defaultValue={defaultValue}
+                                              >
+                                                <option value="">Select {property.title || key}</option>
+                                                {property.enum.map((option: any) => (
+                                                  <option key={option} value={option}>{option}</option>
+                                                ))}
+                                              </select>
+                                            )}
+                                            
+                                            {/* Show UI configuration if available */}
+                                            {Object.keys(uiConfig).length > 0 && (
+                                              <div className="mt-1 text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-1 rounded">
+                                                UI Config: {JSON.stringify(uiConfig, null, 0)}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <div className="text-center py-4 text-slate-500 dark:text-slate-400">
+                                      <p>No form schema defined</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          // Render custom components (non-JsonForm)
+                          if (element.customComponent && element.componentData) {
+                            const component = element.componentData;
+                            return (
+                              <div key={element.uniqueId} className="border border-slate-200 dark:border-slate-600 rounded-lg p-4 bg-slate-50 dark:bg-slate-700">
+                                <div className="flex items-center space-x-2 mb-3">
+                                  <Component className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                                  <h4 className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                    {component.name}
+                                  </h4>
+                                  <span className="text-xs px-2 py-1 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-300 rounded">
+                                    Custom Component
+                                  </span>
+                                </div>
+                                {component.description && (
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                                    {component.description}
+                                  </p>
+                                )}
+                                
+                                <div className="bg-white dark:bg-slate-800 p-3 rounded border">
+                                  {component.template ? (
+                                    <div dangerouslySetInnerHTML={{ __html: component.template }} />
+                                  ) : (
+                                    <p className="text-slate-500 dark:text-slate-400 italic">No template content</p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          // Render regular HTML elements
+                          const attributes = element.attributes || {};
+                          const Tag = element.tag as keyof React.JSX.IntrinsicElements;
+                          
+                          return (
+                            <div key={element.uniqueId} className="border border-slate-200 dark:border-slate-600 rounded-lg p-3 bg-white dark:bg-slate-800">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <FileText className="h-3 w-3 text-slate-600 dark:text-slate-400" />
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  {element.name} ({element.tag})
+                                </span>
+                              </div>
+                              <div className="preview-element">
+                                {['input', 'img'].includes(element.tag) ? (
+                                  <Tag {...attributes} className="block" />
+                                ) : (
+                                  <Tag {...attributes} className="block">
+                                    {element.content || `Sample ${element.tag} content`}
+                                  </Tag>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
