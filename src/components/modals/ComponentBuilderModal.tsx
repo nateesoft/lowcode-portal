@@ -68,15 +68,44 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
     changeDescription: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'basic' | 'builder' | 'design' | 'code' | 'jsonform' | 'settings'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'jsonform' | 'design' | 'code' | 'settings'>('basic');
   const [tagInput, setTagInput] = useState('');
   const [propsText, setPropsText] = useState('{}');
   const [stylesText, setStylesText] = useState('{}');
-  const [jsonFormSchema, setJsonFormSchema] = useState('{}');
-  const [jsonFormUiSchema, setJsonFormUiSchema] = useState('{}');
+  const [jsonFormSchema, setJsonFormSchema] = useState(`{
+  "type": "object",
+  "title": "Custom Form",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name",
+      "default": ""
+    },
+    "email": {
+      "type": "string",
+      "title": "Email",
+      "format": "email"
+    }
+  },
+  "required": ["name", "email"]
+}`);
+  const [jsonFormUiSchema, setJsonFormUiSchema] = useState(`{
+  "name": {
+    "ui:placeholder": "Enter your name"
+  },
+  "email": {
+    "ui:placeholder": "user@example.com",
+    "ui:help": "We'll never share your email with anyone else."
+  }
+}`);
+  const [jsonFormData, setJsonFormData] = useState(`{
+  "name": "John Doe",
+  "email": "john.doe@example.com"
+}`);
   const [isLoading, setIsLoading] = useState(false);
-  const [builderElements, setBuilderElements] = useState<any[]>([]);
+  const [dragDropElements, setDragDropElements] = useState<any[]>([]);
   const [selectedElement, setSelectedElement] = useState<any>(null);
+  const [showJsonPreview, setShowJsonPreview] = useState(false);
 
   const { 
     dragRef, 
@@ -140,8 +169,8 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
       setJsonFormUiSchema('{}');
     }
     setTagInput('');
-    setBuilderElements([]);
     setSelectedElement(null);
+    setDragDropElements([]);
   }, [editingComponent, userId, isOpen]);
 
   // Reset position when modal opens
@@ -196,7 +225,7 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
 
       // Generate template from builder if elements exist
       let finalTemplate = formData.template;
-      if (builderElements.length > 0) {
+      if (dragDropElements.length > 0) {
         finalTemplate = generateTemplateFromBuilder();
       }
 
@@ -246,7 +275,7 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
       }).join('\n');
     };
 
-    return generateHTML(builderElements);
+    return generateHTML(dragDropElements);
   };
 
   const addTag = () => {
@@ -287,18 +316,18 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
       children: elementData.type === 'layout' ? [] : undefined
     };
     
-    setBuilderElements(prev => [...prev, newElement]);
+    setDragDropElements(prev => [...prev, newElement]);
   };
 
   const removeBuilderElement = (elementId: string) => {
-    setBuilderElements(prev => prev.filter(el => el.id !== elementId));
+    setDragDropElements(prev => prev.filter(el => el.id !== elementId));
     if (selectedElement?.id === elementId) {
       setSelectedElement(null);
     }
   };
 
   const updateBuilderElement = (elementId: string, updates: any) => {
-    setBuilderElements(prev => 
+    setDragDropElements(prev => 
       prev.map(el => el.id === elementId ? { ...el, ...updates } : el)
     );
     if (selectedElement?.id === elementId) {
@@ -371,7 +400,7 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
           <div className="flex border-b border-slate-200 dark:border-slate-700">
             {[
               { key: 'basic', label: 'Basic Info', icon: FileText },
-              { key: 'builder', label: 'Visual Builder', icon: Layout }
+              { key: 'jsonform', label: 'Custom JsonForm', icon: Layout }
             ].map(tab => (
               <button
                 key={tab.key}
@@ -515,7 +544,7 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
               )}
 
               {/* Visual Builder Tab */}
-              {activeTab === 'builder' && (
+              {activeTab === 'jsonform' && (
                 <div className="flex-1 flex min-h-0">
                   {/* Tools Panel */}
                   <div className="w-64 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col">
@@ -557,12 +586,12 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
                       onDragOver={onDragOver}
                       onDrop={onDrop}
                       className={`h-full border-2 border-dashed rounded-lg p-4 transition-colors overflow-y-auto ${
-                        builderElements.length === 0 
+                        dragDropElements.length === 0 
                           ? 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50' 
                           : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
                       }`}
                     >
-                      {builderElements.length === 0 ? (
+                      {dragDropElements.length === 0 ? (
                         <div className="h-full flex items-center justify-center">
                           <div className="text-center">
                             <Layout className="h-12 w-12 text-slate-400 mx-auto mb-4" />
@@ -577,7 +606,7 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
                       ) : (
                         <div className="space-y-4">
                           <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Component Preview</h3>
-                          {builderElements.map((element) => {
+                          {dragDropElements.map((element) => {
                             const getIconComponent = (iconName: string) => {
                               const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
                                 div: Layout,
@@ -659,7 +688,7 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
             </div>
 
             {/* Preview Panel */}
-            {(activeTab === 'builder' || activeTab === 'design') && (
+            {(activeTab === 'design') && (
               <div className="w-96 border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 flex flex-col">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700">
                   <div className="flex items-center space-x-2">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search, Wrench, Maximize2, Minimize2, ChevronDown, ChevronRight } from 'lucide-react';
-import { PageData, CreatePageRequest } from '@/lib/api';
+import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search, Wrench, Maximize2, Minimize2, ChevronDown, ChevronRight, Component } from 'lucide-react';
+import { PageData, CreatePageRequest, componentAPI, ComponentData } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -106,6 +106,8 @@ const PageModal: React.FC<PageModalProps> = ({
   const [builderElements, setBuilderElements] = useState<any[]>([]);
   const [selectedElement, setSelectedElement] = useState<any>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [customComponents, setCustomComponents] = useState<ComponentData[]>([]);
+  const [loadingComponents, setLoadingComponents] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [modalSize, setModalSize] = useState({ width: 1200, height: 800 });
@@ -142,6 +144,14 @@ const PageModal: React.FC<PageModalProps> = ({
 
   const generateHTML = () => {
     return builderElements.map(element => {
+      // Handle custom components
+      if (element.customComponent && element.componentData) {
+        const component = element.componentData;
+        return `<!-- Custom Component: ${component.name} -->
+${component.template || ''}`;
+      }
+      
+      // Handle regular HTML elements
       const attributes = element.attributes || {};
       const attributeString = Object.entries(attributes)
         .map(([key, value]) => `${key}="${value}"`)
@@ -161,6 +171,30 @@ const PageModal: React.FC<PageModalProps> = ({
       [groupName]: !prev[groupName]
     }));
   };
+
+  const loadCustomComponents = useCallback(async () => {
+    if (!isOpen || !user?.id) return;
+    
+    setLoadingComponents(true);
+    try {
+      const components = await componentAPI.getAll();
+      // Filter components that are published/public and belong to the user or are public
+      const availableComponents = components.filter(comp => 
+        comp.status === 'published' || comp.isPublic || comp.userId === user.id
+      );
+      setCustomComponents(availableComponents);
+    } catch (error) {
+      console.error('Error loading custom components:', error);
+      showError('Failed to load custom components');
+    } finally {
+      setLoadingComponents(false);
+    }
+  }, [isOpen, user?.id, showError]);
+
+  // Load custom components when modal opens
+  useEffect(() => {
+    loadCustomComponents();
+  }, [loadCustomComponents]);
 
   // Center modal when opened
   useEffect(() => {
@@ -508,6 +542,7 @@ const PageModal: React.FC<PageModalProps> = ({
                   <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">HTML Elements</h3>
                   
                   <div className="space-y-3">
+                    {/* HTML Element Groups */}
                     {htmlElementGroups.map((group) => {
                       const GroupIcon = group.icon;
                       const isCollapsed = collapsedGroups[group.name];
@@ -554,6 +589,71 @@ const PageModal: React.FC<PageModalProps> = ({
                         </div>
                       );
                     })}
+
+                    {/* Custom Components Group */}
+                    <div className="border border-slate-200 dark:border-slate-600 rounded-lg">
+                      {/* Group Header */}
+                      <button
+                        onClick={() => toggleGroup('Custom Components')}
+                        className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 hover:from-purple-200 hover:to-blue-200 dark:hover:from-purple-800/30 dark:hover:to-blue-800/30 rounded-t-lg transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Component className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                            Custom Components
+                          </span>
+                          {loadingComponents && (
+                            <div className="w-3 h-3 border border-purple-300 border-t-purple-600 rounded-full animate-spin"></div>
+                          )}
+                        </div>
+                        {collapsedGroups['Custom Components'] ? (
+                          <ChevronRight className="h-4 w-4 text-purple-500" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-purple-500" />
+                        )}
+                      </button>
+                      
+                      {/* Custom Components List */}
+                      {!collapsedGroups['Custom Components'] && (
+                        <div className="p-2 space-y-1">
+                          {customComponents.length === 0 ? (
+                            <div className="p-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                              {loadingComponents ? 'Loading components...' : 'No custom components available'}
+                            </div>
+                          ) : (
+                            customComponents.map((component) => {
+                              const componentElement = {
+                                id: `custom-${component.id}`,
+                                name: component.name,
+                                tag: 'div',
+                                type: 'custom',
+                                content: component.template || '',
+                                customComponent: true,
+                                componentData: component
+                              };
+                              
+                              return (
+                                <div
+                                  key={component.id}
+                                  draggable
+                                  onDragStart={(e) => onDragStart(e, componentElement)}
+                                  className="flex items-center space-x-2 p-2 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-600 rounded cursor-move hover:border-purple-400 dark:hover:border-purple-400 hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-800/30 dark:hover:to-blue-800/30 transition-colors"
+                                >
+                                  <Component className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                                  <div className="flex-1">
+                                    <span className="text-xs font-medium text-purple-700 dark:text-purple-300">{component.name}</span>
+                                    <div className="text-xs text-purple-500 dark:text-purple-400">{component.type}</div>
+                                  </div>
+                                  {component.isPublic && (
+                                    <div className="w-2 h-2 bg-green-500 rounded-full" title="Public component"></div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
@@ -597,7 +697,13 @@ const PageModal: React.FC<PageModalProps> = ({
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Page Preview</h3>
                       {builderElements.map((element) => {
                         // Get icon component based on element type
-                        const getIconComponent = (tag: string) => {
+                        const getIconComponent = (element: any) => {
+                          // Handle custom components
+                          if (element.customComponent) {
+                            return Component;
+                          }
+                          
+                          // Handle regular HTML elements
                           const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
                             div: Layout,
                             section: Layout,
@@ -615,24 +721,48 @@ const PageModal: React.FC<PageModalProps> = ({
                             img: FileText,
                             a: FileText
                           };
-                          return iconMap[tag] || FileText;
+                          return iconMap[element.tag] || FileText;
                         };
                         
-                        const IconComponent = getIconComponent(element.tag);
+                        const IconComponent = getIconComponent(element);
                         
                         return (
                           <div
                             key={element.uniqueId}
-                            className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-400 dark:hover:border-slate-400 transition-colors"
+                            className={`flex items-center justify-between p-3 border rounded-lg hover:border-slate-400 dark:hover:border-slate-400 transition-colors ${
+                              element.customComponent 
+                                ? 'bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-600'
+                                : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600'
+                            }`}
                           >
                             <div className="flex items-center space-x-3">
-                              <IconComponent className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                              <IconComponent className={`h-4 w-4 ${
+                                element.customComponent 
+                                  ? 'text-purple-600 dark:text-purple-400'
+                                  : 'text-slate-600 dark:text-slate-300'
+                              }`} />
                               <div>
-                                <div className="text-sm font-medium text-slate-900 dark:text-white">
+                                <div className={`text-sm font-medium ${
+                                  element.customComponent 
+                                    ? 'text-purple-900 dark:text-purple-100'
+                                    : 'text-slate-900 dark:text-white'
+                                }`}>
                                   {element.name}
+                                  {element.customComponent && (
+                                    <span className="ml-2 text-xs px-2 py-0.5 bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded-full">
+                                      Custom
+                                    </span>
+                                  )}
                                 </div>
-                                <div className="text-xs text-slate-500 dark:text-slate-400">
-                                  {element.content || `<${element.tag}>`}
+                                <div className={`text-xs ${
+                                  element.customComponent 
+                                    ? 'text-purple-600 dark:text-purple-400'
+                                    : 'text-slate-500 dark:text-slate-400'
+                                }`}>
+                                  {element.customComponent 
+                                    ? element.componentData?.type || 'Custom Component'
+                                    : element.content || `<${element.tag}>`
+                                  }
                                 </div>
                               </div>
                             </div>
