@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search, Wrench, Maximize2, Minimize2 } from 'lucide-react';
 import { PageData, CreatePageRequest } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
+import { useAuth } from '@/contexts/AuthContext';
 import dynamic from 'next/dynamic';
 
 // Dynamically import Puck editor to avoid SSR issues
@@ -31,6 +32,7 @@ const PageModal: React.FC<PageModalProps> = ({
   userId = 1
 }) => {
   const { showError } = useAlert();
+  const { user } = useAuth();
   const [formData, setFormData] = useState<CreatePageRequest>({
     title: '',
     slug: '',
@@ -49,7 +51,7 @@ const PageModal: React.FC<PageModalProps> = ({
     seoKeywords: [],
     pageType: 'standard',
     routePath: '',
-    userId,
+    userId: user?.id || userId || 1,
     changeDescription: ''
   });
 
@@ -99,7 +101,7 @@ const PageModal: React.FC<PageModalProps> = ({
         seoKeywords: editingPage.seoKeywords || [],
         pageType: editingPage.pageType || 'standard',
         routePath: editingPage.routePath || '',
-        userId,
+        userId: user?.id || userId || 1,
         changeDescription: ''
       });
       setContentText(JSON.stringify(editingPage.content || {}, null, 2));
@@ -126,7 +128,7 @@ const PageModal: React.FC<PageModalProps> = ({
         seoKeywords: [],
         pageType: 'standard',
         routePath: '',
-        userId,
+        userId: user?.id || userId || 1,
         changeDescription: ''
       });
       setContentText('{}');
@@ -204,6 +206,7 @@ const PageModal: React.FC<PageModalProps> = ({
 
       const pageData = {
         ...formData,
+        userId: user?.id || userId || 1, // Ensure we use current user ID
         content,
         layout,
         components,
@@ -211,11 +214,22 @@ const PageModal: React.FC<PageModalProps> = ({
         changeDescription: formData.changeDescription || (editingPage ? 'Page updated' : 'Page created')
       };
 
+      console.log('Saving page with data:', pageData); // Debug logging
       await onSave(pageData);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving page:', error);
-      showError('Failed to save page');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Show more detailed error message
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to save page';
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -227,14 +241,26 @@ const PageModal: React.FC<PageModalProps> = ({
     try {
       const pageData = {
         ...formData,
+        userId: user?.id || userId || 1, // Ensure we use current user ID
         changeDescription: formData.changeDescription || (editingPage ? 'Page updated via builder' : 'Page created via builder')
       };
 
+      console.log('Saving page via builder with data:', pageData); // Debug logging
       await onSave(pageData);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving page:', error);
-      showError('Failed to save page');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Show more detailed error message
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to save page';
+      showError(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -24,6 +24,7 @@ import FlowHistoryPanel from '@/components/panels/FlowHistoryPanel';
 import CodeEditorModal from '@/components/modals/CodeEditorModal';
 import { serviceAPI, ServiceData, nodeContentAPI, CreateNodeContentRequest } from '@/lib/api';
 import { useAlertActions } from '@/hooks/useAlert';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ServiceFlowModalProps {
   isOpen: boolean;
@@ -546,6 +547,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
     resetPosition 
   } = useModalDragAndResize();
   const { alert } = useAlertActions();
+  const { user } = useAuth();
 
   const onConnect: OnConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
@@ -704,7 +706,7 @@ const ServiceFlowModal: React.FC<ServiceFlowModalProps> = ({
       edges: cleanEdges,
       viewport: cleanViewport,
       version: version,
-      createdBy: 1, // TODO: Get from auth context
+      createdBy: user?.id || 1, // Use authenticated user ID
       changeDescription: changeDescription || `Updated ${serviceTypeData?.label || 'service'} with ${cleanNodes.length} nodes`,
       serviceType: serviceType // Add service type to the data
     };

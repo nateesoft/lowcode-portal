@@ -95,7 +95,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const { openChatbot } = useChatbot();
   const { alert } = useAlertActions();
   const { showConfirm } = useAlert();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { 
     connections, 
     isLoading: dbLoading, 
@@ -272,10 +272,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handleSavePage = async (pageData: CreatePageRequest) => {
     try {
       if (editingPage) {
-        await pageAPI.update(editingPage.id!, { ...pageData, userId: 1 });
+        await pageAPI.update(editingPage.id!, { ...pageData, userId: user?.id || 1 });
         alert.success('Page updated successfully!');
       } else {
-        await pageAPI.create({ ...pageData, userId: 1 });
+        await pageAPI.create({ ...pageData, userId: user?.id || 1 });
         alert.success('Page created successfully!');
       }
       await loadPages();
@@ -2586,7 +2586,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         }}
         onSave={handleSaveComponent}
         editingComponent={editingComponent}
-        userId={1}
+        userId={user?.id || 1}
       />
 
       <ComponentHistoryPanel
@@ -2600,7 +2600,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         onRestore={() => {
           loadComponents();
         }}
-        userId={1}
+        userId={user?.id || 1}
       />
 
       {/* Page Management Modals */}
@@ -2612,7 +2612,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         }}
         onSave={handleSavePage}
         editingPage={editingPage}
-        userId={1}
+        userId={user?.id || 1}
       />
 
       <PageHistoryPanel
@@ -2626,7 +2626,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         onRestore={() => {
           loadPages();
         }}
-        userId={1}
+        userId={user?.id || 1}
       />
 
       {/* My Project Modal */}
