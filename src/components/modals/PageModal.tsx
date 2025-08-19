@@ -279,102 +279,6 @@ const PageModal: React.FC<PageModalProps> = ({
     setBuilderElements((prev) => prev.filter((el) => el.uniqueId !== uniqueId))
   }
 
-  const generateHTML = () => {
-    if (builderElements.length === 0) {
-      return "<!-- No elements in canvas -->"
-    }
-
-    return builderElements
-      .map((element) => {
-        // Handle JsonForm components
-        if (
-          element.type === "jsonform" &&
-          element.customComponent &&
-          element.componentData
-        ) {
-          const component = element.componentData
-          return `<!-- JsonForm Component: ${component.name} -->
-<!-- Component ID: ${component.id} -->
-<!-- Description: ${component.description || "No description"} -->
-<!-- Category: ${component.category} -->
-<!-- Type: ${component.type} -->
-
-<!-- JSON Schema -->
-<script type="application/json" id="schema-${component.id}">
-${component.jsonSchema || "{}"}
-</script>
-
-<!-- UI Schema -->
-<script type="application/json" id="uischema-${component.id}">
-${component.uiSchema || "{}"}
-</script>
-
-<!-- Form Data -->
-<script type="application/json" id="formdata-${component.id}">
-${component.formData || "{}"}
-</script>
-
-<!-- JsonForm Container -->
-<div id="jsonform-${
-            component.id
-          }" class="jsonform-component" data-component-name="${component.name}">
-  <!-- This will be rendered by JsonForms -->
-  <div class="jsonform-placeholder">
-    <h3>${component.name}</h3>
-    <p>${component.description || "JsonForm Component"}</p>
-    <p><em>This form will be rendered using JsonForms library</em></p>
-  </div>
-</div>
-
-<!-- JsonForm Initialization Script -->
-<script>
-  // Initialize JsonForm for component ${component.id}
-  document.addEventListener('DOMContentLoaded', function() {
-    const schema = JSON.parse(document.getElementById('schema-${
-      component.id
-    }').textContent);
-    const uiSchema = JSON.parse(document.getElementById('uischema-${
-      component.id
-    }').textContent);
-    const formData = JSON.parse(document.getElementById('formdata-${
-      component.id
-    }').textContent);
-    
-    // Initialize your JsonForms renderer here
-    console.log('JsonForm ${
-      component.name
-    } ready:', { schema, uiSchema, formData });
-  });
-</script>`
-        }
-
-        // Handle custom components (non-JsonForm)
-        if (element.customComponent && element.componentData) {
-          const component = element.componentData
-          return `<!-- Custom Component: ${component.name} -->
-<!-- Component ID: ${component.id} -->
-<!-- Type: ${component.type} -->
-<!-- Category: ${component.category} -->
-${component.template || "<!-- No template defined -->"}`
-        }
-
-        // Handle regular HTML elements
-        const attributes = element.attributes || {}
-        const attributeString = Object.entries(attributes)
-          .map(([key, value]) => `${key}="${value}"`)
-          .join(" ")
-
-        if (["input", "img"].includes(element.tag)) {
-          return `<${element.tag} ${attributeString} />`
-        }
-
-        return `<${element.tag} ${attributeString}>${element.content || ""}</${
-          element.tag
-        }>`
-      })
-      .join("\n\n")
-  }
-
   const toggleGroup = (groupName: string) => {
     setCollapsedGroups((prev) => ({
       ...prev,
@@ -1136,29 +1040,56 @@ ${component.template || "<!-- No template defined -->"}`
                                 </div>
                               ) : (
                                 customComponents.map((component) => {
+                                  // Safely parse JSON data with error handling
+                                  let parsedSchema = {}
+                                  let parsedUiSchema = {}
+                                  let parsedFormData = {}
+                                  
+                                  try {
+                                    parsedSchema = component.jsonSchema 
+                                      ? JSON.parse(component.jsonSchema) 
+                                      : {}
+                                  } catch (error) {
+                                    console.warn(`Failed to parse jsonSchema for component ${component.name}:`, error)
+                                    parsedSchema = {}
+                                  }
+                                  
+                                  try {
+                                    parsedUiSchema = component.uiSchema 
+                                      ? JSON.parse(component.uiSchema) 
+                                      : {}
+                                  } catch (error) {
+                                    console.warn(`Failed to parse uiSchema for component ${component.name}:`, error)
+                                    parsedUiSchema = {}
+                                  }
+                                  
+                                  try {
+                                    parsedFormData = component.formData 
+                                      ? JSON.parse(component.formData) 
+                                      : {}
+                                  } catch (error) {
+                                    console.warn(`Failed to parse formData for component ${component.name}:`, error)
+                                    parsedFormData = {}
+                                  }
+                                  
                                   const componentElement = {
                                     id: `custom-${component.id}`,
                                     name: component.name,
                                     tag: "JsonForm",
                                     type: "jsonform",
                                     content: `<JsonForm 
-  schema={${JSON.stringify(JSON.parse(component.jsonSchema || "{}"), null, 2)}}
-  uiSchema={${JSON.stringify(JSON.parse(component.uiSchema || "{}"), null, 2)}}
-  formData={${JSON.stringify(JSON.parse(component.formData || "{}"), null, 2)}}
+  schema={${JSON.stringify(parsedSchema, null, 2)}}
+  uiSchema={${JSON.stringify(parsedUiSchema, null, 2)}}
+  formData={${JSON.stringify(parsedFormData, null, 2)}}
   onChange={(data) => console.log('Form data changed:', data)}
   onSubmit={(data) => console.log('Form submitted:', data)}
 />`,
                                     customComponent: true,
                                     componentData: component,
-                                    schema: component.jsonSchema
-                                      ? JSON.parse(component.jsonSchema)
-                                      : {},
-                                    uiSchema: component.uiSchema
-                                      ? JSON.parse(component.uiSchema)
-                                      : {},
-                                    formData: component.formData
-                                      ? JSON.parse(component.formData)
-                                      : {}
+                                    // Store parsed data for easy access
+                                    schema: parsedSchema,
+                                    uiSchema: parsedUiSchema,
+                                    formData: parsedFormData
                                   }
 
                                   return (
@@ -1393,79 +1324,103 @@ ${component.template || "<!-- No template defined -->"}`
                                 let uiSchema: any = {}
                                 let formData: any = {}
 
-                                try {
-                                  // Parse jsonSchema
-                                  if (
-                                    component.jsonSchema &&
-                                    component.jsonSchema.trim() !== "{}" &&
-                                    component.jsonSchema.trim() !== ""
-                                  ) {
-                                    schema = JSON.parse(component.jsonSchema)
-                                  } else {
-                                    // Fallback schema สำหรับ demo
-                                    schema = {
-                                      type: "object",
-                                      title: component.name + " Form",
-                                      properties: {
+                                const { jsonSchema: schemaComponent, uiSchema: uiSchemaComponent } = component?.props
+                                // Use pre-parsed data from element if available
+                                if (schemaComponent && Object.keys(schemaComponent).length > 0) {
+                                  schema = schemaComponent
+                                } else {
+                                  // Try to parse from component data
+                                  try {
+                                    if (
+                                      component.jsonSchema &&
+                                      component.jsonSchema.trim() !== "{}" &&
+                                      component.jsonSchema.trim() !== ""
+                                    ) {
+                                      schema = JSON.parse(component.jsonSchema)
+                                    } else {
+                                      // Fallback schema สำหรับ demo
+                                      schema = {
+                                        type: "object",
+                                        title: component.name + " Form",
+                                        properties: {
+                                          name: {
+                                            type: "string",
+                                            title: "Name"
+                                          },
+                                          email: {
+                                            type: "string",
+                                            title: "Email",
+                                            format: "email"
+                                          },
+                                          message: {
+                                            type: "string",
+                                            title: "Message",
+                                            format: "textarea"
+                                          }
+                                        },
+                                        required: ["name", "email"]
+                                      }
+                                    }
+                                  } catch (error) {
+                                    console.error("Error parsing jsonSchema:", error)
+                                    schema = {}
+                                  }
+                                }
+
+                                // Use pre-parsed uiSchema from element if available
+                                if (uiSchemaComponent && Object.keys(uiSchemaComponent).length > 0) {
+                                  uiSchema = uiSchemaComponent
+                                } else {
+                                  // Try to parse from component data
+                                  try {
+                                    if (
+                                      component.uiSchema &&
+                                      component.uiSchema.trim() !== "{}" &&
+                                      component.uiSchema.trim() !== ""
+                                    ) {
+                                      uiSchema = JSON.parse(component.uiSchema)
+                                    } else {
+                                      // Fallback uiSchema สำหรับ demo
+                                      uiSchema = {
                                         name: {
-                                          type: "string",
-                                          title: "Name"
+                                          "ui:placeholder": "Enter your full name"
                                         },
                                         email: {
-                                          type: "string",
-                                          title: "Email",
-                                          format: "email"
+                                          "ui:placeholder":
+                                            "Enter your email address"
                                         },
                                         message: {
-                                          type: "string",
-                                          title: "Message",
-                                          format: "textarea"
-                                        }
-                                      },
-                                      required: ["name", "email"]
-                                    }
-                                  }
-
-                                  // Parse uiSchema
-                                  if (
-                                    component.uiSchema &&
-                                    component.uiSchema.trim() !== "{}" &&
-                                    component.uiSchema.trim() !== ""
-                                  ) {
-                                    uiSchema = JSON.parse(component.uiSchema)
-                                  } else {
-                                    // Fallback uiSchema สำหรับ demo
-                                    uiSchema = {
-                                      name: {
-                                        "ui:placeholder": "Enter your full name"
-                                      },
-                                      email: {
-                                        "ui:placeholder":
-                                          "Enter your email address"
-                                      },
-                                      message: {
-                                        "ui:widget": "textarea",
-                                        "ui:placeholder": "Enter your message",
-                                        "ui:options": {
-                                          rows: 4
+                                          "ui:widget": "textarea",
+                                          "ui:placeholder": "Enter your message",
+                                          "ui:options": {
+                                            rows: 4
+                                          }
                                         }
                                       }
                                     }
+                                  } catch (error) {
+                                    console.error("Error parsing uiSchema:", error)
+                                    uiSchema = {}
                                   }
+                                }
 
-                                  // Parse formData
-                                  if (
-                                    component.formData &&
-                                    component.formData.trim() !== "{}" &&
-                                    component.formData.trim() !== ""
-                                  ) {
-                                    formData = JSON.parse(component.formData)
+                                // Use pre-parsed formData from element if available
+                                if (element.formData && Object.keys(element.formData).length > 0) {
+                                  formData = element.formData
+                                } else {
+                                  // Try to parse from component data
+                                  try {
+                                    if (
+                                      component.formData &&
+                                      component.formData.trim() !== "{}" &&
+                                      component.formData.trim() !== ""
+                                    ) {
+                                      formData = JSON.parse(component.formData)
+                                    }
+                                  } catch (error) {
+                                    console.error("Error parsing formData:", error)
+                                    formData = {}
                                   }
-                                } catch (error) {
-                                  console.error(
-                                    "Error parsing JsonForm data:",
-                                    error
-                                  )
                                 }
 
                                 return (
