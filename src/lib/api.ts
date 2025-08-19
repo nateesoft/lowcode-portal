@@ -35,25 +35,48 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
+        console.log('401 error detected, attempting token refresh...');
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
+          console.log('Refresh token found, calling refresh endpoint...');
           const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refresh_token: refreshToken
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            withCredentials: true
           });
           
+          console.log('Token refresh response:', response.data);
           const newAccessToken = response.data.access_token;
           localStorage.setItem('access_token', newAccessToken);
           
+          // Update the user data if provided
+          if (response.data.user) {
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+          }
+          
           // Retry original request with new token
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          console.log('Retrying original request with new token...');
           return api(originalRequest);
+        } else {
+          console.log('No refresh token found, redirecting to login');
+          throw new Error('No refresh token available');
         }
       } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
         // Refresh failed, redirect to login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        
+        // Only redirect if we're not already on the login page
+        if (window.location.pathname !== '/login') {
+          console.log('Redirecting to login page...');
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }
@@ -1141,6 +1164,8 @@ export interface UserGroupData {
   createdById?: number;
   createdBy?: User;
   members?: User[];
+  projectId?: number;
+  project?: MyProjectData;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -1154,6 +1179,7 @@ export interface CreateUserGroupRequest {
   color?: string;
   icon?: string;
   memberIds?: number[];
+  projectId?: number;
 }
 
 export interface UpdateUserGroupRequest {
@@ -1164,6 +1190,7 @@ export interface UpdateUserGroupRequest {
   settings?: any;
   color?: string;
   icon?: string;
+  projectId?: number;
 }
 
 export interface UserGroupStats {
@@ -1177,6 +1204,10 @@ export interface UserGroupStats {
     memberCount: number;
     status: string;
   }>;
+}
+
+export interface AddMembersDto {
+  userIds: number[];
 }
 
 export const userGroupAPI = {
@@ -1235,6 +1266,32 @@ export const userGroupAPI = {
   removeMembers: async (id: number, userIds: number[]): Promise<UserGroupData> => {
     const response = await api.delete(`/user-groups/${id}/members`, { data: { userIds } });
     return response.data;
+  },
+};
+
+// Users API
+export const usersAPI = {
+  // Get all users
+  getAll: async (): Promise<User[]> => {
+    const response = await api.get('/users');
+    return response.data;
+  },
+
+  // Get user by ID
+  getById: async (id: number): Promise<User> => {
+    const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+
+  // Update user
+  update: async (id: number, data: Partial<User>): Promise<User> => {
+    const response = await api.patch(`/users/${id}`, data);
+    return response.data;
+  },
+
+  // Delete user
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/users/${id}`);
   },
 };
 
@@ -1302,3 +1359,22 @@ export const serviceAPI = {
     await api.delete(`/services/${id}`);
   },
 };
+
+// Centralized API object
+export const apiClient = {
+  // User Groups
+  getUserGroups: () => userGroupAPI.getAll(),
+  createUserGroup: (data: CreateUserGroupRequest) => userGroupAPI.create(data),
+  updateUserGroup: (id: number, data: UpdateUserGroupRequest) => userGroupAPI.update(id, data),
+  deleteUserGroup: (id: number) => userGroupAPI.delete(id),
+  addMembersToGroup: (id: number, data: AddMembersDto) => userGroupAPI.addMembers(id, data.userIds),
+  removeMembersFromGroup: (id: number, data: AddMembersDto) => userGroupAPI.removeMembers(id, data.userIds),
+  
+  // Projects
+  getMyProjects: () => myProjectAPI.getAll(),
+  
+  // Users  
+  getUsers: () => usersAPI.getAll(),
+};
+
+// Export the centralized API client as the default export

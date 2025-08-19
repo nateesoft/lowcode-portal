@@ -41,36 +41,44 @@ const LoginPage: React.FC<LoginPageProps> = ({
     setLoading(true);
     setError('');
 
+    console.log('Form submission started:', { isLogin, formData: { ...formData, password: '***' } });
+
     try {
-      let userData;
       if (isLogin) {
-        const response = await authAPI.login({ email: formData.email, password: formData.password });
-        userData = response.user;
+        console.log('Attempting login...');
+        // Use AuthContext login which handles both API call and state management
         await login(formData.email, formData.password);
+        console.log('Login successful');
+        // Set legacy state for any components that still depend on it
+        setIsAuthenticated(true);
+        // Redirect to dashboard
+        router.push('/dashboard');
       } else {
         if (!formData.firstName || !formData.lastName) {
+          console.log('Registration validation failed: missing fields');
           setError('Please fill in all fields');
+          setLoading(false);
           return;
         }
-        const response = await authAPI.register({ 
-          email: formData.email, 
-          password: formData.password, 
-          firstName: formData.firstName, 
-          lastName: formData.lastName 
-        });
-        userData = response.user;
+        console.log('Attempting registration...');
+        // Use AuthContext register which handles both API call and state management
         await register(formData.email, formData.password, formData.firstName, formData.lastName);
+        console.log('Registration successful');
+        // Set legacy state for any components that still depend on it
+        setIsAuthenticated(true);
+        setUserRole('user'); // Default role for new users
+        // Redirect to dashboard
+        router.push('/dashboard');
       }
       
-      // Set legacy state for any components that still depend on it
-      setIsAuthenticated(true);
-      setUserRole(userData.role as UserRole);
-      
-      // Redirect based on role
-      const redirectPath = getDefaultRedirectForRole(userData.role);
-      router.push(redirectPath);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'An error occurred');
+      console.error('Login/Register error:', err);
+      console.error('Error details:', { 
+        message: err.message, 
+        response: err.response?.data, 
+        status: err.response?.status 
+      });
+      setError(err.response?.data?.message || err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }

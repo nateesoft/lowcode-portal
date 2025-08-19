@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Folder, Globe, Smartphone, Database, MonitorSpeaker, ShoppingCart, FileText, User, Package, Type, Palette, Languages, Shield, Bell, Calendar, Settings } from 'lucide-react';
 import { myProjectAPI, CreateMyProjectRequest, DesignSettings } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MyProjectModalProps {
   isOpen: boolean;
@@ -135,6 +136,7 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
   onClose,
   onProjectCreated
 }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<CreateMyProjectRequest>({
     name: '',
     slug: '',
@@ -144,7 +146,7 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
     priority: 'medium',
     isPublic: false,
     tags: [],
-    createdById: 1 // Default user ID
+    createdById: user?.id || 1 // Use authenticated user ID
   });
   
   const [designSettings, setDesignSettings] = useState<DesignSettings>({
@@ -207,9 +209,11 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
       // Combine formData with designSettings
       const projectData: CreateMyProjectRequest = {
         ...formData,
+        createdById: user?.id || 1, // Ensure we use current user ID
         designSettings: designSettings
       };
       
+      console.log('Creating project with data:', projectData); // Debug logging
       const project = await myProjectAPI.create(projectData);
       showAlert('Project created successfully!', 'success');
       onProjectCreated?.(project);
@@ -225,7 +229,7 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
         priority: 'medium',
         isPublic: false,
         tags: [],
-        createdById: 1
+        createdById: user?.id || 1
       });
       setDesignSettings({
         primaryFont: 'inter',
@@ -238,7 +242,17 @@ const MyProjectModal: React.FC<MyProjectModalProps> = ({
       });
     } catch (error: any) {
       console.error('Error creating project:', error);
-      showAlert(error.response?.data?.message || 'Failed to create project', 'error');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Show more detailed error message
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to create project';
+      showAlert(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }

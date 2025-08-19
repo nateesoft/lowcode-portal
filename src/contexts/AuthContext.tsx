@@ -59,19 +59,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(storedUser);
         setIsAuthenticated(true);
         
-        // Skip token verification for now to avoid redirect loops
-        // We'll verify in the background but not logout on failure immediately
+        // Verify token validity
         try {
           const verification = await authAPI.verifyToken();
           console.log('Token verification result:', verification);
           if (!verification.valid) {
-            console.log('Token invalid, but keeping user logged in for now');
-            // Don't logout immediately, let the user try to use the app
-            // The API interceptors will handle token refresh
+            console.log('Token invalid, attempting refresh...');
+            try {
+              await authAPI.refreshToken();
+              console.log('Token refreshed successfully');
+              // Re-verify after refresh
+              const newVerification = await authAPI.verifyToken();
+              if (!newVerification.valid) {
+                console.log('Token still invalid after refresh, logging out');
+                handleLogout();
+              }
+            } catch (refreshError) {
+              console.error('Token refresh failed:', refreshError);
+              handleLogout();
+            }
           }
         } catch (error) {
-          console.log('Token verification error (but keeping logged in):', error);
-          // Don't logout immediately
+          console.log('Token verification error:', error);
+          // Try refresh on verification error
+          try {
+            await authAPI.refreshToken();
+            console.log('Token refreshed after verification error');
+          } catch (refreshError) {
+            console.error('Token refresh failed after verification error:', refreshError);
+            handleLogout();
+          }
         }
       } else {
         console.log('No stored user, trying token verification');
