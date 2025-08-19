@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search, Wrench, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Save, Palette, Settings, FileText, Tag, Globe, Layout, Search, Wrench, Maximize2, Minimize2, ChevronDown, ChevronRight } from 'lucide-react';
 import { PageData, CreatePageRequest } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,18 +17,49 @@ const pageTypes = [
   'portfolio', 'documentation', 'support', 'checkout', 'other'
 ];
 
-// HTML Elements for Visual Builder (similar to ComponentBuilderModal)
-const htmlElements = [
-  { id: 'div', name: 'Container (div)', icon: Layout, tag: 'div', type: 'layout' },
-  { id: 'section', name: 'Section', icon: Layout, tag: 'section', type: 'layout' },
-  { id: 'header', name: 'Header', icon: Layout, tag: 'header', type: 'layout' },
-  { id: 'main', name: 'Main', icon: Layout, tag: 'main', type: 'layout' },
-  { id: 'h1', name: 'Heading 1', icon: FileText, tag: 'h1', type: 'text', content: 'Heading 1' },
-  { id: 'h2', name: 'Heading 2', icon: FileText, tag: 'h2', type: 'text', content: 'Heading 2' },
-  { id: 'p', name: 'Paragraph', icon: FileText, tag: 'p', type: 'text', content: 'Your paragraph text here' },
-  { id: 'button', name: 'Button', icon: Settings, tag: 'button', type: 'interactive', content: 'Click me' },
-  { id: 'input', name: 'Input', icon: Settings, tag: 'input', type: 'form', attributes: { type: 'text', placeholder: 'Enter text' } },
-  { id: 'textarea', name: 'Textarea', icon: Settings, tag: 'textarea', type: 'form', attributes: { placeholder: 'Enter text', rows: '3' } },
+// HTML Elements grouped for Visual Builder
+const htmlElementGroups = [
+  {
+    name: 'Layout Elements',
+    icon: Layout,
+    elements: [
+      { id: 'div', name: 'Container (div)', icon: Layout, tag: 'div', type: 'layout' },
+      { id: 'section', name: 'Section', icon: Layout, tag: 'section', type: 'layout' },
+      { id: 'header', name: 'Header', icon: Layout, tag: 'header', type: 'layout' },
+      { id: 'main', name: 'Main', icon: Layout, tag: 'main', type: 'layout' },
+      { id: 'footer', name: 'Footer', icon: Layout, tag: 'footer', type: 'layout' },
+      { id: 'aside', name: 'Aside', icon: Layout, tag: 'aside', type: 'layout' },
+    ]
+  },
+  {
+    name: 'Text Elements',
+    icon: FileText,
+    elements: [
+      { id: 'h1', name: 'Heading 1', icon: FileText, tag: 'h1', type: 'text', content: 'Heading 1' },
+      { id: 'h2', name: 'Heading 2', icon: FileText, tag: 'h2', type: 'text', content: 'Heading 2' },
+      { id: 'h3', name: 'Heading 3', icon: FileText, tag: 'h3', type: 'text', content: 'Heading 3' },
+      { id: 'p', name: 'Paragraph', icon: FileText, tag: 'p', type: 'text', content: 'Your paragraph text here' },
+      { id: 'span', name: 'Span', icon: FileText, tag: 'span', type: 'text', content: 'Text span' },
+    ]
+  },
+  {
+    name: 'Form Elements',
+    icon: Settings,
+    elements: [
+      { id: 'input', name: 'Input', icon: Settings, tag: 'input', type: 'form', attributes: { type: 'text', placeholder: 'Enter text' } },
+      { id: 'textarea', name: 'Textarea', icon: Settings, tag: 'textarea', type: 'form', attributes: { placeholder: 'Enter text', rows: '3' } },
+      { id: 'select', name: 'Select', icon: Settings, tag: 'select', type: 'form' },
+      { id: 'button', name: 'Button', icon: Settings, tag: 'button', type: 'interactive', content: 'Click me' },
+    ]
+  },
+  {
+    name: 'Media & Links',
+    icon: Globe,
+    elements: [
+      { id: 'img', name: 'Image', icon: Globe, tag: 'img', type: 'media', attributes: { src: 'https://via.placeholder.com/150', alt: 'Image' } },
+      { id: 'a', name: 'Link', icon: Globe, tag: 'a', type: 'interactive', content: 'Link text', attributes: { href: '#' } },
+    ]
+  }
 ];
 
 const PageModal: React.FC<PageModalProps> = ({
@@ -74,6 +105,7 @@ const PageModal: React.FC<PageModalProps> = ({
   const [jsonFormUiSchema, setJsonFormUiSchema] = useState('{}');
   const [builderElements, setBuilderElements] = useState<any[]>([]);
   const [selectedElement, setSelectedElement] = useState<any>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [modalSize, setModalSize] = useState({ width: 1200, height: 800 });
@@ -121,6 +153,13 @@ const PageModal: React.FC<PageModalProps> = ({
       
       return `<${element.tag} ${attributeString}>${element.content || ''}</${element.tag}>`;
     }).join('\n');
+  };
+
+  const toggleGroup = (groupName: string) => {
+    setCollapsedGroups(prev => ({
+      ...prev,
+      [groupName]: !prev[groupName]
+    }));
   };
 
   // Center modal when opened
@@ -467,18 +506,51 @@ const PageModal: React.FC<PageModalProps> = ({
               <div className="w-64 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col">
                 <div className="p-4 flex-1 overflow-y-auto">
                   <h3 className="text-sm font-medium text-slate-900 dark:text-white mb-3">HTML Elements</h3>
-                  <div className="space-y-2">
-                    {htmlElements.map((element) => {
-                      const IconComponent = element.icon;
+                  
+                  <div className="space-y-3">
+                    {htmlElementGroups.map((group) => {
+                      const GroupIcon = group.icon;
+                      const isCollapsed = collapsedGroups[group.name];
+                      
                       return (
-                        <div
-                          key={element.id}
-                          draggable
-                          onDragStart={(e) => onDragStart(e, element)}
-                          className="flex items-center space-x-2 p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg cursor-move hover:border-slate-400 dark:hover:border-slate-400 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors shadow-sm"
-                        >
-                          <IconComponent className="h-4 w-4 text-slate-700 dark:text-slate-300" />
-                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{element.name}</span>
+                        <div key={group.name} className="border border-slate-200 dark:border-slate-600 rounded-lg">
+                          {/* Group Header */}
+                          <button
+                            onClick={() => toggleGroup(group.name)}
+                            className="w-full flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-t-lg transition-colors"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <GroupIcon className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+                              <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                {group.name}
+                              </span>
+                            </div>
+                            {isCollapsed ? (
+                              <ChevronRight className="h-4 w-4 text-slate-500" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-500" />
+                            )}
+                          </button>
+                          
+                          {/* Group Elements */}
+                          {!isCollapsed && (
+                            <div className="p-2 space-y-1">
+                              {group.elements.map((element) => {
+                                const IconComponent = element.icon;
+                                return (
+                                  <div
+                                    key={element.id}
+                                    draggable
+                                    onDragStart={(e) => onDragStart(e, element)}
+                                    className="flex items-center space-x-2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded cursor-move hover:border-slate-400 dark:hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                                  >
+                                    <IconComponent className="h-3 w-3 text-slate-600 dark:text-slate-400" />
+                                    <span className="text-xs text-slate-700 dark:text-slate-300">{element.name}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
