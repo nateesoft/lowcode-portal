@@ -1450,24 +1450,80 @@ const PageModal: React.FC<PageModalProps> = ({
                                           <p className="font-medium mb-2">
                                             Live JsonForm Preview:
                                           </p>
-                                          {schema.properties &&
-                                            Object.keys(schema.properties).map(
-                                              (key) => {
-                                                const property =
-                                                  schema.properties[key]
-                                                const uiConfig =
-                                                  uiSchema[key] || {}
-                                                const placeholder =
-                                                  uiConfig["ui:placeholder"] ||
-                                                  `Enter ${
-                                                    property.title || key
-                                                  }`
-                                                const widget =
-                                                  uiConfig["ui:widget"]
-                                                const options =
-                                                  uiConfig["ui:options"] || {}
-                                                const defaultValue =
-                                                  formData[key] || ""
+                                          {/* Check if uiSchema has layout structure */}
+                                          {uiSchema && (uiSchema.type === "HorizontalLayout" || uiSchema.type === "VerticalLayout") ? (
+                                            <div>
+                                              <div className="flex items-center gap-2 mb-3 text-xs">
+                                                <span className="inline-flex items-center px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                                  <Layout className="h-3 w-3 mr-1" />
+                                                  {uiSchema.type === "HorizontalLayout" ? "Horizontal" : "Vertical"} Layout
+                                                </span>
+                                                <span className="text-slate-500 dark:text-slate-400">
+                                                  {uiSchema.elements?.length || 0} fields
+                                                </span>
+                                              </div>
+                                              <div className={uiSchema.type === "HorizontalLayout" ? "flex flex-row gap-4 flex-wrap" : "flex flex-col space-y-3"}>
+                                              {uiSchema.elements && uiSchema.elements.map((layoutElement: any, layoutIndex: number) => {
+                                                if (layoutElement.type === "Control" && layoutElement.scope) {
+                                                  const propertyKey = layoutElement.scope.split('/').pop()
+                                                  const property = schema.properties?.[propertyKey]
+                                                  
+                                                  if (!property) return null
+                                                  
+                                                  const defaultValue = formData[propertyKey] || ""
+                                                  
+                                                  return (
+                                                    <div key={layoutIndex} className={`${uiSchema.type === "HorizontalLayout" ? "flex-1 min-w-0" : "w-full"} p-2 bg-slate-50 dark:bg-slate-700 rounded`}>
+                                                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                                        {property.title || propertyKey}
+                                                        {schema.required?.includes(propertyKey) && <span className="text-red-500 ml-1">*</span>}
+                                                      </label>
+                                                      
+                                                      {property.type === "string" && !property.enum && (
+                                                        <input
+                                                          type={property.format === "email" ? "email" : "text"}
+                                                          placeholder={`Enter ${property.title || propertyKey}`}
+                                                          className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                                          defaultValue={defaultValue}
+                                                          disabled
+                                                        />
+                                                      )}
+                                                      {property.type === "number" && (
+                                                        <input
+                                                          type="number"
+                                                          className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                                          defaultValue={defaultValue}
+                                                          disabled
+                                                        />
+                                                      )}
+                                                      {property.enum && (
+                                                        <select
+                                                          className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                                          disabled
+                                                          defaultValue={defaultValue}
+                                                        >
+                                                          <option value="">Select {property.title || propertyKey}</option>
+                                                          {property.enum.map((option: any) => (
+                                                            <option key={option} value={option}>{option}</option>
+                                                          ))}
+                                                        </select>
+                                                      )}
+                                                    </div>
+                                                  )
+                                                }
+                                                return null
+                                              })}
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            /* Render standard property-based forms */
+                                            schema.properties && Object.keys(schema.properties).map((key) => {
+                                              const property = schema.properties[key]
+                                              const uiConfig = uiSchema[key] || {}
+                                              const placeholder = uiConfig["ui:placeholder"] || `Enter ${property.title || key}`
+                                              const widget = uiConfig["ui:widget"]
+                                              const options = uiConfig["ui:options"] || {}
+                                              const defaultValue = formData[key] || ""
 
                                                 return (
                                                   <div
@@ -1602,7 +1658,8 @@ const PageModal: React.FC<PageModalProps> = ({
                                                   </div>
                                                 )
                                               }
-                                            )}
+                                            )
+                                          )}
                                         </div>
                                       ) : (
                                         <div className="text-center py-4 text-slate-500 dark:text-slate-400">
