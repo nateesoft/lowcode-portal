@@ -184,10 +184,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const handleSaveComponent = async (componentData: CreateComponentRequest) => {
     try {
       if (editingComponent) {
-        await componentAPI.update(editingComponent.id!, { ...componentData, userId: 1 });
+        await componentAPI.update(editingComponent.id!, { ...componentData, userId: user?.id || 1 });
         alert.success('Component updated successfully!');
       } else {
-        await componentAPI.create({ ...componentData, userId: 1 });
+        await componentAPI.create({ ...componentData, userId: user?.id || 1 });
         alert.success('Component created successfully!');
       }
       await loadComponents();
@@ -1909,10 +1909,13 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className={`fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 z-50 transform transition-transform duration-300 ease-in-out ${
         mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0`}>
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex items-center space-x-2">
-            <Code2 className="h-8 w-8 text-blue-600" />
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">DEVLOOP</span>
+        <div className="p-2 border-b border-slate-200 dark:border-slate-700">
+          <div className="w-full h-16 flex items-center justify-center">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
         </div>
 
@@ -2119,9 +2122,12 @@ const Dashboard: React.FC<DashboardProps> = ({
           >
             <Menu className="h-6 w-6" />
           </button>
-          <div className="flex items-center space-x-2">
-            <Code2 className="h-6 w-6 text-blue-600" />
-            <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">DEVLOOP</span>
+          <div className="flex items-center justify-center flex-1 h-full px-2">
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain max-w-[200px] max-h-[40px]"
+            />
           </div>
           <div className="flex items-center space-x-2">
             <button className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">

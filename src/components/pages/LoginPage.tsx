@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Code2 } from 'lucide-react';
 import { UserRole } from '@/lib/types';
 import { authAPI } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -99,8 +98,11 @@ const LoginPage: React.FC<LoginPageProps> = ({
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="flex items-center justify-center mb-8">
-          <Code2 className="h-10 w-10 text-blue-600" />
-          <span className="text-2xl font-bold ml-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">DEVLOOP</span>
+          <img 
+            src="/logo.png" 
+            alt="Logo" 
+            className="h-16 w-auto object-contain"
+          />
         </div>
         
         <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1 mb-8">

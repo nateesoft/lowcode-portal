@@ -3,6 +3,7 @@ import { X, Save, Code, Eye, FileText, Move, Maximize2, Minimize2, Layout, Type,
 import { ComponentData, CreateComponentRequest } from '@/lib/api';
 import { useAlert } from '@/contexts/AlertContext';
 import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ComponentBuilderModalProps {
   isOpen: boolean;
@@ -47,9 +48,10 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
   onClose,
   onSave,
   editingComponent,
-  userId = 1
+  userId
 }) => {
   const { showError } = useAlert();
+  const { user } = useAuth();
   const [formData, setFormData] = useState<CreateComponentRequest>({
     name: '',
     description: '',
@@ -62,7 +64,7 @@ const ComponentBuilderModal: React.FC<ComponentBuilderModalProps> = ({
     status: 'draft',
     isPublic: false,
     tags: [],
-    userId,
+    userId: user?.id || userId || 1,
     changeDescription: ''
   });
 
