@@ -370,6 +370,12 @@ const PageModal: React.FC<PageModalProps> = ({
       setLayoutText(JSON.stringify(editingPage.layout || {}, null, 2))
       setComponentsText(JSON.stringify(editingPage.components || {}, null, 2))
       setStylesText(JSON.stringify(editingPage.styles || {}, null, 2))
+      
+      // Load builderElements from saved content if available
+      if (editingPage.content && editingPage.content.buildData && editingPage.content.buildData.builderElements) {
+        setBuilderElements(editingPage.content.buildData.builderElements)
+        console.log('Loaded builderElements from saved page:', editingPage.content.buildData.builderElements)
+      }
     } else {
       // Reset for new page
       setFormData({
@@ -397,6 +403,9 @@ const PageModal: React.FC<PageModalProps> = ({
       setLayoutText("{}")
       setComponentsText("{}")
       setStylesText("{}")
+      
+      // Reset builderElements for new page
+      setBuilderElements([])
     }
     setTagInput("")
     setKeywordInput("")
@@ -466,10 +475,20 @@ const PageModal: React.FC<PageModalProps> = ({
         return
       }
 
+      // Prepare builderElements data from Build tab
+      const buildData = {
+        builderElements: builderElements,
+        elementsCount: builderElements.length,
+        lastModified: new Date().toISOString()
+      }
+
       const pageData = {
         ...formData,
         userId: user?.id || userId || 1, // Ensure we use current user ID
-        content,
+        content: {
+          ...content,
+          buildData: buildData
+        },
         layout,
         components,
         styles,
@@ -479,6 +498,9 @@ const PageModal: React.FC<PageModalProps> = ({
       }
 
       console.log("Saving page with data:", pageData) // Debug logging
+      console.log("Build tab data being saved:", buildData) // Debug build data
+      console.log("Total builderElements:", builderElements.length) // Debug elements count
+      
       await onSave(pageData)
       onClose()
     } catch (error: any) {
@@ -1450,39 +1472,161 @@ const PageModal: React.FC<PageModalProps> = ({
                                           <p className="font-medium mb-2">
                                             Live JsonForm Preview:
                                           </p>
-                                          {/* Check if uiSchema has layout structure */}
-                                          {uiSchema && (uiSchema.type === "HorizontalLayout" || uiSchema.type === "VerticalLayout") ? (
-                                            <div>
-                                              <div className="flex items-center gap-2 mb-3 text-xs">
-                                                <span className="inline-flex items-center px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
-                                                  <Layout className="h-3 w-3 mr-1" />
-                                                  {uiSchema.type === "HorizontalLayout" ? "Horizontal" : "Vertical"} Layout
-                                                </span>
-                                                <span className="text-slate-500 dark:text-slate-400">
-                                                  {uiSchema.elements?.length || 0} fields
-                                                </span>
-                                              </div>
-                                              <div className={uiSchema.type === "HorizontalLayout" ? "flex flex-row gap-4 flex-wrap" : "flex flex-col space-y-3"}>
-                                              {uiSchema.elements && uiSchema.elements.map((layoutElement: any, layoutIndex: number) => {
-                                                if (layoutElement.type === "Control" && layoutElement.scope) {
-                                                  const propertyKey = layoutElement.scope.split('/').pop()
-                                                  const property = schema.properties?.[propertyKey]
-                                                  
-                                                  if (!property) return null
-                                                  
-                                                  const defaultValue = formData[propertyKey] || ""
+                                          {/* Recursive function to render layouts */}
+                                          {(() => {
+                                            const renderLayoutElement = (element: any, depth: number = 0, path: string = "0"): React.ReactNode => {
+                                              // Handle nested layouts (HorizontalLayout, VerticalLayout)
+                                              if (element.type === "HorizontalLayout" || element.type === "VerticalLayout") {
+                                                return (
+                                                  <div key={`layout-${element.type}-${path}-${depth}`} className="mb-4">
+                                                    {depth === 0 && (
+                                                      <div className="flex items-center gap-2 mb-3 text-xs">
+                                                        <span className="inline-flex items-center px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                                          <Layout className="h-3 w-3 mr-1" />
+                                                          {element.type === "HorizontalLayout" ? "Horizontal" : "Vertical"} Layout
+                                                        </span>
+                                                        <span className="text-slate-500 dark:text-slate-400">
+                                                          {element.elements?.length || 0} elements
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                    {depth > 0 && (
+                                                      <div className="mb-2 text-xs">
+                                                        <span className="inline-flex items-center px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded text-xs">
+                                                          Nested {element.type === "HorizontalLayout" ? "Horizontal" : "Vertical"}
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                    <div className={`${
+                                                      element.type === "HorizontalLayout" 
+                                                        ? "flex flex-row gap-3 flex-wrap" 
+                                                        : "flex flex-col space-y-2"
+                                                    } ${depth > 0 ? "p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-25 dark:bg-slate-800/50" : ""}`}>
+                                                      {element.elements && element.elements.map((childElement: any, index: number) => 
+                                                        renderLayoutElement(childElement, depth + 1, `${path}-${index}`)
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                )
+                                              }
+                                              
+                                              // Handle Control elements
+                                              if (element.type === "Control" && element.scope) {
+                                                const propertyKey = element.scope.split('/').pop()
+                                                const property = schema.properties?.[propertyKey]
+                                                
+                                                if (!property) return null
+                                                
+                                                const defaultValue = formData[propertyKey] || ""
+                                                const isNested = depth > 0
+                                                
+                                                return (
+                                                  <div key={`control-${propertyKey}-${path}-${depth}`} className={`${
+                                                    isNested 
+                                                      ? "flex-1 min-w-0 p-2 bg-white dark:bg-slate-700 rounded border" 
+                                                      : "p-2 bg-slate-50 dark:bg-slate-700 rounded"
+                                                  }`}>
+                                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                                      {property.title || propertyKey}
+                                                      {schema.required?.includes(propertyKey) && <span className="text-red-500 ml-1">*</span>}
+                                                    </label>
+                                                    
+                                                    {property.type === "string" && !property.enum && (
+                                                      <input
+                                                        type={property.format === "email" ? "email" : "text"}
+                                                        placeholder={`Enter ${property.title || propertyKey}`}
+                                                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                                        defaultValue={defaultValue}
+                                                        disabled
+                                                      />
+                                                    )}
+                                                    {property.type === "number" && (
+                                                      <input
+                                                        type="number"
+                                                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                                        defaultValue={defaultValue}
+                                                        disabled
+                                                      />
+                                                    )}
+                                                    {property.type === "boolean" && (
+                                                      <div className="flex items-center space-x-2">
+                                                        <input
+                                                          type="checkbox"
+                                                          disabled
+                                                          className="rounded"
+                                                          defaultChecked={defaultValue}
+                                                        />
+                                                        <span className="text-sm">{property.title || propertyKey}</span>
+                                                      </div>
+                                                    )}
+                                                    {property.enum && (
+                                                      <select
+                                                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                                                        disabled
+                                                        defaultValue={defaultValue}
+                                                      >
+                                                        <option value="">Select {property.title || propertyKey}</option>
+                                                        {property.enum.map((option: any) => (
+                                                          <option key={option} value={option}>{option}</option>
+                                                        ))}
+                                                      </select>
+                                                    )}
+                                                  </div>
+                                                )
+                                              }
+                                              
+                                              // Handle other element types (Group, Label, etc.)
+                                              if (element.type === "Group" && element.elements) {
+                                                return (
+                                                  <div key={`group-${path}-${depth}`} className="mb-3 p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800/30">
+                                                    {element.label && (
+                                                      <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{element.label}</h4>
+                                                    )}
+                                                    <div className="space-y-2">
+                                                      {element.elements.map((childElement: any, index: number) => 
+                                                        renderLayoutElement(childElement, depth + 1, `${path}-group-${index}`)
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                )
+                                              }
+                                              
+                                              return null
+                                            }
+                                            
+                                            // Check if uiSchema has layout structure
+                                            return uiSchema && (uiSchema.type === "HorizontalLayout" || uiSchema.type === "VerticalLayout") 
+                                              ? renderLayoutElement(uiSchema, 0, "root")
+                                              : (
+                                                /* Render standard property-based forms */
+                                                schema.properties && Object.keys(schema.properties).map((key) => {
+                                                  const property = schema.properties[key]
+                                                  const uiConfig = uiSchema[key] || {}
+                                                  const placeholder = uiConfig["ui:placeholder"] || `Enter ${property.title || key}`
+                                                  const widget = uiConfig["ui:widget"]
+                                                  const options = uiConfig["ui:options"] || {}
+                                                  const defaultValue = formData[key] || ""
                                                   
                                                   return (
-                                                    <div key={layoutIndex} className={`${uiSchema.type === "HorizontalLayout" ? "flex-1 min-w-0" : "w-full"} p-2 bg-slate-50 dark:bg-slate-700 rounded`}>
+                                                    <div key={key} className="mb-3 p-2 bg-slate-50 dark:bg-slate-700 rounded">
                                                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                                        {property.title || propertyKey}
-                                                        {schema.required?.includes(propertyKey) && <span className="text-red-500 ml-1">*</span>}
+                                                        {property.title || key}
+                                                        {schema.required?.includes(key) && <span className="text-red-500 ml-1">*</span>}
                                                       </label>
                                                       
-                                                      {property.type === "string" && !property.enum && (
+                                                      {property.type === "string" && widget === "textarea" && (
+                                                        <textarea
+                                                          placeholder={placeholder}
+                                                          className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white resize-none"
+                                                          rows={options.rows || 3}
+                                                          defaultValue={defaultValue}
+                                                          disabled
+                                                        />
+                                                      )}
+                                                      {property.type === "string" && widget !== "textarea" && !property.enum && (
                                                         <input
                                                           type={property.format === "email" ? "email" : "text"}
-                                                          placeholder={`Enter ${property.title || propertyKey}`}
+                                                          placeholder={placeholder}
                                                           className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                                                           defaultValue={defaultValue}
                                                           disabled
@@ -1491,10 +1635,22 @@ const PageModal: React.FC<PageModalProps> = ({
                                                       {property.type === "number" && (
                                                         <input
                                                           type="number"
+                                                          placeholder={placeholder}
                                                           className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                                                           defaultValue={defaultValue}
                                                           disabled
                                                         />
+                                                      )}
+                                                      {property.type === "boolean" && (
+                                                        <div className="flex items-center space-x-2">
+                                                          <input
+                                                            type="checkbox"
+                                                            disabled
+                                                            className="rounded"
+                                                            defaultChecked={defaultValue}
+                                                          />
+                                                          <span className="text-sm">{property.title || key}</span>
+                                                        </div>
                                                       )}
                                                       {property.enum && (
                                                         <select
@@ -1502,164 +1658,23 @@ const PageModal: React.FC<PageModalProps> = ({
                                                           disabled
                                                           defaultValue={defaultValue}
                                                         >
-                                                          <option value="">Select {property.title || propertyKey}</option>
+                                                          <option value="">Select {property.title || key}</option>
                                                           {property.enum.map((option: any) => (
                                                             <option key={option} value={option}>{option}</option>
                                                           ))}
                                                         </select>
                                                       )}
+                                                      
+                                                      {Object.keys(uiConfig).length > 0 && (
+                                                        <div className="mt-1 text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-1 rounded">
+                                                          UI Config: {JSON.stringify(uiConfig, null, 0)}
+                                                        </div>
+                                                      )}
                                                     </div>
                                                   )
-                                                }
-                                                return null
-                                              })}
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            /* Render standard property-based forms */
-                                            schema.properties && Object.keys(schema.properties).map((key) => {
-                                              const property = schema.properties[key]
-                                              const uiConfig = uiSchema[key] || {}
-                                              const placeholder = uiConfig["ui:placeholder"] || `Enter ${property.title || key}`
-                                              const widget = uiConfig["ui:widget"]
-                                              const options = uiConfig["ui:options"] || {}
-                                              const defaultValue = formData[key] || ""
-
-                                                return (
-                                                  <div
-                                                    key={key}
-                                                    className="mb-3 p-2 bg-slate-50 dark:bg-slate-700 rounded"
-                                                  >
-                                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                                      {property.title || key}
-                                                      {schema.required?.includes(
-                                                        key
-                                                      ) && (
-                                                        <span className="text-red-500 ml-1">
-                                                          *
-                                                        </span>
-                                                      )}
-                                                    </label>
-
-                                                    {/* String field with uiSchema support */}
-                                                    {property.type ===
-                                                      "string" &&
-                                                      widget === "textarea" && (
-                                                        <textarea
-                                                          placeholder={
-                                                            placeholder
-                                                          }
-                                                          className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white resize-none"
-                                                          rows={
-                                                            options.rows || 3
-                                                          }
-                                                          defaultValue={
-                                                            defaultValue
-                                                          }
-                                                          disabled
-                                                        />
-                                                      )}
-                                                    {property.type ===
-                                                      "string" &&
-                                                      widget !== "textarea" &&
-                                                      !property.enum && (
-                                                        <input
-                                                          type={
-                                                            property.format ===
-                                                            "email"
-                                                              ? "email"
-                                                              : "text"
-                                                          }
-                                                          placeholder={
-                                                            placeholder
-                                                          }
-                                                          className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                                          defaultValue={
-                                                            defaultValue
-                                                          }
-                                                          disabled
-                                                        />
-                                                      )}
-
-                                                    {/* Number field */}
-                                                    {property.type ===
-                                                      "number" && (
-                                                      <input
-                                                        type="number"
-                                                        placeholder={
-                                                          placeholder
-                                                        }
-                                                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                                        defaultValue={
-                                                          defaultValue
-                                                        }
-                                                        disabled
-                                                      />
-                                                    )}
-
-                                                    {/* Boolean field */}
-                                                    {property.type ===
-                                                      "boolean" && (
-                                                      <div className="flex items-center space-x-2">
-                                                        <input
-                                                          type="checkbox"
-                                                          disabled
-                                                          className="rounded"
-                                                          defaultChecked={
-                                                            defaultValue
-                                                          }
-                                                        />
-                                                        <span className="text-sm">
-                                                          {property.title ||
-                                                            key}
-                                                        </span>
-                                                      </div>
-                                                    )}
-
-                                                    {/* Enum/Select field */}
-                                                    {property.enum && (
-                                                      <select
-                                                        className="w-full px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                                                        disabled
-                                                        defaultValue={
-                                                          defaultValue
-                                                        }
-                                                      >
-                                                        <option value="">
-                                                          Select{" "}
-                                                          {property.title ||
-                                                            key}
-                                                        </option>
-                                                        {property.enum.map(
-                                                          (option: any) => (
-                                                            <option
-                                                              key={option}
-                                                              value={option}
-                                                            >
-                                                              {option}
-                                                            </option>
-                                                          )
-                                                        )}
-                                                      </select>
-                                                    )}
-
-                                                    {/* Show UI configuration if available */}
-                                                    {Object.keys(uiConfig)
-                                                      .length > 0 && (
-                                                      <div className="mt-1 text-xs text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-1 rounded">
-                                                        UI Config:{" "}
-                                                        {JSON.stringify(
-                                                          uiConfig,
-                                                          null,
-                                                          0
-                                                        )}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                )
-                                              }
-                                            )
-                                          )}
+                                                })
+                                              )
+                                          })()}
                                         </div>
                                       ) : (
                                         <div className="text-center py-4 text-slate-500 dark:text-slate-400">
