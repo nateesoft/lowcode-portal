@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { secretKeyAPI, SecretKeyData, CreateSecretKeyRequest, UpdateSecretKeyRequest } from '@/lib/api';
 
 interface SecretKey {
   id: string;
@@ -16,15 +17,17 @@ interface SecretManagementContextType {
   secrets: SecretKey[];
   isLoading: boolean;
   error: string | null;
-  addSecret: (secret: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>) => void;
-  updateSecret: (id: string, secret: Partial<SecretKey>) => void;
-  deleteSecret: (id: string) => void;
+  isDemoMode: boolean;
+  addSecret: (secret: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>) => Promise<void>;
+  updateSecret: (id: string, secret: Partial<SecretKey>) => Promise<void>;
+  deleteSecret: (id: string) => Promise<void>;
   getSecret: (id: string) => SecretKey | undefined;
   generateDemoSecrets: () => void;
   searchSecrets: (query: string) => SecretKey[];
   filterByType: (type: SecretKey['type']) => SecretKey[];
   getExpiredSecrets: () => SecretKey[];
   getExpiringSoonSecrets: () => SecretKey[];
+  loadSecrets: () => Promise<void>;
 }
 
 const SecretManagementContext = createContext<SecretManagementContextType | undefined>(undefined);
@@ -41,32 +44,132 @@ export const SecretManagementProvider: React.FC<{ children: React.ReactNode }> =
   const [secrets, setSecrets] = useState<SecretKey[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
-  const addSecret = useCallback((secretData: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>) => {
-    const newSecret: SecretKey = {
-      ...secretData,
-      id: `secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString(),
-      lastModified: new Date().toISOString()
-    };
+  // Convert API data to SecretKey format
+  const convertApiToSecretKey = (apiData: SecretKeyData): SecretKey => ({
+    id: apiData.id?.toString() || '',
+    name: apiData.name || '',
+    description: apiData.description || '',
+    value: apiData.value || (apiData as any).maskedValue || '',
+    type: apiData.type,
+    createdAt: apiData.createdAt || new Date().toISOString(),
+    lastModified: apiData.updatedAt || apiData.lastModified || new Date().toISOString(),
+    expiresAt: apiData.expiresAt,
+    tags: apiData.tags || []
+  });
 
-    setSecrets(prev => [...prev, newSecret]);
+  // Convert SecretKey to API format
+  const convertSecretKeyToApi = (secretData: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>): CreateSecretKeyRequest => ({
+    name: secretData.name,
+    description: secretData.description,
+    value: secretData.value,
+    type: secretData.type,
+    expiresAt: secretData.expiresAt,
+    tags: secretData.tags,
+    isActive: true
+  });
+
+  // Load secrets from API with fallback to demo data
+  const loadSecrets = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const apiSecrets = await secretKeyAPI.getAll();
+      const convertedSecrets = apiSecrets.map(convertApiToSecretKey);
+      setSecrets(convertedSecrets);
+      setIsDemoMode(false);
+    } catch (err: any) {
+      console.warn('API not available, using demo data:', err);
+      // Fallback to demo data when API is not available
+      generateDemoSecrets();
+      setIsDemoMode(true);
+      setError(null); // Don't show error for fallback to demo data
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const updateSecret = useCallback((id: string, updates: Partial<SecretKey>) => {
-    setSecrets(prev => prev.map(secret => 
-      secret.id === id 
-        ? { 
-            ...secret, 
-            ...updates, 
-            lastModified: new Date().toISOString() 
-          }
-        : secret
-    ));
+  // Load secrets on mount
+  useEffect(() => {
+    loadSecrets();
+  }, [loadSecrets]);
+
+  const addSecret = useCallback(async (secretData: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const apiData = convertSecretKeyToApi(secretData);
+      const createdSecret = await secretKeyAPI.create(apiData);
+      const newSecret = convertApiToSecretKey(createdSecret);
+      setSecrets(prev => [...prev, newSecret]);
+    } catch (err: any) {
+      console.warn('API not available, using local storage:', err);
+      // Fallback to local storage when API is not available
+      const newSecret: SecretKey = {
+        ...secretData,
+        id: `secret_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString()
+      };
+      setSecrets(prev => [...prev, newSecret]);
+      setError(null); // Don't show error for fallback
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const deleteSecret = useCallback((id: string) => {
-    setSecrets(prev => prev.filter(secret => secret.id !== id));
+  const updateSecret = useCallback(async (id: string, updates: Partial<SecretKey>) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const apiUpdates: UpdateSecretKeyRequest = {
+        name: updates.name,
+        description: updates.description,
+        value: updates.value,
+        type: updates.type,
+        expiresAt: updates.expiresAt,
+        tags: updates.tags
+      };
+      
+      const updatedSecret = await secretKeyAPI.update(parseInt(id), apiUpdates);
+      const convertedSecret = convertApiToSecretKey(updatedSecret);
+      
+      setSecrets(prev => prev.map(secret => 
+        secret.id === id ? convertedSecret : secret
+      ));
+    } catch (err: any) {
+      console.warn('API not available, updating locally:', err);
+      // Fallback to local update when API is not available
+      setSecrets(prev => prev.map(secret => 
+        secret.id === id 
+          ? { 
+              ...secret, 
+              ...updates, 
+              lastModified: new Date().toISOString() 
+            }
+          : secret
+      ));
+      setError(null); // Don't show error for fallback
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const deleteSecret = useCallback(async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await secretKeyAPI.delete(parseInt(id));
+      setSecrets(prev => prev.filter(secret => secret.id !== id));
+    } catch (err: any) {
+      console.warn('API not available, deleting locally:', err);
+      // Fallback to local deletion when API is not available
+      setSecrets(prev => prev.filter(secret => secret.id !== id));
+      setError(null); // Don't show error for fallback
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   const getSecret = useCallback((id: string) => {
@@ -177,6 +280,7 @@ export const SecretManagementProvider: React.FC<{ children: React.ReactNode }> =
     secrets,
     isLoading,
     error,
+    isDemoMode,
     addSecret,
     updateSecret,
     deleteSecret,
@@ -185,7 +289,8 @@ export const SecretManagementProvider: React.FC<{ children: React.ReactNode }> =
     searchSecrets,
     filterByType,
     getExpiredSecrets,
-    getExpiringSoonSecrets
+    getExpiringSoonSecrets,
+    loadSecrets
   };
 
   return (

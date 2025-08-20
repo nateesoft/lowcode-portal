@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Key, Edit, Trash2, Eye, EyeOff, Copy, Clock, Shield } from 'lucide-react';
+import { useAlert } from '@/hooks/useAlert';
 
 interface SecretKey {
   id: string;
@@ -16,17 +17,55 @@ interface SecretKey {
 interface SecretKeyCardProps {
   secret: SecretKey;
   onEdit: (secret: SecretKey) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
   onCopy: (value: string) => void;
+  isDeleting?: boolean;
 }
 
 const SecretKeyCard: React.FC<SecretKeyCardProps> = ({
   secret,
   onEdit,
   onDelete,
-  onCopy
+  onCopy,
+  isDeleting = false
 }) => {
   const [isValueVisible, setIsValueVisible] = useState(false);
+  const [isLocalDeleting, setIsLocalDeleting] = useState(false);
+  const { showConfirm, showSuccess, showError } = useAlert();
+
+  const handleCopy = async () => {
+    try {
+      await onCopy(secret.value);
+      showSuccess('คัดลอกสำเร็จ', 'คัดลอกค่า Secret Key ไปยัง Clipboard แล้ว');
+    } catch (error) {
+      showError('ไม่สามารถคัดลอกได้', 'เกิดข้อผิดพลาดในการคัดลอก');
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmed = await showConfirm(
+      'ยืนยันการลบ Secret Key',
+      `คุณแน่ใจหรือไม่ที่จะลบ "${secret.name}"? การดำเนินการนี้ไม่สามารถยกเลิกได้`,
+      {
+        confirmText: 'ลบ',
+        cancelText: 'ยกเลิก',
+        confirmType: 'danger'
+      }
+    );
+
+    if (confirmed) {
+      setIsLocalDeleting(true);
+      try {
+        await onDelete(secret.id);
+        showSuccess('ลบสำเร็จ', `ลบ Secret Key "${secret.name}" เรียบร้อยแล้ว`);
+      } catch (error) {
+        console.error('Failed to delete secret:', error);
+        showError('ไม่สามารถลบได้', 'เกิดข้อผิดพลาดในการลบ Secret Key');
+      } finally {
+        setIsLocalDeleting(false);
+      }
+    }
+  };
 
   const getTypeIcon = (type: SecretKey['type']) => {
     switch (type) {
@@ -49,6 +88,7 @@ const SecretKeyCard: React.FC<SecretKeyCardProps> = ({
   };
 
   const maskValue = (value: string) => {
+    if (!value) return '••••••••';
     if (value.length <= 8) return '••••••••';
     return value.substring(0, 4) + '••••••••' + value.substring(value.length - 4);
   };
@@ -89,7 +129,7 @@ const SecretKeyCard: React.FC<SecretKeyCardProps> = ({
             )}
           </button>
           <button
-            onClick={() => onCopy(secret.value)}
+            onClick={handleCopy}
             className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
             title="Copy value"
           >
@@ -103,11 +143,16 @@ const SecretKeyCard: React.FC<SecretKeyCardProps> = ({
             <Edit className="h-4 w-4 text-slate-600 dark:text-slate-400" />
           </button>
           <button
-            onClick={() => onDelete(secret.id)}
-            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+            onClick={handleDelete}
+            disabled={isLocalDeleting || isDeleting}
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             title="Delete secret"
           >
-            <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+            {isLocalDeleting || isDeleting ? (
+              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+            )}
           </button>
         </div>
       </div>

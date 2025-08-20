@@ -1369,6 +1369,143 @@ export const serviceAPI = {
   },
 };
 
+// ===== SECRET KEY MANAGEMENT API =====
+
+export interface SecretKeyData {
+  id?: number;
+  name: string;
+  description?: string;
+  value: string;
+  type: 'api_key' | 'password' | 'certificate' | 'token';
+  expiresAt?: string;
+  tags: string[];
+  isActive?: boolean;
+  createdBy?: User;
+  createdById?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  lastModified?: string;
+}
+
+export interface CreateSecretKeyRequest {
+  name: string;
+  description?: string;
+  value: string;
+  type: 'api_key' | 'password' | 'certificate' | 'token';
+  expiresAt?: string;
+  tags?: string[];
+  isActive?: boolean;
+}
+
+export interface UpdateSecretKeyRequest {
+  name?: string;
+  description?: string;
+  value?: string;
+  type?: 'api_key' | 'password' | 'certificate' | 'token';
+  expiresAt?: string;
+  tags?: string[];
+  isActive?: boolean;
+}
+
+export interface SecretKeyStats {
+  total: number;
+  active: number;
+  expired: number;
+  expiringSoon: number;
+  byType: Array<{
+    type: string;
+    count: number;
+  }>;
+  recentActivity: Array<{
+    id: number;
+    name: string;
+    action: string;
+    date: string;
+  }>;
+}
+
+export const secretKeyAPI = {
+  // Get all secret keys
+  getAll: async (): Promise<SecretKeyData[]> => {
+    const response = await api.get('/secret-keys');
+    return response.data;
+  },
+
+  // Get secret key by ID
+  getById: async (id: number): Promise<SecretKeyData> => {
+    const response = await api.get(`/secret-keys/${id}`);
+    return response.data;
+  },
+
+  // Create secret key
+  create: async (data: CreateSecretKeyRequest): Promise<SecretKeyData> => {
+    const response = await api.post('/secret-keys', data);
+    return response.data;
+  },
+
+  // Update secret key
+  update: async (id: number, data: UpdateSecretKeyRequest): Promise<SecretKeyData> => {
+    const response = await api.patch(`/secret-keys/${id}`, data);
+    return response.data;
+  },
+
+  // Delete secret key
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/secret-keys/${id}`);
+  },
+
+  // Get secret key stats
+  getStats: async (): Promise<SecretKeyStats> => {
+    const response = await api.get('/secret-keys/stats');
+    return response.data;
+  },
+
+  // Get expired secrets
+  getExpired: async (): Promise<SecretKeyData[]> => {
+    const response = await api.get('/secret-keys/expired');
+    return response.data;
+  },
+
+  // Get expiring soon secrets
+  getExpiringSoon: async (days: number = 7): Promise<SecretKeyData[]> => {
+    const response = await api.get(`/secret-keys/expiring-soon?days=${days}`);
+    return response.data;
+  },
+
+  // Filter by type
+  getByType: async (type: string): Promise<SecretKeyData[]> => {
+    const response = await api.get(`/secret-keys/type/${type}`);
+    return response.data;
+  },
+
+  // Search secrets
+  search: async (query: string): Promise<SecretKeyData[]> => {
+    const response = await api.get(`/secret-keys/search?q=${encodeURIComponent(query)}`);
+    return response.data;
+  },
+
+  // Generate random secret value
+  generateRandom: async (length: number = 32, includeSpecialChars: boolean = true): Promise<{ value: string }> => {
+    const response = await api.post('/secret-keys/generate', { 
+      length, 
+      includeSpecialChars 
+    });
+    return response.data;
+  },
+
+  // Validate secret key
+  validate: async (id: number): Promise<{ isValid: boolean; errors?: string[] }> => {
+    const response = await api.post(`/secret-keys/${id}/validate`);
+    return response.data;
+  },
+
+  // Rotate secret key
+  rotate: async (id: number, newValue?: string): Promise<SecretKeyData> => {
+    const response = await api.post(`/secret-keys/${id}/rotate`, { newValue });
+    return response.data;
+  }
+};
+
 // Centralized API object
 export const apiClient = {
   // User Groups
@@ -1384,6 +1521,13 @@ export const apiClient = {
   
   // Users  
   getUsers: () => usersAPI.getAll(),
+
+  // Secret Keys
+  getSecretKeys: () => secretKeyAPI.getAll(),
+  createSecretKey: (data: CreateSecretKeyRequest) => secretKeyAPI.create(data),
+  updateSecretKey: (id: number, data: UpdateSecretKeyRequest) => secretKeyAPI.update(id, data),
+  deleteSecretKey: (id: number) => secretKeyAPI.delete(id),
+  getSecretKeyStats: () => secretKeyAPI.getStats(),
 };
 
 // Export the centralized API client as the default export

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Key, Shield, Calendar, Tag, Plus, Maximize2, Minimize2, Move } from 'lucide-react';
 import { useModalDragAndResize } from '@/hooks/useModalDragAndResize';
+import { useAlert } from '@/hooks/useAlert';
 
 interface SecretKey {
   id: string;
@@ -17,7 +18,7 @@ interface SecretKey {
 interface SecretKeyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (secret: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>) => void;
+  onSave: (secret: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>) => Promise<void>;
   editingSecret?: SecretKey | null;
 }
 
@@ -81,15 +82,33 @@ const SecretKeyModal: React.FC<SecretKeyModalProps> = ({
     }
   }, [isOpen, resetPosition]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showSuccess, showError } = useAlert();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.value.trim()) return;
 
-    onSave({
-      ...formData,
-      expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : undefined
-    });
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        ...formData,
+        expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : undefined
+      });
+      showSuccess(
+        editingSecret ? 'อัปเดตสำเร็จ' : 'สร้างสำเร็จ',
+        `${editingSecret ? 'อัปเดต' : 'สร้าง'} Secret Key "${formData.name}" เรียบร้อยแล้ว`
+      );
+      onClose();
+    } catch (error) {
+      console.error('Failed to save secret:', error);
+      showError(
+        editingSecret ? 'ไม่สามารถอัปเดตได้' : 'ไม่สามารถสร้างได้',
+        'เกิดข้อผิดพลาดในการบันทึก Secret Key'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const addTag = () => {
@@ -311,9 +330,16 @@ const SecretKeyModal: React.FC<SecretKeyModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center"
             >
-              {editingSecret ? 'Update Secret' : 'Create Secret'}
+              {isSubmitting && (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+              )}
+              {isSubmitting 
+                ? (editingSecret ? 'Updating...' : 'Creating...')
+                : (editingSecret ? 'Update Secret' : 'Create Secret')
+              }
             </button>
           </div>
         </form>
