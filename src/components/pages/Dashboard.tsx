@@ -15,13 +15,14 @@ import { useTranslation } from 'react-i18next';
 import WeUIModal from '@/components/modals/WeUIModal';
 import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
 import { useChatbot } from '@/contexts/ChatbotContext';
-import { useDatabase } from '@/contexts/DatabaseContext';
+import { useDatabase, DatabaseConnection } from '@/contexts/DatabaseContext';
 import { useMedia } from '@/contexts/MediaContext';
 import { useProjectManagement } from '@/contexts/ProjectManagementContext';
 import { 
   DatabaseConnectionCard, 
   DatabaseConnectionModal, 
-  DatabaseTablesView 
+  DatabaseTablesView,
+  DatabaseQueryView
 } from '@/components/database';
 import MediaBreadcrumbs from '@/components/media/MediaBreadcrumbs';
 import MediaToolbar from '@/components/media/MediaToolbar';
@@ -103,8 +104,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     addConnection,
     updateConnection,
     deleteConnection,
-    testConnection,
-    generateDemoData
+    testConnection
   } = useDatabase();
   const {
     viewMode,
@@ -369,6 +369,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [showConnectionModal, setShowConnectionModal] = useState(false);
   const [editingConnection, setEditingConnection] = useState<any>(null);
   const [viewingTablesConnection, setViewingTablesConnection] = useState<any>(null);
+  const [queryingConnection, setQueryingConnection] = useState<any>(null);
   
   // Media states
   const [showFolderModal, setShowFolderModal] = useState(false);
@@ -1127,6 +1128,26 @@ const Dashboard: React.FC<DashboardProps> = ({
         ) : null;
 
       case 'database':
+        if (queryingConnection) {
+          return (
+            <div className="h-full">
+              <DatabaseQueryView 
+                connection={queryingConnection} 
+              />
+              {/* Back button */}
+              <div className="absolute top-4 left-4 z-10">
+                <button
+                  onClick={() => setQueryingConnection(null)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                >
+                  <span>←</span>
+                  <span>Back to Connections</span>
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         if (viewingTablesConnection) {
           return (
             <DatabaseTablesView
@@ -1147,11 +1168,11 @@ const Dashboard: React.FC<DashboardProps> = ({
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button 
-                  onClick={() => generateDemoData()}
+                  onClick={() => setShowConnectionModal(true)}
                   className="w-full sm:w-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition flex items-center justify-center"
                 >
-                  <Database className="h-4 w-4 mr-2" />
-                  Load Demo Data
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Connection
                 </button>
                 <button 
                   onClick={() => setShowConnectionModal(true)}
@@ -1181,12 +1202,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <button 
-                      onClick={() => generateDemoData()}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
-                    >
-                      Try Demo Connections
-                    </button>
-                    <button 
                       onClick={() => setShowConnectionModal(true)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
                     >
@@ -1204,11 +1219,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                         setEditingConnection(conn);
                         setShowConnectionModal(true);
                       }}
-                      onDelete={deleteConnection}
-                      onTest={testConnection}
+                      onDelete={async (id: string) => await deleteConnection(Number(id))}
+                      onTest={async (conn: DatabaseConnection) => {
+                        try {
+                          console.log('Testing connection from Dashboard:', conn);
+                          const result = await testConnection(conn.id);
+                          console.log('Test result:', result);
+                          if (result) {
+                            alert.success(`Connection "${conn.name}" tested successfully!`);
+                          } else {
+                            alert.error(`Connection test failed for "${conn.name}"`);
+                          }
+                        } catch (error: any) {
+                          console.error('Test connection error in Dashboard:', error);
+                          alert.error(`Error testing connection: ${error.message}`);
+                        }
+                      }}
                       onConnect={(conn) => {
-                        // Connect logic here
-                        console.log('Connect to', conn);
+                        setQueryingConnection(conn);
                       }}
                       onViewTables={(conn) => setViewingTablesConnection(conn)}
                       isLoading={dbLoading}
@@ -2573,11 +2601,11 @@ const Dashboard: React.FC<DashboardProps> = ({
           setShowSecretModal(false);
           setEditingSecret(null);
         }}
-        onSave={(secretData) => {
+        onSave={async (secretData) => {
           if (editingSecret) {
-            updateSecret(editingSecret.id, secretData);
+            await updateSecret(editingSecret.id, secretData);
           } else {
-            addSecret(secretData);
+            await addSecret(secretData);
           }
         }}
         editingSecret={editingSecret}

@@ -14,7 +14,7 @@ import { DatabaseConnection } from '@/contexts/DatabaseContext';
 interface DatabaseConnectionCardProps {
   connection: DatabaseConnection;
   onEdit: (connection: DatabaseConnection) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
   onTest: (connection: DatabaseConnection) => void;
   onConnect: (connection: DatabaseConnection) => void;
   onViewTables: (connection: DatabaseConnection) => void;
@@ -94,7 +94,7 @@ const DatabaseConnectionCard: React.FC<DatabaseConnectionCardProps> = ({
         {connection.lastConnected && (
           <div className="flex items-center space-x-1 mt-1">
             <Clock className="h-3 w-3" />
-            <span>Last connected: {connection.lastConnected.toLocaleString()}</span>
+            <span>Last connected: {new Date(connection.lastConnected).toLocaleString()}</span>
           </div>
         )}
       </div>

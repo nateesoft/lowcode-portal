@@ -24,8 +24,7 @@ const DatabaseConnectionModal: React.FC<DatabaseConnectionModalProps> = ({
     port: 3306,
     database: '',
     username: '',
-    password: '',
-    status: 'disconnected' as DatabaseConnection['status']
+    password: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -39,8 +38,7 @@ const DatabaseConnectionModal: React.FC<DatabaseConnectionModalProps> = ({
         port: editingConnection.port,
         database: editingConnection.database,
         username: editingConnection.username,
-        password: '',
-        status: editingConnection.status
+        password: ''
       });
     } else {
       setFormData({
@@ -50,8 +48,7 @@ const DatabaseConnectionModal: React.FC<DatabaseConnectionModalProps> = ({
         port: 3306,
         database: '',
         username: '',
-        password: '',
-        status: 'disconnected'
+        password: ''
       });
     }
     setErrors({});
@@ -87,7 +84,18 @@ const DatabaseConnectionModal: React.FC<DatabaseConnectionModalProps> = ({
       return;
     }
 
-    onSave(formData);
+    // Only send fields that backend expects
+    const connectionData = {
+      name: formData.name,
+      type: formData.type,
+      host: formData.host,
+      port: formData.port,
+      database: formData.database,
+      username: formData.username,
+      password: formData.password
+    };
+    
+    onSave(connectionData);
   };
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -109,10 +117,6 @@ const DatabaseConnectionModal: React.FC<DatabaseConnectionModalProps> = ({
     switch (type) {
       case 'mysql': return 3306;
       case 'postgresql': return 5432;
-      case 'mongodb': return 27017;
-      case 'redis': return 6379;
-      case 'sqlite': return 0;
-      case 'firebase': return 443;
       default: return 3306;
     }
   };
@@ -188,10 +192,6 @@ const DatabaseConnectionModal: React.FC<DatabaseConnectionModalProps> = ({
             >
               <option value="mysql">MySQL</option>
               <option value="postgresql">PostgreSQL</option>
-              <option value="mongodb">MongoDB</option>
-              <option value="sqlite">SQLite</option>
-              <option value="redis">Redis</option>
-              <option value="firebase">Firebase</option>
             </select>
           </div>
 
