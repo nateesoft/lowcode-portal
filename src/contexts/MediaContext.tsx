@@ -1,8 +1,11 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { mediaAPI, MediaFileData, MediaFolderData, UploadProgressData, CreateMediaFolderRequest } from '@/lib/api';
 
+// Use API types directly with proper date handling
 export interface MediaFile {
   id: string;
   name: string;
+  originalName: string;
   type: 'image' | 'video' | 'audio' | 'document' | 'other';
   mimeType: string;
   size: number;
@@ -32,17 +35,12 @@ export interface MediaFolder {
   icon?: string;
   createdAt: Date;
   updatedAt: Date;
+  createdBy: string;
   fileCount: number;
   totalSize: number;
 }
 
-export interface UploadProgress {
-  fileId: string;
-  fileName: string;
-  progress: number;
-  status: 'uploading' | 'processing' | 'complete' | 'error';
-  error?: string;
-}
+export type UploadProgress = UploadProgressData;
 
 export type ViewMode = 'grid' | 'list';
 export type SortBy = 'name' | 'date' | 'size' | 'type';
@@ -142,94 +140,130 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load initial data
+  useEffect(() => {
+    loadFiles();
+    loadFolders();
+  }, [currentFolder?.id]);
+
+  const convertApiFileToLocal = (apiFile: MediaFileData): MediaFile => ({
+    ...apiFile,
+    uploadedAt: new Date(apiFile.uploadedAt),
+    updatedAt: new Date(apiFile.updatedAt),
+  });
+
+  const convertApiFolderToLocal = (apiFolder: MediaFolderData): MediaFolder => ({
+    ...apiFolder,
+    createdAt: new Date(apiFolder.createdAt),
+    updatedAt: new Date(apiFolder.updatedAt),
+    fileCount: apiFolder.files?.length || 0,
+    totalSize: apiFolder.files?.reduce((sum, file) => sum + file.size, 0) || 0,
+  });
+
+  const loadFiles = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await mediaAPI.getFiles(currentFolder?.id);
+      const convertedFiles = response.data.map(convertApiFileToLocal);
+      setFiles(convertedFiles);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load files');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadFolders = async () => {
+    try {
+      const response = await mediaAPI.getFolders(currentFolder?.id);
+      const convertedFolders = response.data.map(convertApiFolderToLocal);
+      setFolders(convertedFolders);
+    } catch (err) {
+      console.error('Failed to load folders:', err);
+    }
+  };
   
-  // File upload simulation
+  // Real file upload using API
   const uploadFiles = async (fileList: FileList) => {
     setIsUploading(true);
     setError(null);
     
-    const newFiles: MediaFile[] = [];
-    const progressItems: UploadProgress[] = [];
-    
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
-      const fileId = `file-${Date.now()}-${i}`;
-      
-      // Create progress tracking
-      const progressItem: UploadProgress = {
-        fileId,
+    try {
+      // Create progress tracking for each file
+      const progressItems: UploadProgress[] = Array.from(fileList).map((file, i) => ({
+        fileId: `file-${Date.now()}-${i}`,
         fileName: file.name,
         progress: 0,
-        status: 'uploading'
-      };
-      progressItems.push(progressItem);
+        status: 'uploading' as const
+      }));
       
-      // Simulate file processing
-      const mediaFile: MediaFile = {
-        id: fileId,
-        name: file.name,
-        type: getFileType(file.type),
-        mimeType: file.type,
-        size: file.size,
-        url: URL.createObjectURL(file),
-        thumbnailUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
-        folderId: currentFolder?.id,
-        tags: [],
-        metadata: await extractMetadata(file),
-        uploadedAt: new Date(),
-        updatedAt: new Date(),
-        uploadedBy: 'current-user'
-      };
+      setUploadProgress(progressItems);
+
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => 
+          prev.map(item => ({
+            ...item,
+            progress: Math.min(item.progress + 10, 90)
+          }))
+        );
+      }, 200);
+
+      // Upload files via API
+      const response = await mediaAPI.uploadFiles(fileList, currentFolder?.id);
       
-      newFiles.push(mediaFile);
-    }
-    
-    setUploadProgress(progressItems);
-    
-    // Simulate upload progress
-    for (let progress = 0; progress <= 100; progress += 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Clear progress simulation
+      clearInterval(progressInterval);
+      
+      // Show completion
       setUploadProgress(prev => 
         prev.map(item => ({
           ...item,
-          progress,
-          status: progress === 100 ? 'processing' : 'uploading'
+          progress: 100,
+          status: 'complete' as const
         }))
       );
-    }
-    
-    // Processing phase
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setUploadProgress(prev => 
-      prev.map(item => ({
-        ...item,
-        status: 'complete'
-      }))
-    );
-    
-    // Add files to state
-    setFiles(prev => [...prev, ...newFiles]);
-    
-    // Update folder file count
-    if (currentFolder) {
-      setFolders(prev => 
-        prev.map(folder => 
-          folder.id === currentFolder.id
-            ? { 
-                ...folder, 
-                fileCount: folder.fileCount + newFiles.length,
-                totalSize: folder.totalSize + newFiles.reduce((sum, f) => sum + f.size, 0)
-              }
-            : folder
-        )
+
+      // Convert API response to local format
+      const uploadedFiles: MediaFile[] = response.data.map(convertApiFileToLocal);
+
+      // Update files state
+      setFiles(prev => [...prev, ...uploadedFiles]);
+
+      // Update folder file count
+      if (currentFolder) {
+        setFolders(prev => 
+          prev.map(folder => 
+            folder.id === currentFolder.id
+              ? { 
+                  ...folder, 
+                  fileCount: folder.fileCount + uploadedFiles.length,
+                  totalSize: folder.totalSize + uploadedFiles.reduce((sum, f) => sum + f.size, 0)
+                }
+              : folder
+          )
+        );
+      }
+
+      // Clear progress after delay
+      setTimeout(() => {
+        setUploadProgress([]);
+        setIsUploading(false);
+      }, 2000);
+
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Upload failed');
+      setUploadProgress(prev => 
+        prev.map(item => ({
+          ...item,
+          status: 'error' as const,
+          error: 'Upload failed'
+        }))
       );
-    }
-    
-    // Clear progress after delay
-    setTimeout(() => {
-      setUploadProgress([]);
       setIsUploading(false);
-    }, 2000);
+    }
   };
   
   const getFileType = (mimeType: string): MediaFile['type'] => {
@@ -271,9 +305,15 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   
   const deleteFiles = async (fileIds: string[]) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Delete files via API
+      if (fileIds.length === 1) {
+        await mediaAPI.deleteFile(fileIds[0]);
+      } else {
+        await mediaAPI.deleteFiles(fileIds);
+      }
       
       const deletedFiles = files.filter(f => fileIds.includes(f.id));
       const deletedSize = deletedFiles.reduce((sum, f) => sum + f.size, 0);
@@ -304,15 +344,20 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   
   const moveFiles = async (fileIds: string[], targetFolderId?: string) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Move files via API
+      const response = await mediaAPI.moveFiles(fileIds, targetFolderId);
+      
+      // Update local state with response data
+      const movedFiles = response.data.map(convertApiFileToLocal);
       
       setFiles(prev => 
-        prev.map(file => 
-          fileIds.includes(file.id)
-            ? { ...file, folderId: targetFolderId, updatedAt: new Date() }
-            : file
-        )
+        prev.map(file => {
+          const movedFile = movedFiles.find(moved => moved.id === file.id);
+          return movedFile || file;
+        })
       );
       
       setSelectedFiles([]);
@@ -348,14 +393,15 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   
   const renameFile = async (fileId: string, newName: string) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const response = await mediaAPI.renameFile(fileId, newName);
+      const renamedFile = convertApiFileToLocal(response.data);
       
       setFiles(prev => 
         prev.map(file => 
-          file.id === fileId
-            ? { ...file, name: newName, updatedAt: new Date() }
-            : file
+          file.id === fileId ? renamedFile : file
         )
       );
     } catch (err) {
@@ -366,29 +412,29 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   };
   
   const updateFileTags = async (fileId: string, tags: string[]) => {
-    setFiles(prev => 
-      prev.map(file => 
-        file.id === fileId
-          ? { ...file, tags, updatedAt: new Date() }
-          : file
-      )
-    );
+    try {
+      setError(null);
+      const response = await mediaAPI.updateFileTags(fileId, tags);
+      const updatedFile = convertApiFileToLocal(response.data);
+      
+      setFiles(prev => 
+        prev.map(file => 
+          file.id === fileId ? updatedFile : file
+        )
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update file tags');
+    }
   };
   
   const createFolder = async (name: string, parentId?: string) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const newFolder: MediaFolder = {
-        id: `folder-${Date.now()}`,
-        name,
-        parentId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        fileCount: 0,
-        totalSize: 0
-      };
+      const createData: CreateMediaFolderRequest = { name, parentId };
+      const response = await mediaAPI.createFolder(createData);
+      const newFolder = convertApiFolderToLocal(response.data);
       
       setFolders(prev => [...prev, newFolder]);
     } catch (err) {
@@ -400,10 +446,12 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   
   const deleteFolder = async (folderId: string) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await mediaAPI.deleteFolder(folderId);
       
-      // Delete folder and all files inside
+      // Delete folder and all files inside from local state
       setFolders(prev => prev.filter(f => f.id !== folderId));
       setFiles(prev => prev.filter(f => f.folderId !== folderId));
     } catch (err) {
@@ -414,6 +462,7 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   };
   
   const renameFolder = async (folderId: string, newName: string) => {
+    // Note: Add API call when backend supports folder rename
     setFolders(prev => 
       prev.map(folder => 
         folder.id === folderId
@@ -424,6 +473,7 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
   };
   
   const moveFolder = async (folderId: string, targetParentId?: string) => {
+    // Note: Add API call when backend supports folder move
     setFolders(prev => 
       prev.map(folder => 
         folder.id === folderId
@@ -555,95 +605,10 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
     return breadcrumbs;
   };
   
-  const generateDemoData = () => {
-    const demoFolders: MediaFolder[] = [
-      {
-        id: 'folder-1',
-        name: 'Project Images',
-        createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        fileCount: 15,
-        totalSize: 25600000
-      },
-      {
-        id: 'folder-2',
-        name: 'Marketing Videos',
-        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        fileCount: 8,
-        totalSize: 156800000
-      },
-      {
-        id: 'folder-3',
-        name: 'Documents',
-        parentId: 'folder-1',
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        fileCount: 12,
-        totalSize: 5400000
-      }
-    ];
-    
-    const demoFiles: MediaFile[] = [
-      {
-        id: 'file-1',
-        name: 'hero-banner.jpg',
-        type: 'image',
-        mimeType: 'image/jpeg',
-        size: 2400000,
-        url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200',
-        folderId: 'folder-1',
-        tags: ['hero', 'banner', 'homepage'],
-        metadata: { width: 1920, height: 1080 },
-        uploadedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-        uploadedBy: 'designer'
-      },
-      {
-        id: 'file-2',
-        name: 'product-demo.mp4',
-        type: 'video',
-        mimeType: 'video/mp4',
-        size: 45600000,
-        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-        folderId: 'folder-2',
-        tags: ['product', 'demo', 'marketing'],
-        metadata: { width: 1280, height: 720, duration: 120 },
-        uploadedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-        uploadedBy: 'marketing'
-      },
-      {
-        id: 'file-3',
-        name: 'logo-variants.zip',
-        type: 'other',
-        mimeType: 'application/zip',
-        size: 1200000,
-        url: '#',
-        tags: ['logo', 'branding', 'assets'],
-        uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        uploadedBy: 'designer'
-      },
-      {
-        id: 'file-4',
-        name: 'team-photo.jpg',
-        type: 'image',
-        mimeType: 'image/jpeg',
-        size: 3200000,
-        url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800',
-        thumbnailUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=200',
-        tags: ['team', 'about', 'company'],
-        metadata: { width: 2048, height: 1366 },
-        uploadedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-        uploadedBy: 'admin'
-      }
-    ];
-    
-    setFolders(demoFolders);
-    setFiles(demoFiles);
+  const generateDemoData = async () => {
+    // Refresh data instead of generating demo data
+    await loadFiles();
+    await loadFolders();
   };
   
   const value: MediaContextType = {

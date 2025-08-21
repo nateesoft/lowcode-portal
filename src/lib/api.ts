@@ -1530,4 +1530,172 @@ export const apiClient = {
   getSecretKeyStats: () => secretKeyAPI.getStats(),
 };
 
+// ===== MEDIA API =====
+
+export interface MediaFileData {
+  id: string;
+  name: string;
+  originalName: string;
+  type: 'image' | 'video' | 'audio' | 'document' | 'other';
+  mimeType: string;
+  size: number;
+  url: string;
+  thumbnailUrl?: string;
+  folderId?: string;
+  tags: string[];
+  metadata?: {
+    width?: number;
+    height?: number;
+    duration?: number;
+    frameRate?: number;
+    bitrate?: number;
+    colorSpace?: string;
+    orientation?: number;
+  };
+  uploadedAt: string;
+  updatedAt: string;
+  uploadedBy: string;
+}
+
+export interface MediaFolderData {
+  id: string;
+  name: string;
+  parentId?: string;
+  color?: string;
+  icon?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  fileCount?: number;
+  totalSize?: number;
+  files?: MediaFileData[];
+  children?: MediaFolderData[];
+}
+
+export interface UploadProgressData {
+  fileId: string;
+  fileName: string;
+  progress: number;
+  status: 'uploading' | 'processing' | 'complete' | 'error';
+  error?: string;
+}
+
+export interface CreateMediaFolderRequest {
+  name: string;
+  parentId?: string;
+  color?: string;
+  icon?: string;
+}
+
+export interface UpdateMediaFileRequest {
+  name?: string;
+  tags?: string[];
+  folderId?: string;
+}
+
+export const mediaAPI = {
+  // Upload files
+  uploadFiles: async (files: FileList, folderId?: string): Promise<{ data: MediaFileData[]; message: string }> => {
+    const formData = new FormData();
+    
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
+    
+    if (folderId) {
+      formData.append('folderId', folderId);
+    }
+
+    const response = await api.post('/media/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    return response.data;
+  },
+
+  // Get files
+  getFiles: async (folderId?: string): Promise<{ data: MediaFileData[] }> => {
+    let url = '/media/files';
+    if (folderId) {
+      url += `?folderId=${folderId}`;
+    }
+    
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  // Get file by ID
+  getFile: async (id: string): Promise<{ data: MediaFileData }> => {
+    const response = await api.get(`/media/files/${id}`);
+    return response.data;
+  },
+
+  // Update file
+  updateFile: async (id: string, data: UpdateMediaFileRequest): Promise<{ data: MediaFileData }> => {
+    const response = await api.put(`/media/files/${id}`, data);
+    return response.data;
+  },
+
+  // Delete file
+  deleteFile: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/media/files/${id}`);
+    return response.data;
+  },
+
+  // Delete multiple files
+  deleteFiles: async (fileIds: string[]): Promise<{ message: string }> => {
+    const response = await api.delete('/media/files', { data: { fileIds } });
+    return response.data;
+  },
+
+  // Move files
+  moveFiles: async (fileIds: string[], folderId?: string): Promise<{ data: MediaFileData[] }> => {
+    const response = await api.put('/media/files/move', { fileIds, folderId });
+    return response.data;
+  },
+
+  // Update file tags
+  updateFileTags: async (id: string, tags: string[]): Promise<{ data: MediaFileData }> => {
+    const response = await api.put(`/media/files/${id}/tags`, { tags });
+    return response.data;
+  },
+
+  // Rename file
+  renameFile: async (id: string, name: string): Promise<{ data: MediaFileData }> => {
+    const response = await api.put(`/media/files/${id}/rename`, { name });
+    return response.data;
+  },
+
+  // Create folder
+  createFolder: async (data: CreateMediaFolderRequest): Promise<{ data: MediaFolderData }> => {
+    const response = await api.post('/media/folders', data);
+    return response.data;
+  },
+
+  // Get folders
+  getFolders: async (parentId?: string): Promise<{ data: MediaFolderData[] }> => {
+    let url = '/media/folders';
+    if (parentId) {
+      url += `?parentId=${parentId}`;
+    }
+    
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  // Get folder by ID
+  getFolder: async (id: string): Promise<{ data: MediaFolderData }> => {
+    const response = await api.get(`/media/folders/${id}`);
+    return response.data;
+  },
+
+  // Delete folder
+  deleteFolder: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/media/folders/${id}`);
+    return response.data;
+  },
+};
+
 // Export the centralized API client as the default export
