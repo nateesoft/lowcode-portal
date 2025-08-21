@@ -180,8 +180,21 @@ export const MediaProvider: React.FC<MediaProviderProps> = ({ children }) => {
       const response = await mediaAPI.getFolders(currentFolder?.id);
       const convertedFolders = response.data.map(convertApiFolderToLocal);
       setFolders(convertedFolders);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load folders:', err);
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        config: {
+          url: err.config?.url,
+          baseURL: err.config?.baseURL,
+          method: err.config?.method
+        }
+      });
+      setError(`ไม่สามารถโหลดโฟลเดอร์ได้: ${err.message || 'การเชื่อมต่อ API ล้มเหลว'}`);
+      // Set empty folders to prevent further errors
+      setFolders([]);
     }
   };
   

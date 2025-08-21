@@ -8,7 +8,7 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
+  withCredentials: false, // Temporarily disable to test CORS issues
 });
 
 // Request interceptor to add auth token

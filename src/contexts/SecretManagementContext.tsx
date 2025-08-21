@@ -18,6 +18,8 @@ interface SecretManagementContextType {
   isLoading: boolean;
   error: string | null;
   isDemoMode: boolean;
+  isVaultEnabled: boolean;
+  vaultStatus: 'connected' | 'disconnected' | 'unknown';
   addSecret: (secret: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>) => Promise<void>;
   updateSecret: (id: string, secret: Partial<SecretKey>) => Promise<void>;
   deleteSecret: (id: string) => Promise<void>;
@@ -28,6 +30,7 @@ interface SecretManagementContextType {
   getExpiredSecrets: () => SecretKey[];
   getExpiringSoonSecrets: () => SecretKey[];
   loadSecrets: () => Promise<void>;
+  checkVaultStatus: () => Promise<void>;
 }
 
 const SecretManagementContext = createContext<SecretManagementContextType | undefined>(undefined);
@@ -45,6 +48,8 @@ export const SecretManagementProvider: React.FC<{ children: React.ReactNode }> =
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [isVaultEnabled, setIsVaultEnabled] = useState(false);
+  const [vaultStatus, setVaultStatus] = useState<'connected' | 'disconnected' | 'unknown'>('unknown');
 
   // Convert API data to SecretKey format
   const convertApiToSecretKey = (apiData: SecretKeyData): SecretKey => ({
@@ -90,10 +95,25 @@ export const SecretManagementProvider: React.FC<{ children: React.ReactNode }> =
     }
   }, []);
 
+  // Check Vault status
+  const checkVaultStatus = useCallback(async () => {
+    try {
+      // This would be a call to check vault health/status
+      // For now, we'll assume vault is enabled if the API responds with vault metadata
+      const response = await secretKeyAPI.getAll();
+      const hasVaultSecrets = response.some((secret: any) => secret.metadata?.storedInVault);
+      setIsVaultEnabled(hasVaultSecrets);
+      setVaultStatus(hasVaultSecrets ? 'connected' : 'disconnected');
+    } catch (error) {
+      setVaultStatus('unknown');
+    }
+  }, []);
+
   // Load secrets on mount
   useEffect(() => {
     loadSecrets();
-  }, [loadSecrets]);
+    checkVaultStatus();
+  }, [loadSecrets, checkVaultStatus]);
 
   const addSecret = useCallback(async (secretData: Omit<SecretKey, 'id' | 'createdAt' | 'lastModified'>) => {
     setIsLoading(true);
@@ -281,6 +301,8 @@ export const SecretManagementProvider: React.FC<{ children: React.ReactNode }> =
     isLoading,
     error,
     isDemoMode,
+    isVaultEnabled,
+    vaultStatus,
     addSecret,
     updateSecret,
     deleteSecret,
@@ -290,7 +312,8 @@ export const SecretManagementProvider: React.FC<{ children: React.ReactNode }> =
     filterByType,
     getExpiredSecrets,
     getExpiringSoonSecrets,
-    loadSecrets
+    loadSecrets,
+    checkVaultStatus
   };
 
   return (

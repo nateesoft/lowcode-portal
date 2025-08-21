@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Key, Edit, Trash2, Eye, EyeOff, Copy, Clock, Shield } from 'lucide-react';
+import { Key, Edit, Trash2, Eye, EyeOff, Copy, Clock, Shield, Database } from 'lucide-react';
 import { useAlert } from '@/hooks/useAlert';
+import { useSecretManagement } from '@/contexts/SecretManagementContext';
 
 interface SecretKey {
   id: string;
@@ -32,6 +33,7 @@ const SecretKeyCard: React.FC<SecretKeyCardProps> = ({
   const [isValueVisible, setIsValueVisible] = useState(false);
   const [isLocalDeleting, setIsLocalDeleting] = useState(false);
   const { showConfirm, showSuccess, showError } = useAlert();
+  const { isVaultEnabled } = useSecretManagement();
 
   const handleCopy = async () => {
     try {
@@ -111,8 +113,18 @@ const SecretKeyCard: React.FC<SecretKeyCardProps> = ({
           <div className={`p-2 rounded ${getTypeColor(secret.type)}`}>
             {getTypeIcon(secret.type)}
           </div>
-          <div>
-            <h3 className="font-medium text-slate-900 dark:text-white">{secret.name}</h3>
+          <div className="flex-1">
+            <div className="flex items-center space-x-2">
+              <h3 className="font-medium text-slate-900 dark:text-white">{secret.name}</h3>
+              {isVaultEnabled && (
+                <div className="flex items-center space-x-1">
+                  <Shield className="h-3 w-3 text-green-600 dark:text-green-400" />
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                    Vault
+                  </span>
+                </div>
+              )}
+            </div>
             <p className="text-sm text-slate-600 dark:text-slate-400">{secret.description}</p>
           </div>
         </div>
