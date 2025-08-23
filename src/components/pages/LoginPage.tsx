@@ -102,12 +102,22 @@ const LoginPage: React.FC<LoginPageProps> = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={() => router.push('/landing')}
+            className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-colors p-2"
+            title="Back to Home"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
           <img 
             src="/logo.png" 
             alt="Logo" 
             className="h-16 w-auto object-contain"
           />
+          <div className="w-10"></div>
         </div>
         
         <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1 mb-8">
@@ -239,15 +249,6 @@ const LoginPage: React.FC<LoginPageProps> = ({
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
             Login with Keycloak
-          </button>
-        </div>
-
-        <div className="mt-4 text-center">
-          <button 
-            onClick={() => { setIsAuthenticated(true); setUserRole('admin'); }}
-            className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 underline"
-          >
-            Login as Admin (Demo)
           </button>
         </div>
       </div>

@@ -7,6 +7,7 @@ import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import CurrencySwitcher from '@/components/ui/CurrencySwitcher';
 import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
+import VideoModal from '@/components/VideoModal';
 import { useTranslation } from 'react-i18next';
 import { useScrollToSection } from '@/hooks/useScrollToSection';
 
@@ -25,6 +26,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
   const { activeSection, scrollToSection } = useScrollToSection();
   const pricing = getPricing();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   return (
     <div className="min-h-screen relative">
       {/* Animated Background */}
@@ -193,7 +195,10 @@ const LandingPage: React.FC<LandingPageProps> = ({
             >
               Start Building Free
             </button>
-            <button className="px-8 py-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-lg font-semibold border-2 border-slate-200 dark:border-slate-700 hover:shadow-lg transition">
+            <button 
+              onClick={() => setIsVideoModalOpen(true)}
+              className="px-8 py-4 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg text-lg font-semibold border-2 border-slate-200 dark:border-slate-700 hover:shadow-lg transition transform hover:scale-105"
+            >
               View Demo
             </button>
           </div>
@@ -300,6 +305,14 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* Scroll to Top Button */}
       <ScrollToTopButton />
+
+      {/* Video Modal */}
+      <VideoModal 
+        isOpen={isVideoModalOpen}
+        onClose={() => setIsVideoModalOpen(false)}
+        title="TON Low-Code Platform Demo"
+        videoUrl="https://www.youtube.com/embed/dQw4w9WgXcQ" // Replace with actual demo video
+      />
     </div>
   );
 };
