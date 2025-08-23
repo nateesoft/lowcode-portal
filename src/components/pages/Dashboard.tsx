@@ -14,6 +14,7 @@ import CurrencySwitcher from '@/components/ui/CurrencySwitcher';
 import { useTranslation } from 'react-i18next';
 import WeUIModal from '@/components/modals/WeUIModal';
 import ServiceFlowModal from '@/components/modals/ServiceFlowModal';
+import PlanUpgradeModal from '@/components/modals/PlanUpgradeModal';
 import { useChatbot } from '@/contexts/ChatbotContext';
 import { useDatabase, DatabaseConnection } from '@/contexts/DatabaseContext';
 import { useMedia } from '@/contexts/MediaContext';
@@ -128,6 +129,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [activeView, setActiveView] = useState('dashboard');
   const [showWeUIModal, setShowWeUIModal] = useState(false);
   const [showServiceFlowModal, setShowServiceFlowModal] = useState(false);
+  const [showPlanUpgradeModal, setShowPlanUpgradeModal] = useState(false);
   const [flows, setFlows] = useState<ServiceResponse[]>([]);
   const [editingFlow, setEditingFlow] = useState<ServiceResponse | null>(null);
   
@@ -2134,8 +2136,11 @@ const Dashboard: React.FC<DashboardProps> = ({
               <LogOut className="h-5 w-5" />
             </button>
           </div>
-          <button className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition">
-{t('upgradePlan')}
+          <button 
+            onClick={() => setShowPlanUpgradeModal(true)}
+            className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:shadow-lg transition transform hover:scale-105"
+          >
+            {t('upgradePlan')}
           </button>
         </div>
       </div>
@@ -2673,6 +2678,13 @@ const Dashboard: React.FC<DashboardProps> = ({
           // Route to reactflow page with the new project
           router.push(`/reactflow?projectId=${project.id}`);
         }}
+      />
+
+      {/* Plan Upgrade Modal */}
+      <PlanUpgradeModal
+        isOpen={showPlanUpgradeModal}
+        onClose={() => setShowPlanUpgradeModal(false)}
+        currentTier={userTier}
       />
     </div>
   );

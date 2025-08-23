@@ -27,6 +27,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
   const pricing = getPricing();
   const [searchQuery, setSearchQuery] = useState('');
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   return (
     <div className="min-h-screen relative">
       {/* Animated Background */}
@@ -264,13 +265,58 @@ const LandingPage: React.FC<LandingPageProps> = ({
       {/* Pricing Section */}
       <section id="pricing" className="py-20 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12 text-slate-900 dark:text-white">Simple, Transparent Pricing</h2>
+          <h2 className="text-3xl font-bold text-center mb-8 text-slate-900 dark:text-white">Simple, Transparent Pricing</h2>
+          
+          {/* Billing Toggle */}
+          <div className="flex justify-center mb-12">
+            <div className="bg-slate-100 dark:bg-slate-700 rounded-lg p-1 flex items-center">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-6 py-2 rounded-md transition-all ${
+                  billingCycle === 'monthly'
+                    ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle('yearly')}
+                className={`px-6 py-2 rounded-md transition-all ${
+                  billingCycle === 'yearly'
+                    ? 'bg-white dark:bg-slate-600 shadow text-slate-900 dark:text-white'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <span>Annual</span>
+                <span className="ml-2 text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
+                  Save 20%
+                </span>
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {['Junior', 'Senior', 'Specialist'].map((tier, index) => (
               <div key={tier} className={`bg-white/30 dark:bg-slate-800/30 backdrop-blur-md rounded-2xl p-8 border border-white/20 dark:border-slate-700/20 hover:bg-white/40 dark:hover:bg-slate-800/40 transition-all duration-300 hover:shadow-2xl ${index === 1 ? 'ring-2 ring-blue-500/50 transform scale-105 bg-white/40 dark:bg-slate-800/40' : ''}`}>
                 <h3 className="text-2xl font-bold mb-2 text-slate-900 dark:text-white">{tier}</h3>
                 <div className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">
-                  {pricing[tier]?.monthly}/mo
+                  {tier === 'Junior' ? (
+                    'Free'
+                  ) : (() => {
+                    const tierPricing = pricing[tier as keyof typeof pricing];
+                    const monthlyPrice = parseInt(tierPricing?.monthly?.replace(/[^0-9]/g, '') || '0');
+                    
+                    return billingCycle === 'yearly' ? (
+                      <>
+                        ${Math.round(monthlyPrice * 12 * 0.8)}/year
+                        <div className="text-sm text-slate-600 dark:text-slate-400 font-normal">
+                          ${Math.round(monthlyPrice * 0.8)}/month billed annually
+                        </div>
+                      </>
+                    ) : (
+                      `$${monthlyPrice}/month`
+                    );
+                  })()}
                 </div>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center text-slate-600 dark:text-slate-300">
@@ -290,12 +336,22 @@ const LandingPage: React.FC<LandingPageProps> = ({
                     {TIER_LIMITS[tier].support} Support
                   </li>
                 </ul>
-                <button className={`w-full py-3 rounded-lg font-semibold transition ${
-                  index === 1 
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg' 
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}>
-                  {tier === 'Junior' ? 'Start Free' : 'Upgrade Now'}
+                <button 
+                  onClick={() => {
+                    if (tier === 'Junior') {
+                      router.push('/login');
+                    } else {
+                      // Redirect to login first, then user can upgrade from dashboard
+                      router.push('/login');
+                    }
+                  }}
+                  className={`w-full py-3 rounded-lg font-semibold transition transform hover:scale-105 ${
+                    index === 1 
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg' 
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {tier === 'Junior' ? 'Start Free' : 'Get Started'}
                 </button>
               </div>
             ))}
