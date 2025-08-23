@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authAPI, User } from '@/lib/api';
+import { authAPI, User, KeycloakUserSyncRequest } from '@/lib/api';
+import { useKeycloakSafe } from '@/hooks/useKeycloakSafe';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -8,6 +10,7 @@ interface AuthContextType {
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, firstName: string, lastName: string, role?: string) => Promise<void>;
+  syncKeycloakUser: (keycloakUserData: KeycloakUserSyncRequest) => Promise<void>;
   logout: () => void;
   refreshAuth: () => Promise<void>;
 }
@@ -30,6 +33,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const keycloakContext = useKeycloakSafe();
+  const router = useRouter();
   
   const isAdmin = user?.role === 'admin';
 
@@ -136,10 +141,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const syncKeycloakUser = async (keycloakUserData: KeycloakUserSyncRequest) => {
+    try {
+      console.log('Syncing Keycloak user data:', keycloakUserData);
+      const response = await authAPI.syncKeycloakUser(keycloakUserData);
+      setUser(response.user);
+      setIsAuthenticated(true);
+      console.log('Keycloak user sync successful:', response.user);
+    } catch (error) {
+      console.error('Keycloak user sync failed:', error);
+      throw error;
+    }
+  };
+
   const handleLogout = () => {
+    // Clear local tokens and user
     authAPI.logout();
     setUser(null);
     setIsAuthenticated(false);
+    
+    // Also logout from Keycloak if available
+    if (keycloakContext?.logout) {
+      keycloakContext.logout();
+    } else {
+      // If no Keycloak, redirect manually
+      router.push('/login');
+    }
   };
 
   const logout = () => {
@@ -157,6 +184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAdmin,
     login,
     register,
+    syncKeycloakUser,
     logout,
     refreshAuth,
   };

@@ -3,6 +3,7 @@ import { UserRole } from '@/lib/types';
 import { authAPI } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useKeycloakSafe } from '@/hooks/useKeycloakSafe';
+import { useKeycloakSync } from '@/hooks/useKeycloakSync';
 import { useRouter } from 'next/navigation';
 import { getDefaultRedirectForRole } from '@/lib/routes';
 import KeycloakStatus from '@/components/debug/KeycloakStatus';
@@ -18,6 +19,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
 }) => {
   const { login, register, user } = useAuth();
   const keycloakAuth = useKeycloakSafe();
+  const { isSyncing, syncError, isKeycloakAuthenticated, isLocalAuthenticated } = useKeycloakSync();
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -127,6 +129,25 @@ const LoginPage: React.FC<LoginPageProps> = ({
           {error && (
             <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg text-sm">
               {error}
+            </div>
+          )}
+
+          {syncError && (
+            <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded-lg text-sm">
+              Keycloak Sync Error: {syncError}
+            </div>
+          )}
+
+          {isSyncing && (
+            <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg text-sm flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Syncing Keycloak user data...
+            </div>
+          )}
+
+          {isKeycloakAuthenticated && isLocalAuthenticated && (
+            <div className="mb-4 p-3 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg text-sm">
+              ✅ Successfully authenticated with Keycloak and synced to local database
             </div>
           )}
 

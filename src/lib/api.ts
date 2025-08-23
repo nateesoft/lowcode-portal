@@ -98,6 +98,15 @@ export interface RegisterRequest {
   role?: string;
 }
 
+export interface KeycloakUserSyncRequest {
+  keycloakId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role?: string;
+  emailVerified?: boolean;
+}
+
 export interface User {
   id: number;
   email: string;
@@ -238,6 +247,18 @@ export const authAPI = {
     const token = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
     return !!(token || refreshToken);
+  },
+
+  syncKeycloakUser: async (data: KeycloakUserSyncRequest): Promise<AuthResponse> => {
+    const response = await api.post('/auth/keycloak-sync', data);
+    const authResponse = response.data;
+    
+    // Store tokens in localStorage
+    localStorage.setItem('access_token', authResponse.tokens.access_token);
+    localStorage.setItem('refresh_token', authResponse.tokens.refresh_token);
+    localStorage.setItem('user', JSON.stringify(authResponse.user));
+    
+    return authResponse;
   },
 };
 
